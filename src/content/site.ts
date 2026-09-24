@@ -26,7 +26,6 @@ export const NAV_LINKS = [
   { href: "/subscription", label: "Subscription" },
   { href: "/faq", label: "FAQ" },
   { href: "/contact", label: "Contact" },
-  { href: "/policies/terms", label: "Legal" },
 ] as const;
 
 // Placeholder support inbox — update to the real address before publishing.
@@ -86,7 +85,7 @@ export const WHATS_INSIDE = [
   { stat: "15+", label: "Handcrafted puzzles and games" },
   { stat: "10+", label: "Facts in our Curious Corner" },
   { stat: "5", label: "Around the World and Wonder features" },
-  { stat: "Your pace", label: "Screen-free fun, five minutes or an afternoon" },
+  { stat: "∞", label: "Unlimited Hours of screen-free fun" },
 ] as const;
 
 export const PREVIEW_CLIPS = [

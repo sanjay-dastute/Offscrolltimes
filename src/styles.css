@@ -650,6 +650,15 @@ a:hover .nav-arrow {
 .play-puzzle button[aria-disabled=true] { background: #f0e5c6; cursor: default; box-shadow: none; }
 .play-puzzle button span { font: 700 7px monospace; letter-spacing: .1em; }
 .play-gap { border: 2px dashed #827659; color: #827659; font-size: 28px; }
+.play-picture-guide { width: 116px; margin: 20px auto 0; padding: 5px; border: 2px solid #171512; border-radius: 8px; background: #fff9e6; box-shadow: 3px 4px 0 #171512; }
+.play-picture-guide img { display: block; width: 100%; height: auto; border-radius: 3px; }
+.play-picture-guide figcaption { margin-top: 5px; font: 800 9px var(--font-mono, monospace); text-transform: uppercase; }
+.play-puzzle-clips { position: absolute; overflow: hidden; }
+.play-picture-puzzle { width: min(100%, 330px); gap: 2px; padding: 6px; border: 2px solid #171512; border-radius: 14px; background: #264843; box-shadow: 5px 6px 0 #171512; }
+.play-picture-puzzle .play-picture-piece { display: block; position: relative; overflow: hidden; border: 0; border-radius: 0; background-color: #f5dbab; background-image: url('/images/fox-picture-puzzle.webp'); background-size: 300% 300%; box-shadow: none; clip-path: url(#play-jigsaw-shape); }
+.play-picture-puzzle .play-picture-piece[aria-pressed=true] { filter: brightness(1.25) drop-shadow(0 0 5px #ffdc42); }
+.play-picture-puzzle .play-picture-piece:focus-visible { outline: 3px solid #ffdc42; outline-offset: -5px; }
+.play-picture-puzzle .play-piece-number { position: absolute; right: 9px; bottom: 9px; display: grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; background: #fff9e6; color: #171512; font: 800 11px var(--font-mono, monospace); box-shadow: 0 1px 3px #17151280; }
 .play-die { display: grid; grid-template-columns: repeat(3, 1fr); gap: 9px; width: 108px; height: 108px; border: 3px solid #171512; border-radius: 22px; padding: 17px; margin: 28px auto; background: #ffdc42; box-shadow: 5px 6px 0 #171512; }
 .play-die .pip { background: #171512; border-radius: 50%; }
 .play-result { min-height: 48px; font-weight: 700; }

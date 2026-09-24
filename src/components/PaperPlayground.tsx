@@ -6,10 +6,10 @@ const QUESTIONS = [
   { question: 'Which word becomes shorter when you add two letters?', options: ['Small', 'Short', 'Little'], answer: 1, why: 'Add “er” to “short” and you get “shorter”. A little wordplay!' },
 ]
 type Game = 'quiz' | 'puzzle' | 'dice'
-const GAME_LABELS: Record<Game, string> = { quiz: 'Quick quiz', puzzle: 'Slide puzzle', dice: 'Roll the dice' }
+const GAME_LABELS: Record<Game, string> = { dice: 'Roll the dice', puzzle: 'Picture puzzle', quiz: 'Quick quiz' }
 
 export function PaperPlayground() {
-  const [game, setGame] = useState<Game>('quiz')
+  const [game, setGame] = useState<Game>('dice')
   return <section id="mini-puzzle-pack" className="paper-playground" aria-labelledby="playground-title">
     <div className="paper-playground-shell">
       <p className="play-eyebrow">A little less scrolling. A little more playing.</p>
@@ -19,7 +19,7 @@ export function PaperPlayground() {
         {(Object.keys(GAME_LABELS) as Game[]).map(id => <button key={id} type="button" aria-pressed={game === id} onClick={() => setGame(id)}>{GAME_LABELS[id]}</button>)}
       </div>
       <div className="play-card" key={game}>
-        {game === 'quiz' ? <Quiz /> : game === 'puzzle' ? <SlidePuzzle /> : <DiceGame />}
+        {game === 'quiz' ? <Quiz /> : game === 'puzzle' ? <PicturePuzzle /> : <DiceGame />}
       </div>
       <p className="play-footnote">Changing games starts a fresh round. These are free web tasters.</p>
       <a className="play-subscribe" href="/subscription">Enjoy the pause? Choose your subscription <span aria-hidden="true">↗</span></a>
@@ -64,31 +64,30 @@ function Quiz() {
   </>
 }
 
-const SOLVED = [1, 2, 3, 4, 5, 6, 7, 8, 0]
-function adjacent(a: number, b: number) { return Math.abs(Math.floor(a / 3) - Math.floor(b / 3)) + Math.abs(a % 3 - b % 3) === 1 }
-function SlidePuzzle() {
-  const [tiles, setTiles] = useState([1, 2, 3, 4, 0, 6, 7, 5, 8])
+const SOLVED = [1, 2, 3, 4, 5, 6, 7, 8, 9]
+function PicturePuzzle() {
+  const [tiles, setTiles] = useState([2, 7, 6, 1, 5, 8, 4, 3, 9])
   const [moves, setMoves] = useState(0)
-  const empty = tiles.indexOf(0)
+  const [selected, setSelected] = useState<number | null>(null)
   const solved = tiles.every((tile, i) => tile === SOLVED[i])
-  function move(index: number) {
-    if (solved || !adjacent(index, empty)) return
-    const next = [...tiles]; [next[index], next[empty]] = [next[empty], next[index]]
-    setTiles(next); setMoves(moves + 1)
+  function choose(index: number) {
+    if (solved) return
+    if (selected === null) { setSelected(index); return }
+    if (selected === index) { setSelected(null); return }
+    const next = [...tiles]
+    ;[next[index], next[selected]] = [next[selected], next[index]]
+    setTiles(next); setMoves(previous => previous + 1); setSelected(null)
   }
   function shuffle() {
     const next = [...SOLVED]
-    let blank = 8, previous = -1
-    for (let step = 0; step < 60; step++) {
-      const choices = next.map((_, i) => i).filter(i => adjacent(i, blank) && i !== previous)
-      const chosen = choices[Math.floor(Math.random() * choices.length)]
-      ;[next[chosen], next[blank]] = [next[blank], next[chosen]]
-      previous = blank; blank = chosen
+    for (let index = next.length - 1; index > 0; index--) {
+      const random = Math.floor(Math.random() * (index + 1))
+      ;[next[index], next[random]] = [next[random], next[index]]
     }
-    if (next.every((tile, i) => tile === SOLVED[i])) [next[7], next[8]] = [next[8], next[7]]
-    setTiles(next); setMoves(0)
+    if (next.every((tile, index) => tile === SOLVED[index])) [next[0], next[1]] = [next[1], next[0]]
+    setTiles(next); setMoves(0); setSelected(null)
   }
-  return <><div className="play-card-bar"><span>{moves} moves</span><span>The pocket puzzle</span></div><div className="play-card-body"><h3>Put the pieces in their place.</h3><p>Arrange 1–8 in order, with the gap last. Tap a tile beside the gap to slide it. Or Tab to it and press Enter.</p><div className="play-puzzle" role="group" aria-label="Sliding number puzzle">{tiles.map((tile, index) => tile ? <button key={tile} type="button" aria-disabled={solved || !adjacent(index, empty)} aria-label={`Tile ${tile}, row ${Math.floor(index / 3) + 1}, column ${index % 3 + 1}${adjacent(index, empty) ? ', can slide' : ''}`} onClick={() => move(index)}>{tile}<span aria-hidden="true">OFFSCROLL</span></button> : <span className="play-gap" key="gap" aria-label={`Empty space, row ${Math.floor(index / 3) + 1}, column ${index % 3 + 1}`}>✦</span>)}</div><p className="play-result" role="status">{solved ? `Beautifully put together. Solved in ${moves} moves!` : 'A small shuffle. A satisfying little win.'}</p><button type="button" className="play-primary" onClick={shuffle}>{solved ? 'Try another puzzle' : 'Shuffle a new puzzle'}</button></div></>
+  return <><div className="play-card-bar"><span>{moves} swaps</span><span>The picture puzzle</span></div><div className="play-card-body"><h3>Piece together a play break.</h3><p>Use the little picture as your guide. Tap one piece, then tap another to swap them. You can also use Tab and Enter.</p><figure className="play-picture-guide"><img src="/images/fox-picture-puzzle.webp" alt="The completed picture: a smiling fox reading a puzzle newspaper at a desk" width="900" height="900" loading="lazy"/><figcaption>Your picture guide</figcaption></figure><svg className="play-puzzle-clips" aria-hidden="true" focusable="false" width="0" height="0"><defs><clipPath id="play-jigsaw-shape" clipPathUnits="objectBoundingBox"><path d="M .04 .04 H .39 C .37 .16 .63 .16 .61 .04 H .96 V .39 C .84 .37 .84 .63 .96 .61 V .96 H .61 C .63 .84 .37 .84 .39 .96 H .04 V .61 C .16 .63 .16 .37 .04 .39 Z"/></clipPath></defs></svg><div className="play-puzzle play-picture-puzzle" role="group" aria-label="Nine-piece picture puzzle. Select two pieces to swap their positions.">{tiles.map((tile, index) => <button key={tile} type="button" className="play-picture-piece" aria-pressed={selected === index} aria-label={`Picture piece ${tile}, row ${Math.floor(index / 3) + 1}, column ${index % 3 + 1}${selected === index ? ', selected' : ''}`} style={{backgroundPosition: `${((tile - 1) % 3) * 50}% ${Math.floor((tile - 1) / 3) * 50}%`}} onClick={() => choose(index)}><span className="play-piece-number" aria-hidden="true">{tile}</span></button>)}</div><p className="play-result" role="status">{solved ? `Picture revealed! Solved in ${moves} swaps.` : selected === null ? 'Select a piece to move it.' : `Piece ${tiles[selected]} selected. Choose another piece to swap.`}</p><button type="button" className="play-primary" onClick={shuffle}>{solved ? 'Try another shuffle' : 'Shuffle the picture'}</button></div></>
 }
 
 const DICE_FACTS = [

@@ -82,7 +82,7 @@ export function Hero() {
               Monthly print edition
             </span>
             <span className="rounded-full border border-graphite bg-paper-raised px-3 py-1.5 font-mono text-[10.5px] font-bold tracking-[0.08em] uppercase">
-              Free India delivery · international enquiries welcome
+              Free India delivery · Ordering from Abroad? Get in Touch
             </span>
           </div>
         </div>

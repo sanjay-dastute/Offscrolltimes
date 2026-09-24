@@ -2,14 +2,7 @@ import { createFileRoute } from '@tanstack/react-router'
 
 import { SiteHeader } from '#/components/SiteHeader'
 import { SubscriptionConfigurator } from '#/components/SubscriptionConfigurator'
-import {
-  EditionContents,
-  SampleIssueGallery,
-  ShippingCancellationGift,
-  SubscriptionFaq,
-  SubscriptionHero,
-} from '#/components/subscription'
-import { Testimonials } from '#/components/sections'
+import { SubscriptionHero } from '#/components/subscription'
 import { SiteFooter } from '#/components/Faq'
 import { BRAND_NAME } from '#/content/site'
 
@@ -43,11 +36,6 @@ function SubscriptionPage() {
       <main id="main-content">
         <SubscriptionHero />
         <SubscriptionConfigurator />
-        <SampleIssueGallery />
-        <EditionContents />
-        <ShippingCancellationGift />
-        <Testimonials />
-        <SubscriptionFaq />
       </main>
 
       <SiteFooter />
