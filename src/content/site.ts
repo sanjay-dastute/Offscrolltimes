@@ -18,11 +18,11 @@ export const BUSINESS_DETAILS = {
   registration: "Legal entity name, registered address and registration numbers will be published after incorporation approval.",
 };
 
-export const ANNOUNCEMENT = "Free delivery across India.";
+export const ANNOUNCEMENT = "From us to your doorstep, wherever you are.";
 
 export const NAV_LINKS = [
   { href: "/", label: "Home" },
-  { href: "/about", label: "About" },
+  { href: "/about", label: "About Us" },
   { href: "/subscription", label: "Subscription" },
   { href: "/faq", label: "FAQ" },
   { href: "/contact", label: "Contact" },
@@ -83,10 +83,10 @@ export function whatsappEnquiryMessage(country: string): string {
 export const SUBSCRIBE_HREF = "/subscription";
 
 export const WHATS_INSIDE = [
-  { stat: "20+", label: "Handcrafted puzzles & games" },
-  { stat: "10", label: "Fun facts & local trivia" },
-  { stat: "5", label: "Illustrations to color & keep" },
-  { stat: "45–60 min", label: "Screen-free entertainment per issue" },
+  { stat: "15+", label: "Handcrafted puzzles and games" },
+  { stat: "10+", label: "Facts in our Curious Corner" },
+  { stat: "5", label: "Around the World and Wonder features" },
+  { stat: "Your pace", label: "Screen-free fun, five minutes or an afternoon" },
 ] as const;
 
 export const PREVIEW_CLIPS = [
@@ -105,27 +105,27 @@ export const WHY_LOVE = [
   },
   {
     title: "Suitable for individuals, couples and families",
-    body: "Solo over coffee, or spread across the table with the people you live with.",
+    body: "Solve it over coffee, challenge a partner, or spread it across the table with family and friends.",
   },
   {
     title: "Fresh edition every month",
-    body: "New puzzles, new facts, new themes. Never the same issue twice.",
+    body: "New puzzles, new facts, new challenges. Never the same issue twice.",
   },
   {
-    title: "Locally relevant content",
-    body: "Trivia, references and puzzles tuned to where you live, not a generic template.",
+    title: "Made for your world",
+    body: "Trivia, references and puzzles shaped around what feels familiar and relevant to you.",
   },
   {
     title: "Delivered to your door",
-    body: "No pickup, no app store. It shows up in your mailbox.",
+    body: "No pickup, no app store. It lands at your doorstep.",
   },
 ] as const;
 
 export const HOW_IT_WORKS = [
   {
     num: "01",
-    title: "Choose a plan",
-    body: "Choose a 1, 3, 6 or 12-month prepaid term and confirm the complete price before checkout.",
+    title: "Choose a plan from your account",
+    body: "Select a 1, 3 or 12-month prepaid term, sign in with Google or Microsoft, and review the complete price before paying.",
   },
   {
     num: "02",
@@ -135,12 +135,12 @@ export const HOW_IT_WORKS = [
   {
     num: "03",
     title: "Receive it every month",
-    body: "Your copy arrives by post, timed to your billing cycle.",
+    body: "Your copy is dispatched for each eligible monthly edition in your prepaid term.",
   },
   {
     num: "04",
     title: "Play, share and enjoy",
-    body: "Solve it solo, race a friend, or pass pages around the table.",
+    body: "Solve it solo, race a friend, or spread it across the table. Try not to peek at the answers.",
   },
 ] as const;
 
@@ -155,7 +155,7 @@ export const PLANS = [
     price: "INR 159",
     period: "/ month for 1 year",
     monthlyEquivalent: "INR 1,908 prepaid for 12 months",
-    best: true,
+    best: false,
     renewsEvery: "Manual renewal",
     blurb: "Available exclusively during the first month of launch. Limited-period introductory offer.",
   },
@@ -194,7 +194,7 @@ export const PLANS = [
     price: "INR 175",
     period: "/ month",
     monthlyEquivalent: "INR 2,100 prepaid for 12 months",
-    best: false,
+    best: true,
     renewsEvery: "Manual renewal",
     blurb: "Subscribe for twelve months at a special monthly rate. INR 2,100 prepaid.",
   },
@@ -206,9 +206,9 @@ export const CURRENCY_OPTIONS = [
 ] as const;
 
 export const WHO_FOR = [
-  { key: "Individuals", body: "A proper break from your phone that still feels like a treat." },
-  { key: "Couples", body: "Solve side by side, swap clues, or turn it into a friendly competition." },
-  { key: "Families", body: "Something the whole table can do together, no screens fought over." },
+  { key: "Adults", body: "A real break from the screen, with something worth looking forward to." },
+  { key: "Families & friends", body: "One newspaper. One table. Plenty to argue about." },
+  { key: "Travellers", body: "Toss it in your bag. No Wi-Fi, no charging, no roaming charges." },
   { key: "Offices", body: "A shared copy in the break room turns lunch into a puzzle race." },
   { key: "Gifts", body: "A subscription that keeps arriving all year, not just for one birthday." },
 ] as const;
@@ -217,36 +217,16 @@ export const WHO_FOR = [
  * Beta-reader feedback ahead of public launch. Labeled accurately per the
  * build brief — replace with verified customer reviews once they exist.
  */
-export const TESTIMONIALS = [
-  {
-    initials: "AR",
-    name: "Ananya R.",
-    role: "Beta reader · Bengaluru",
-    quote:
-      "Did the crossword with my mom over chai. First time in months we weren't both staring at our phones.",
-  },
-  {
-    initials: "MT",
-    name: "Marco T.",
-    role: "Beta reader · Lisbon",
-    quote: "Genuinely surprised how good the trivia was. Wasn't expecting to learn something.",
-  },
-  {
-    initials: "PD",
-    name: "Priya & Dev",
-    role: "Beta readers · Mumbai",
-    quote: "We raced each other through the word search. I lost. Doing it again next month.",
-  },
-] as const;
+export const TESTIMONIALS: ReadonlyArray<{ initials: string; name: string; role: string; quote: string }> = [];
 
 export const FAQ_PREVIEW = [
   {
     q: "What's inside each issue?",
-    a: "20+ handcrafted puzzles and games, 10 fun facts and local trivia, and 5 illustrations to color, all in one printed edition.",
+    a: "Each issue brings 15+ handcrafted puzzles and games, 10+ curious facts, and five Around the World and Wonder features to explore at your own pace.",
   },
   {
     q: "Where do you deliver?",
-    a: "We currently provide free delivery across India. For international subscription enquiries, message us on Instagram or email hello@offscrolltimes.com.",
+    a: "We currently provide free delivery across India. For international subscription enquiries, contact us at hello@offscrolltimes.com or on WhatsApp.",
   },
   {
     q: "Can I cancel anytime?",
@@ -254,7 +234,7 @@ export const FAQ_PREVIEW = [
   },
   {
     q: "Is it suitable for kids?",
-    a: "It's built for adults and teens, but most puzzles and facts work well for families to do together. It isn't a children's activity book.",
+    a: "It's built for adults and teens, but many puzzles and facts work well for families and friends to do together. It isn't a children's activity book.",
   },
   {
     q: "How am I billed?",
@@ -288,55 +268,55 @@ export const FAQ_MORE = [
 export const FAQ_GROUPS = [
   {
     key: "publication",
-    title: "Publication",
+    title: "About the publication",
     items: [
       { q: "What is Offscroll Times?", a: "A physical monthly newspaper filled with original puzzles, games, illustrations and regional trivia. It is printed and delivered by post; it is not a digital newsletter." },
-      { q: "What is inside each issue?", a: "Every edition contains more than 20 puzzles and games, fun facts, local trivia and illustrations, designed for adults, teens and families to enjoy together." },
+      { q: "What is inside each issue?", a: "Each edition includes 15+ puzzles and games, 10+ curious facts, and five Around the World and Wonder features, with illustrations and challenges to enjoy alone or together." },
       { q: "Will I see the same puzzles again?", a: "No. Each monthly edition has a fresh theme and newly prepared content. Sample previews deliberately hide full puzzles and answers." },
     ],
   },
   {
     key: "subscription",
-    title: "Subscription",
+    title: "Subscription and renewals",
     items: [
       { q: "What is the monthly print cut-off?", a: "Orders and address changes received by the 20th are included in the next month's print run. For example, an order placed on 18 August is eligible for the September edition; an order placed on 22 August starts with October." },
-      { q: "When does my subscription start and end?", a: "Your subscription starts with the first eligible edition shown before checkout. A 3-month term includes three consecutive monthly editions and ends after the third edition unless it renews; the same rule applies to 1, 6 and 12-month terms." },
-      { q: "How many copies will I receive?", a: "The selected duration multiplied by copies per edition gives the total. For example, 6 months with 2 copies per edition provides 12 printed copies." },
+      { q: "When does my subscription start and end?", a: "Your subscription starts with the first eligible edition shown before checkout. A 3-month term includes three monthly editions and ends after the third edition unless you manually buy a new term. The same rule applies to 1 and 12-month terms." },
+      { q: "How many copies will I receive?", a: "The selected duration multiplied by copies per edition gives the total. For example, 3 months with 2 copies per edition provides 6 printed copies." },
       { q: "Can I buy it as a gift or for a workplace?", a: "Yes. Use the recipient, office or reception delivery address during checkout. Multiple copies can be sent to the same address." },
     ],
   },
   {
     key: "payment",
-    title: "Payment",
+    title: "Payments and currencies",
     items: [
       { q: "What does the payment cover?", a: "One payment covers every monthly copy in the selected term, including delivery. Any applicable tax is shown and confirmed by the payment provider at checkout." },
-      { q: "Which currencies and payment methods are supported?", a: "The website displays estimated USD, INR, EUR and GBP totals. The final currency, tax and available payment methods are confirmed at checkout. Razorpay will be connected before public launch." },
+      { q: "Which currencies and payment methods are supported?", a: "Online checkout currently supports INR for India delivery. Available payment methods appear in Razorpay Checkout. For Europe, contact us before ordering." },
       { q: "How do offers and duration discounts work?", a: "Longer terms receive the percentage shown beside the duration. A valid offer code is applied after the duration discount, and the exact monetary saving appears in the order summary." },
     ],
   },
   {
     key: "delivery",
-    title: "Delivery",
+    title: "India delivery",
     items: [
       { q: "How long does delivery take in India?", a: "We normally dispatch in the first week of the month. Delivery within India is estimated at 3–7 business days after dispatch, depending on the destination and postal service." },
-      { q: "Do you deliver internationally?", a: "International checkout is not currently available. Message us on Instagram or email hello@offscrolltimes.com with your country for a subscription enquiry." },
       { q: "Where is delivery available?", a: "Online checkout currently supports India, with free delivery included in every plan." },
-      { q: "What if my issue is damaged, missing or delayed?", a: "Contact support with your order details and, for damage, a photo. Report a missing issue within 14 days of its expected delivery date. We will investigate and, where eligible, arrange a replacement or refund for that issue." },
     ],
   },
+  { key: "europe", title: "European delivery", items: [
+    { q: "Can I subscribe from Europe?", a: "European checkout is not yet available. Email hello@offscrolltimes.com or use WhatsApp with your country so we can confirm availability, price and shipping before an order." },
+  ] },
   {
     key: "cancellation",
-    title: "Pause, cancellation & renewal",
+    title: "Pause or cancellation",
     items: [
       { q: "Can I cancel within seven days?", a: "You may request cancellation within 7 days of purchase for a full refund if the first issue has not already been prepared or dispatched." },
       { q: "Can I pause my subscription?", a: "You can request a pause before the monthly cut-off on the 20th. A request after the cut-off applies from the following edition because the next copy may already be in production." },
       { q: "Does my subscription renew automatically?", a: "No. The current Razorpay checkout is prepaid for the selected term and renewal is manual. No future payment is taken without a new authorisation; editions already paid for remain scheduled." },
-      { q: "When can I receive a refund?", a: "The seven-day purchase cancellation applies before preparation or dispatch. A damaged or missing eligible issue may be replaced or refunded. Copies already delivered in good condition are not refundable." },
     ],
   },
   {
     key: "account",
-    title: "Account & address",
+    title: "Address changes and account",
     items: [
       { q: "How do I access my account?", a: "Sign in with Google or Microsoft, then open Account to view your subscription, payments, invoices, dispatches and support options." },
       { q: "When can I change my delivery address?", a: "Update the address in your account by the 20th for the next month's edition. For example, a change saved on 19 August applies to September; a change on 21 August applies from October." },
@@ -344,22 +324,26 @@ export const FAQ_GROUPS = [
       { q: "Can other customers see my details?", a: "No. Authenticated customers can access only their own subscription, payment, address and dispatch records." },
     ],
   },
+  { key: "returns", title: "Returns, refunds and damaged copies", items: [
+    { q: "What if my issue is damaged, missing or delayed?", a: "Contact support with your order details and, for damage, a photo. Report a missing issue within 14 days of the expected delivery date. We will investigate and, where eligible, arrange a replacement or refund for that issue." },
+    { q: "When can I receive a refund?", a: "Request cancellation within seven days of purchase before preparation or dispatch for a full refund under the published policy. A damaged or missing eligible issue may be replaced or refunded. Copies delivered in good condition are generally not refundable." },
+  ] },
+  { key: "gift", title: "Gift subscriptions", items: [
+    { q: "Can I send it as a gift?", a: "Yes. Enter the recipient's India delivery address at checkout. Ask support first if you need an international delivery or a gift message." },
+  ] },
+  { key: "bulk", title: "Bulk and corporate orders", items: [
+    { q: "Can our office order multiple copies?", a: "Yes. Choose a quantity for one India delivery address, or contact us for a tailored bulk enquiry." },
+  ] },
+  { key: "privacy", title: "Privacy and email preferences", items: [
+    { q: "Will a purchase subscribe me to marketing emails?", a: "No. Purchasing the newspaper does not add you to a marketing list. There is no newsletter signup at present." },
+  ] },
 ] as const;
 
-export const FOOTER_DELIVERY_REGIONS = [
-  "India",
-  "United Kingdom",
-  "Ireland",
-  "Germany",
-  "France",
-  "Spain",
-  "Italy",
-  "Netherlands",
-] as const;
+export const FOOTER_DELIVERY_REGIONS = ["India (free)", "International: enquire first"] as const;
 
 export const FOOTER_PAYMENT_METHODS = [
-  "Razorpay checkout planned",
-  "Methods confirmed at launch",
+  "Razorpay secure checkout",
+  "Available methods shown before payment",
 ] as const;
 
 /**
@@ -368,15 +352,16 @@ export const FOOTER_PAYMENT_METHODS = [
  */
 export const ABOUT_INTRO = {
   eyebrow: "About us",
-  title: "Made for better time away from screens.",
-  body: "Offscroll Times is an independent print publication being built in India for curious readers across the country. Our goal is simple: make a monthly newspaper people genuinely look forward to opening, solving and sharing.",
+  title: "What if a newspaper was something you did?",
+  body: "The Offscroll Times began with a simple question: what if a newspaper wasn't something you just read, but something you actually did? So we made one. Every monthly issue is filled with puzzles, games, curious facts, illustrations and challenges. Pick a page, grab a pencil and make a little time your own.",
 };
 
 export const WHO_WE_ARE = {
   paragraphs: [
-    "We're a small team based in Bengaluru, building one thing: a print newspaper that makes putting your phone down feel like a reward instead of a chore.",
-    "Our work brings together puzzle development, illustration, print production and subscriber care. Every grid is tested by a fresh pair of eyes before it goes anywhere near a printer.",
-    "Our mission is simple: twenty-plus minutes of genuine, screen-free attention, delivered to your door, every single month.",
+    "We kept reaching for our phones without noticing. A few minutes of scrolling became half an hour, and we missed the small things: a pencil, a puzzle, a silly answer shared across the table.",
+    "For some of us, it brought back childhood afternoons solving riddles and crosswords with our parents. We would guess, argue, laugh and keep going. They felt ordinary then, but became the moments we remember.",
+    "Life is busier now, so we made something you can pick up for five minutes or lose yourself in for an hour. Start anywhere. Play alone or challenge someone beside you. There are no rules about how you offscroll.",
+    "That's how The Offscroll Times came to life: our way of bringing back paper, pencils, puzzles and a few minutes that are completely yours. We made it because we missed those moments. We hope you enjoy them too.",
   ],
   location: "Bengaluru, India — printing and shipping across India.",
   image: { src: "/images/about-desk-sketches.jpg", alt: "A desk covered in early puzzle-grid sketches, a pencil and a coffee mug" },
@@ -399,12 +384,12 @@ export const TEAM_ROLES = [
 ] as const;
 
 export const WHY_US = [
-  { title: "Original content", body: "Every puzzle is written from scratch for this issue. Nothing is licensed from a generic puzzle bank." },
-  { title: "Regional relevance", body: "Trivia, references and themes tuned to where our readers actually live." },
-  { title: "Careful design", body: "Layout, type and spacing get as much attention as the puzzles themselves." },
-  { title: "Real testing", body: "Every grid is solved by a stranger before it's solved by you. If it stumps a tester for the wrong reasons, it gets rebuilt." },
-  { title: "Print quality", body: "Real paper stock and print settings chosen for pen and pencil, not a printer-friendly PDF." },
-  { title: "Screen-free by design", body: "No app, no login, no notifications. Just a physical thing that respects your attention." },
+  { title: "Original puzzles, every time", body: "We create each edition's puzzles, games and ideas for the issue rather than dropping a generic puzzle collection onto the page." },
+  { title: "Made for our Offscrollers", body: "Trivia and little details are chosen with our readers in mind, so each edition feels familiar, relevant and personal." },
+  { title: "Designed to be played", body: "Type, illustrations and spacing are designed for pencils, scribbles and real hands." },
+  { title: "Tested until it's right", body: "We write, solve, test and rethink puzzles until the clues and difficulty feel right." },
+  { title: "Printed properly", body: "We choose paper and printing for how the issue feels and how a pencil moves across it." },
+  { title: "Delivered to your door", body: "We handle printing, packing and posting so the newspaper arrives ready to open and play." },
 ] as const;
 
 export const PRODUCTION_PROCESS = [
@@ -436,7 +421,7 @@ export const PRODUCTION_PROCESS = [
   {
     num: "06",
     title: "Delivery",
-    body: "Each issue is packed and posted on a schedule timed to subscribers' billing cycles.",
+    body: "Each issue is packed and posted to eligible subscribers on the monthly edition schedule.",
   },
 ] as const;
 
@@ -458,7 +443,7 @@ export const BEHIND_THE_SCENES = [
 /** Content for the paid product subscription page. */
 export const SUBSCRIPTION_INTRO = {
   eyebrow: "Subscription",
-  title: "One plan. A real newspaper, every time it renews.",
+  title: "A new edition every month. Choose your term.",
   body: "Choose a prepaid term and see its full price, delivery schedule, renewal and cancellation details before checkout.",
 };
 
@@ -475,7 +460,7 @@ export const SAMPLE_PAGES = [
   {
     key: "cover",
     label: "Cover",
-    heading: "THE\nPUZZLE\nPOST",
+    heading: "THE\nOFFSCROLL\nTIMES",
     tiles: ["Issue No.", "This month's theme"],
   },
   {
@@ -500,7 +485,7 @@ export const SAMPLE_PAGES = [
 
 export const SHIPPING_INFO = {
   cost: "Delivery is free across India — no extra shipping fee at checkout.",
-  estimate: "Issues are dispatched in the first week of the month and typically arrive within 3–10 business days, depending on your country's postal service.",
+  estimate: "Issues are dispatched in the first week of the month. Delivery within India is estimated at 3–7 business days after dispatch, depending on the destination and postal service.",
 };
 
 export const CANCELLATION_INFO = {

@@ -28,9 +28,9 @@ function IssueMockup() {
         <p className="m-0 font-display text-[2rem] leading-[0.95] font-bold tracking-[-0.02em] sm:text-[2.6rem]">
           THE
           <br />
-          PUZZLE
+          OFFSCROLL
           <br />
-          POST
+          TIMES
         </p>
       </div>
       <div className="grid grid-cols-3 gap-px border-t-2 border-graphite bg-graphite">
@@ -61,15 +61,17 @@ export function Hero() {
         <div className="hero-reveal text-center md:text-left">
           <p className={`${EYEBROW} text-graphite`}>A fresh issue every month</p>
           <h1 className="m-0 font-display text-[clamp(2.3rem,6.4vw,3.8rem)] leading-[0.98] font-bold tracking-[-0.03em] text-balance">
-            A monthly newspaper full of puzzles, games and fun facts.
+            A monthly newspaper full of puzzles, games, laughs and fun facts.
           </h1>
           <p className="mx-auto mt-6 max-w-[46ch] text-[clamp(1.02rem,1.5vw,1.16rem)] leading-relaxed text-graphite-soft text-pretty md:mx-0">
-            Every issue brings fresh crosswords, brain teasers, family games and local trivia
-            straight to your door. Twenty plus activities, zero screens, an hour of real fun.
+            Every issue brings screen-free ways to play, from crosswords and brain teasers to
+            family games and curious trivia, delivered straight to your doorstep. One newspaper.
+            No scrolling. Just fun.
           </p>
+          <p className="mx-auto mt-3 max-w-[46ch] font-display text-[1.05rem] font-semibold md:mx-0">Your monthly escape from the scroll, packed with puzzles, games and fun.</p>
           <div className="mt-8 flex flex-wrap items-center justify-center gap-x-6 gap-y-4 md:justify-start">
             <a href="#plans" className={CTA}>
-              Choose your subscription
+              Start a subscription
             </a>
             <a href="#whats-inside" className="text-[14.5px] text-graphite-soft underline">
               See what is inside
@@ -80,7 +82,7 @@ export function Hero() {
               Monthly print edition
             </span>
             <span className="rounded-full border border-graphite bg-paper-raised px-3 py-1.5 font-mono text-[10.5px] font-bold tracking-[0.08em] uppercase">
-              India + selected Europe
+              Free India delivery · international enquiries welcome
             </span>
           </div>
         </div>
@@ -121,8 +123,9 @@ export function ProductPreview() {
       <Reveal className={`${SHELL} py-14 md:py-20 lg:py-24`}>
         <p className={`${EYEBROW} text-graphite-mute`}>A peek inside</p>
         <h2 className={`${H2} max-w-[24ch]`}>
-          A taste of this month's puzzles. The rest is inside your copy.
+          Fun awaits inside.
         </h2>
+        <p className="mt-4 max-w-[54ch] text-graphite-soft">A sneak peek at our puzzles. Discover more inside your copy.</p>
 
         <div className="mt-10 grid items-center gap-12 md:mt-14 lg:grid-cols-[0.9fr_1.1fr]">
           <FlipBook pages={SAMPLE_PAGES} />
@@ -179,6 +182,34 @@ export function WhyLove() {
   );
 }
 
+const SCROLL_COMPARISON = [
+  ['Ads interrupting you?', 'Constantly', 'We have better manners.'],
+  ['Your brain gets involved', 'Not invited', 'Reluctantly, yes.'],
+  ['After you are done', '“What was I doing?”', '“Okay, that was worth it.”'],
+  ['Brain activity', 'On airplane mode', 'Reluctantly online.'],
+  ['What you remember tomorrow', 'Absolutely nothing', 'At least one ridiculous fact.'],
+  ['Your thumb gets exercise', 'Olympic level', 'Finally, a break.'],
+  ['Your mother asks what you are doing', '“Nothing.”', '“Reading.”'],
+  ['What happens next', 'Nobody knows. Keep scrolling.', 'There is an actual ending.'],
+  ['Worth sending to a friend', 'Not always', '“You have to read this.”'],
+] as const;
+
+export function ScrollComparison() {
+  return <section className="border-b border-graphite bg-paper">
+    <div className={`${SHELL} py-14 md:py-20`}>
+      <p className={`${EYEBROW} text-graphite-mute`}>A different kind of break</p>
+      <h2 className={H2}>Scrolling vs. Offscrolling</h2>
+      <div className="mt-8 overflow-x-auto rounded-2xl border border-graphite bg-paper-raised shadow-[5px_5px_0_rgba(23,21,18,.15)]">
+        <table className="w-full min-w-[560px] border-collapse text-left text-sm">
+          <thead className="bg-sun font-display text-lg"><tr><th scope="col" className="p-4">The moment</th><th scope="col" className="p-4">Scrolling</th><th scope="col" className="p-4">Offscrolling</th></tr></thead>
+          <tbody>{SCROLL_COMPARISON.map(([moment, scroll, paper]) => <tr key={moment} className="border-t border-rule"><th scope="row" className="p-4 font-semibold">{moment}</th><td className="p-4 text-graphite-soft">{scroll}</td><td className="p-4 font-semibold text-founder-deep">{paper}</td></tr>)}</tbody>
+        </table>
+      </div>
+      <p className="mt-3 text-xs text-graphite-mute">A playful comparison, not a scientific claim.</p>
+    </div>
+  </section>
+}
+
 export function HowItWorks() {
   return (
     <section id="how-it-works" className="border-b border-graphite bg-paper scroll-mt-24">
@@ -219,7 +250,7 @@ export function Plans() {
       <Reveal className={`${SHELL} py-14 md:py-20 lg:py-24`}>
         <p className={`${EYEBROW} text-center text-graphite-mute`}>Subscription plans</p>
         <h2 className={`${H2} mx-auto max-w-[20ch] text-center text-balance`}>
-          Choose how often your puzzles arrive.
+          Choose your Offscroll rhythm.
         </h2>
 
         <div className="mt-10 grid gap-6 md:mt-14 md:grid-cols-2 xl:grid-cols-4">
@@ -333,14 +364,11 @@ export function Testimonials() {
   return (
     <section id="testimonials" className="border-b border-graphite bg-paper scroll-mt-24">
       <Reveal className={`${SHELL} py-14 md:py-20 lg:py-24`}>
-        <p className={`${EYEBROW} text-graphite-mute`}>What early readers say</p>
-        <h2 className={`${H2} max-w-[22ch]`}>Beta-reader feedback, ahead of public launch.</h2>
-        <p className="mt-4 max-w-[60ch] leading-relaxed text-graphite-soft">
-          These are early reactions from the beta readers who tried our first issues, not verified
-          customer reviews. We'll add verified reviews here once the first public batch ships.
-        </p>
+        <p className={`${EYEBROW} text-graphite-mute`}>Reader reviews</p>
+        <h2 className={`${H2} max-w-[22ch]`}>Real words from real readers, when they arrive.</h2>
+        <p className="mt-4 max-w-[60ch] leading-relaxed text-graphite-soft">We will share approved beta-reader feedback and verified customer reviews here as they become available.</p>
 
-        <div className="mt-9 grid gap-6 md:mt-12 md:grid-cols-3">
+        {TESTIMONIALS.length > 0 && <div className="mt-9 grid gap-6 md:mt-12 md:grid-cols-3">
           {TESTIMONIALS.map((t) => (
             <figure
               key={t.name}
@@ -367,7 +395,7 @@ export function Testimonials() {
               </figcaption>
             </figure>
           ))}
-        </div>
+        </div>}
       </Reveal>
     </section>
   );
@@ -382,7 +410,7 @@ export function FinalCta() {
           Put something worth opening through your letterbox.
         </h2>
         <p className="m-0 max-w-[48ch] leading-relaxed text-graphite-soft">
-          Choose a duration and receive a fresh puzzle newspaper every month. No inbox clutter, no marketing opt-in.
+          Choose a prepaid term and receive a fresh puzzle newspaper each month. Renewal is manual.
         </p>
         <a href={SUBSCRIBE_HREF} className={`${CTA} mt-2`}>
           Choose your subscription
@@ -390,4 +418,17 @@ export function FinalCta() {
       </Reveal>
     </section>
   );
+}
+
+export function MiniPackPrompt() {
+  return <section className="border-b border-graphite bg-teal text-paper">
+    <div className={`${SHELL} flex flex-col items-start justify-between gap-6 py-12 md:flex-row md:items-center md:py-16`}>
+      <div>
+        <p className={`${EYEBROW} text-paper`}>A little something for right now</p>
+        <h2 className={`${H2} max-w-[18ch]`}>Get a free mini puzzle pack.</h2>
+        <p className="mt-3 max-w-[45ch]">Play three bite-sized games on this page. No account or email needed.</p>
+      </div>
+      <a href="#mini-puzzle-pack" className={`${CTA_OUTLINE} shrink-0`}>Play the free games</a>
+    </div>
+  </section>
 }

@@ -12,8 +12,11 @@ import {
   WhatsInside,
   WhoFor,
   WhyLove,
+  ScrollComparison,
+  MiniPackPrompt,
 } from '#/components/sections'
 import { Faq, SiteFooter } from '#/components/Faq'
+import { PaperPlayground } from '#/components/PaperPlayground'
 
 export const Route = createFileRoute('/')({
   head: () => ({
@@ -36,15 +39,18 @@ function Home() {
 
       <main id="main-content">
         <Hero />
+        <PaperPlayground />
         <WhatsInside />
         <ProductPreview />
         <WhyLove />
+        <ScrollComparison />
         <HowItWorks />
         <SubscriptionPrompt />
         <Plans />
         <WhoFor />
         <Testimonials />
         <Faq />
+        <MiniPackPrompt />
         <FinalCta />
       </main>
 

@@ -600,3 +600,54 @@ a:hover .nav-arrow {
     transform: none;
   }
 }
+/* Free home-page games: graph paper, printed cards and tactile controls. */
+.paper-playground { background-color: #b6c99c; background-image: linear-gradient(#33452d26 1px, transparent 1px), linear-gradient(90deg, #33452d26 1px, transparent 1px); background-size: 24px 24px; padding: clamp(48px, 7vw, 96px) 20px; color: #171512; border-block: 2px solid #171512; }
+.paper-playground-shell { max-width: 760px; margin: auto; text-align: center; }
+.play-eyebrow { font-family: var(--font-mono, monospace); font-size: 11px; font-weight: 800; letter-spacing: .15em; text-transform: uppercase; margin: 0 0 16px; }
+.paper-playground h2 { font-family: var(--font-display, sans-serif); font-size: clamp(32px, 5vw, 56px); font-weight: 800; line-height: 1.05; letter-spacing: -.035em; margin: 0; }
+.play-intro { max-width: 480px; margin: 20px auto 24px; line-height: 1.6; }
+.play-switcher { display: flex; justify-content: center; flex-wrap: wrap; gap: 8px; margin: 0 0 24px; }
+.play-switcher button { border: 2px solid #171512; border-radius: 999px; background: #fff9e6; color: #171512; padding: 10px 18px; font-weight: 700; cursor: pointer; }
+.play-switcher button[aria-pressed=true] { background: #171512; color: #fff9e6; }
+.play-card { max-width: 570px; margin: auto; border: 2px solid #171512; border-radius: 20px; background: #fff9e6; box-shadow: 5px 7px 0 #171512; overflow: hidden; }
+.play-card-bar { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 13px 18px; border-bottom: 2px solid #171512; background: #ffdc42; font: 800 11px var(--font-mono, monospace); letter-spacing: .06em; text-transform: uppercase; }
+.play-card-body { padding: clamp(20px, 4vw, 34px); }
+.play-card-body h3 { font-family: var(--font-display, sans-serif); font-size: clamp(21px, 3vw, 28px); font-weight: 800; line-height: 1.25; color: #086461; margin: 8px 0 16px; }
+.play-card-body p { line-height: 1.6; }
+.play-badge { display: grid; place-items: center; min-width: 56px; width: fit-content; height: 56px; padding-inline: 8px; margin: 0 auto 20px; border: 2px solid #171512; border-radius: 14px; background: #ffdc42; font-weight: 800; box-shadow: 3px 3px 0 #171512; }
+.play-primary { display: flex; align-items: center; justify-content: center; gap: 12px; width: 100%; padding: 14px 20px; margin-top: 24px; min-height: 48px; border: 2px solid #171512; border-radius: 999px; background: #cc3021; color: #fff; font-weight: 800; cursor: pointer; box-shadow: 2px 3px 0 #171512; }
+.play-primary:disabled { opacity: .7; cursor: wait; }
+.play-check { display: flex; justify-content: center; align-items: center; gap: 10px; min-height: 44px; margin-top: 16px; font-size: 14px; }
+.play-check input { width: 20px; height: 20px; accent-color: #086461; }
+.play-options { display: grid; gap: 12px; margin-top: 24px; }
+.play-options button { display: flex; align-items: center; gap: 16px; text-align: left; border: 2px solid #171512; border-radius: 12px; min-height: 54px; padding: 12px 16px; background: #fff; color: #171512; font-weight: 700; cursor: pointer; }
+.play-options button span { color: #086461; font-family: monospace; }
+.play-options button:hover, .play-switcher button:hover { background: #ffdc42; color: #171512; }
+.play-answers { margin: 20px 0; padding-left: 24px; text-align: left; font-size: 14px; }
+.play-answers li { padding: 10px 0; }
+.play-answers p { margin: 6px 0 0; }
+.play-puzzle { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; width: min(100%, 280px); margin: 24px auto; }
+.play-puzzle button, .play-gap { aspect-ratio: 1; border-radius: 12px; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+.play-puzzle button { border: 2px solid #171512; background: #ffdc42; color: #171512; font-size: 30px; font-weight: 800; cursor: pointer; box-shadow: 2px 3px 0 #171512; }
+.play-puzzle button[aria-disabled=true] { background: #f0e5c6; cursor: default; box-shadow: none; }
+.play-puzzle button span { font: 700 7px monospace; letter-spacing: .1em; }
+.play-gap { border: 2px dashed #827659; color: #827659; font-size: 28px; }
+.play-die { display: grid; grid-template-columns: repeat(3, 1fr); gap: 9px; width: 108px; height: 108px; border: 3px solid #171512; border-radius: 22px; padding: 17px; margin: 28px auto; background: #ffdc42; box-shadow: 5px 6px 0 #171512; }
+.play-die .pip { background: #171512; border-radius: 50%; }
+.play-result { min-height: 48px; font-weight: 700; }
+.play-fact { margin: 12px 0 0; padding: 16px; border: 2px dashed #171512; border-radius: 14px; background: #edf4dc; text-align: left; }
+.play-fact-label { color: #086461; font: 800 11px var(--font-mono, monospace); letter-spacing: .1em; text-transform: uppercase; }
+.play-fact p { margin: 8px 0; font-weight: 700; }
+.play-fact a { font-size: 12px; color: #086461; text-underline-offset: 3px; }
+.play-footnote { font-size: 12px; margin: 24px 0 12px; }
+.play-subscribe { display: inline-block; color: #171512; font-weight: 800; text-underline-offset: 4px; padding: 12px 0; }
+.paper-playground :focus-visible { outline: 3px solid #086461; outline-offset: 4px; }
+@media (prefers-reduced-motion: no-preference) {
+  .play-die.is-rolling { animation: paper-dice-roll .5s ease-in-out; }
+  .play-primary, .play-puzzle button { transition: transform .15s ease; }
+  .play-primary:not(:disabled):hover { transform: translateY(-2px); }
+  .play-puzzle button[aria-disabled=false]:hover { transform: translateY(-3px); }
+  .play-question { animation: paper-question-in .2s ease-out; }
+  @keyframes paper-dice-roll { 0%,100% { transform: rotate(0); } 25% { transform: rotate(-18deg) translateY(-10px); } 65% { transform: rotate(20deg) translateY(-5px); } }
+  @keyframes paper-question-in { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+}

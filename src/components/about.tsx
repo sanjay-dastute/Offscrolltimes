@@ -82,7 +82,7 @@ export function WhyUsAbout() {
     <section id="why-us" className="border-b border-graphite bg-paper scroll-mt-24">
       <Reveal className={`${SHELL} py-14 md:py-20 lg:py-24`}>
         <p className={`${EYEBROW} text-graphite-mute`}>Why us</p>
-        <h2 className={`${H2} max-w-[22ch]`}>Six things we don't compromise on.</h2>
+        <h2 className={`${H2} max-w-[22ch]`}>Why we charge this much.</h2>
 
         <div className="mt-10 grid gap-px border border-graphite bg-graphite sm:grid-cols-2 md:mt-14 lg:grid-cols-3">
           {WHY_US.map((item) => (

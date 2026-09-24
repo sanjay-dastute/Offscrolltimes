@@ -63,7 +63,7 @@ export function SiteHeader() {
               href={SUBSCRIBE_HREF}
               className="rounded-full border border-graphite bg-graphite px-3 py-2.5 font-mono text-[10.5px] font-semibold tracking-[0.08em] text-paper uppercase no-underline outline-none transition-colors hover:bg-sun hover:text-graphite focus-visible:ring-2 focus-visible:ring-founder-deep focus-visible:ring-offset-2 sm:px-4 sm:text-[11.5px]"
             >
-              <span className="hidden sm:inline">Choose your subscription</span><span className="sm:hidden">Choose plan</span>
+              <span>Subscribe</span>
             </a>
           </div>
 
