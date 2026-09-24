@@ -10,6 +10,7 @@ backups/
 .env
 .dev.vars.*
 .env.*
+client_secret_*.json
 .nitro
 .tanstack
 .wrangler
