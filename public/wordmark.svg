@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="140" height="45" viewBox="0 0 280 90">
+  <rect x="0" y="6" width="20" height="20" rx="10" fill="#ffcf4d" stroke="#171512" stroke-width="2.5"/>
+  <rect x="0" y="6" width="10" height="10" fill="#171512"/>
+  <rect x="10" y="16" width="10" height="10" fill="#171512"/>
+  <text x="30" y="24" font-family="Georgia, 'Times New Roman', serif" font-weight="700" font-size="19" letter-spacing="0.5" fill="#171512">OFFSCROLL TIMES</text>
+  <line x1="0" y1="40" x2="280" y2="40" stroke="#171512" stroke-width="2"/>
+  <text x="0" y="62" font-family="Georgia, 'Times New Roman', serif" font-weight="600" font-size="13" letter-spacing="2.5" fill="#413b34">MONTHLY PUZZLE EDITION</text>
+</svg>

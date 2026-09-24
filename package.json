@@ -1,0 +1,62 @@
+{
+  "name": "offscroll-times",
+  "private": true,
+  "type": "module",
+  "imports": {
+    "#/*": "./src/*"
+  },
+  "scripts": {
+    "dev": "pnpm run db:migrate:local && vite dev --port 3000",
+    "db:migrate:local": "wrangler d1 migrations apply LIFECYCLE_DB --local --config wrangler.jsonc",
+    "generate-routes": "tsr generate",
+    "build": "vite build",
+    "test": "vitest run --config vitest.config.ts",
+    "preview": "vite preview",
+    "deploy": "wrangler deploy",
+    "typecheck": "tsc --noEmit"
+    ,"db:verify-backup": "node scripts/verify-d1-backup.mjs",
+    "db:verify-encrypted-backup": "node scripts/verify-encrypted-backup.mjs",
+    "security:client-bundle": "node scripts/verify-client-bundle.mjs"
+  },
+  "dependencies": {
+    "@fontsource-variable/bricolage-grotesque": "^5.3.0",
+    "@fontsource-variable/fredoka": "^5.3.0",
+    "@fontsource-variable/instrument-sans": "^5.3.0",
+    "@fontsource-variable/jetbrains-mono": "^5.3.0",
+    "@fontsource/caveat": "^5.3.0",
+    "@tailwindcss/vite": "^4.1.18",
+    "@tanstack/react-devtools": "latest",
+    "@tanstack/react-router": "latest",
+    "@tanstack/react-router-devtools": "latest",
+    "@tanstack/react-start": "latest",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "tailwindcss": "^4.1.18"
+  },
+  "devDependencies": {
+    "@cloudflare/vite-plugin": "^1.26.0",
+    "@tanstack/devtools-vite": "latest",
+    "@tanstack/router-cli": "^1.132.0",
+    "@types/bun": "^1.3.14",
+    "@types/node": "^22.10.2",
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
+    "@vitejs/plugin-react": "^6.0.1",
+    "typescript": "^6.0.2",
+    "vite": "^8.0.0",
+    "vitest": "^4.1.11",
+    "wrangler": "^4.70.0"
+  },
+  "pnpm": {
+    "overrides": {
+      "yaml": "2.8.3",
+      "js-yaml": "4.3.2"
+    },
+    "onlyBuiltDependencies": [
+      "esbuild",
+      "lightningcss",
+      "sharp",
+      "workerd"
+    ]
+  }
+}

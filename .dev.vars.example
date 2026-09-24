@@ -1,0 +1,21 @@
+# Copy to .dev.vars for local development. Never commit real values.
+SESSION_SECRET=generate-at-least-32-random-characters
+AUDIT_CHAIN_SECRET=generate-a-different-random-secret
+EXPORT_SIGNING_SECRET=generate-a-different-random-secret
+LIFECYCLE_SECRET=generate-a-different-random-secret
+
+GOOGLE_CLIENT_ID=replace-with-google-web-client-id
+GOOGLE_CLIENT_SECRET=replace-with-google-web-client-secret
+MICROSOFT_CLIENT_ID=replace-with-entra-application-client-id
+MICROSOFT_CLIENT_SECRET=replace-with-entra-client-secret-value
+AUTH_ALLOWED_ORIGINS=http://localhost:3000,https://offscrolltimes.com,https://www.offscrolltimes.com
+
+RAZORPAY_KEY_ID=replace-later
+RAZORPAY_KEY_SECRET=replace-later
+RAZORPAY_WEBHOOK_SECRET=replace-later
+TURNSTILE_SECRET_KEY=replace-with-cloudflare-turnstile-secret
+
+ADMIN_IDENTITY_IDS=google:provider-subject-or-microsoft:provider-subject
+BUSINESS_TIME_ZONE=Asia/Kolkata
+BUSINESS_CUTOFF_DAY=20
+FULFIL_PAID_AFTER_CANCELLATION=true

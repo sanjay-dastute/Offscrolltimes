@@ -1,0 +1,65 @@
+{
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "offscroll-times",
+	"compatibility_date": "2025-09-02",
+	"compatibility_flags": [
+		"nodejs_compat"
+	],
+	"main": "src/worker.ts",
+	"routes": [
+		{
+			"pattern": "offscrolltimes.com",
+			"custom_domain": true
+		},
+		{
+			"pattern": "www.offscrolltimes.com",
+			"custom_domain": true
+		}
+	],
+	"vars": {
+		"AUTH_ALLOWED_ORIGINS": "https://offscrolltimes.com,https://www.offscrolltimes.com",
+		"BUSINESS_TIME_ZONE": "Asia/Kolkata"
+	},
+	"d1_databases": [
+		{
+			"binding": "LIFECYCLE_DB",
+			"database_name": "offscroll-times-production",
+			// Dedicated Offscroll Times production database.
+			"database_id": "65c26259-c48e-42d5-a700-a2f2b5d13fdd",
+			"migrations_dir": "migrations"
+		}
+	],
+	"r2_buckets": [
+		{
+			"binding": "OFFSCROLL_FILES",
+			"bucket_name": "offscroll-times-production-files",
+			"preview_bucket_name": "offscroll-times-preview-files"
+		},
+		{
+			"bucket_name": "offscroll-times-production-files",
+			"binding": "offscroll_times_production_files",
+			"remote": true
+		},
+		{
+			"bucket_name": "offscroll-times-preview-files",
+			"binding": "offscroll_times_preview_files",
+			"remote": true
+		}
+	],
+	"observability": {
+		"enabled": true,
+		"logs": {
+			"enabled": true,
+			"head_sampling_rate": 1
+		},
+		"traces": {
+			"enabled": true,
+			"head_sampling_rate": 0.05
+		}
+	},
+	"triggers": {
+		"crons": [
+			"* * * * *"
+		]
+	}
+}
