@@ -155,8 +155,8 @@ export function WhyLove() {
   return (
     <section
       id="why-love"
-      className="scallop-top scallop-bottom scroll-mt-24 bg-sun"
-      style={scallop("var(--color-sun)")}
+      className="why-love-section scallop-top scallop-bottom scroll-mt-24"
+      style={scallop("#f3e6c8")}
     >
       <Reveal className={`${SHELL} py-16 md:py-24`}>
         <p className={`${EYEBROW} text-center text-graphite`}>Why customers love it</p>
@@ -164,18 +164,25 @@ export function WhyLove() {
           A small monthly ritual worth looking forward to.
         </h2>
 
-        <div className="mt-10 grid gap-6 sm:grid-cols-2 md:mt-14 lg:grid-cols-3">
-          {WHY_LOVE.map((item) => (
-            <article
-              key={item.title}
-              className="rounded-2xl border border-graphite bg-paper-raised p-7 shadow-[6px_6px_0_rgba(23,21,18,0.14)]"
-            >
-              <h3 className="m-0 mb-3 font-display text-[1.25rem] leading-tight font-bold tracking-[-0.015em]">
-                {item.title}
-              </h3>
-              <p className="m-0 leading-relaxed text-graphite-soft">{item.body}</p>
-            </article>
-          ))}
+        <div className="why-love-composition mt-10 md:mt-14">
+          <div className="why-pencil" aria-hidden="true">
+            <span className="why-pencil-eraser" />
+            <span className="why-pencil-band" />
+            <span className="why-pencil-body"><span>OFFSCROLL TIMES</span></span>
+            <span className="why-pencil-wood" />
+            <span className="why-pencil-lead" />
+          </div>
+          <ol className="why-ribbons">
+            {WHY_LOVE.map((item, index) => (
+              <li className="why-ribbon" key={item.title}>
+                <span className="why-ribbon-number" aria-hidden="true">{String(index + 1).padStart(2, "0")}</span>
+                <div>
+                  <h3>{item.title}</h3>
+                  <p>{item.body}</p>
+                </div>
+              </li>
+            ))}
+          </ol>
         </div>
       </Reveal>
     </section>
