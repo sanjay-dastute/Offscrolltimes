@@ -195,17 +195,19 @@ const SCROLL_COMPARISON = [
 ] as const;
 
 export function ScrollComparison() {
-  return <section className="border-b border-graphite bg-paper">
-    <div className={`${SHELL} py-14 md:py-20`}>
+  return <section className="scroll-comparison border-b border-graphite" aria-labelledby="comparison-title">
+    <div className={`${SHELL} relative py-14 md:py-20`}>
       <p className={`${EYEBROW} text-graphite-mute`}>A different kind of break</p>
-      <h2 className={H2}>Scrolling vs. Offscrolling</h2>
-      <div className="mt-8 overflow-x-auto rounded-2xl border border-graphite bg-paper-raised shadow-[5px_5px_0_rgba(23,21,18,.15)]">
-        <table className="w-full min-w-[560px] border-collapse text-left text-sm">
-          <thead className="bg-sun font-display text-lg"><tr><th scope="col" className="p-4">The moment</th><th scope="col" className="p-4">Scrolling</th><th scope="col" className="p-4">Offscrolling</th></tr></thead>
-          <tbody>{SCROLL_COMPARISON.map(([moment, scroll, paper]) => <tr key={moment} className="border-t border-rule"><th scope="row" className="p-4 font-semibold">{moment}</th><td className="p-4 text-graphite-soft">{scroll}</td><td className="p-4 font-semibold text-founder-deep">{paper}</td></tr>)}</tbody>
+      <h2 id="comparison-title" className={H2}>Scrolling vs. Offscrolling</h2>
+      <p className="mt-4 max-w-[55ch] leading-relaxed text-graphite-soft">Same spare moment. Two very different ways to spend it.</p>
+      <span className="comparison-stamp" aria-hidden="true">PUT<br />THE<br />PHONE<br />DOWN</span>
+      <div className="comparison-scroll mt-8 overflow-x-auto" tabIndex={0} role="region" aria-label="Scrolling versus Offscrolling comparison; scroll sideways on narrow screens">
+        <table className="comparison-table w-full min-w-[600px] text-left text-sm">
+          <thead><tr><th scope="col">The moment</th><th scope="col"><span aria-hidden="true">↟</span> Scrolling</th><th scope="col"><span aria-hidden="true">✦</span> Offscrolling</th></tr></thead>
+          <tbody>{SCROLL_COMPARISON.map(([moment, scroll, paper], index) => <tr key={moment}><th scope="row"><span className="comparison-number" aria-hidden="true">{String(index + 1).padStart(2, '0')}</span>{moment}</th><td>{scroll}</td><td><span aria-hidden="true" className="comparison-spark">✦</span>{paper}</td></tr>)}</tbody>
         </table>
       </div>
-      <p className="mt-3 text-xs text-graphite-mute">A playful comparison, not a scientific claim.</p>
+      <p className="mt-3 text-xs text-graphite-mute">A playful comparison, not a scientific claim. <span className="comparison-mobile-hint">Swipe the table to see every column.</span></p>
     </div>
   </section>
 }

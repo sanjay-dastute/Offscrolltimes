@@ -601,7 +601,25 @@ a:hover .nav-arrow {
   }
 }
 /* Free home-page games: graph paper, printed cards and tactile controls. */
-.paper-playground { background-color: #b6c99c; background-image: linear-gradient(#33452d26 1px, transparent 1px), linear-gradient(90deg, #33452d26 1px, transparent 1px); background-size: 24px 24px; padding: clamp(48px, 7vw, 96px) 20px; color: #171512; border-block: 2px solid #171512; }
+.scroll-comparison { background-color: #dce9e3; background-image: radial-gradient(#284b4720 1px, transparent 1px), linear-gradient(135deg, #ffffff50, transparent 70%); background-size: 14px 14px, auto; }
+.comparison-stamp { position: absolute; top: 55px; right: 50px; display: grid; place-items: center; width: 93px; height: 93px; border: 2px solid #0e5751; border-radius: 50%; color: #0e5751; font: 800 11px/1.05 var(--font-mono, monospace); text-align: center; transform: rotate(14deg); opacity: .85; }
+.comparison-scroll { scrollbar-color: #0e5751 transparent; }
+.comparison-scroll:focus-visible { outline: 3px solid #0e5751; outline-offset: 3px; }
+.comparison-table { border-collapse: separate; border-spacing: 0 9px; }
+.comparison-table th, .comparison-table td { padding: 17px 19px; vertical-align: middle; }
+.comparison-table thead th { background: #171512; color: #fff9e6; font-family: var(--font-display, sans-serif); font-size: 17px; }
+.comparison-table thead th:first-child, .comparison-table tbody th { border-radius: 12px 0 0 12px; }
+.comparison-table thead th:last-child, .comparison-table tbody td:last-child { border-radius: 0 12px 12px 0; }
+.comparison-table thead th:last-child { background: #0e5751; }
+.comparison-table tbody th, .comparison-table tbody td { background: #fffaf0; border-top: 1px solid #171512; border-bottom: 1px solid #171512; }
+.comparison-table tbody th { width: 34%; border-left: 1px solid #171512; font-weight: 750; }
+.comparison-table tbody td:nth-child(2) { width: 29%; color: #575b57; }
+.comparison-table tbody td:last-child { width: 37%; border-right: 1px solid #171512; background: #fbe9ad; color: #154e49; font-weight: 750; }
+.comparison-number { display: inline-block; min-width: 32px; margin-right: 9px; color: #0e5751; font: 800 11px var(--font-mono, monospace); }
+.comparison-spark { margin-right: 9px; color: #a23725; }
+.comparison-mobile-hint { display: none; }
+.paper-playground { background-color: #ead6c6; background-image: radial-gradient(circle at 14% 20%, #ffedba 0, transparent 28%), radial-gradient(circle at 86% 80%, #d1b5b5 0, transparent 30%), repeating-linear-gradient(115deg, #583f3212 0, #583f3212 1px, transparent 1px, transparent 26px); padding: clamp(48px, 7vw, 96px) 20px; color: #171512; border-block: 2px solid #171512; }
+@media (max-width: 767px) { .comparison-stamp { display: none; } .comparison-mobile-hint { display: inline; } .comparison-table th, .comparison-table td { padding: 14px 12px; } }
 .paper-playground-shell { max-width: 760px; margin: auto; text-align: center; }
 .play-eyebrow { font-family: var(--font-mono, monospace); font-size: 11px; font-weight: 800; letter-spacing: .15em; text-transform: uppercase; margin: 0 0 16px; }
 .paper-playground h2 { font-family: var(--font-display, sans-serif); font-size: clamp(32px, 5vw, 56px); font-weight: 800; line-height: 1.05; letter-spacing: -.035em; margin: 0; }
