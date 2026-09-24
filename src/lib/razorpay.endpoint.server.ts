@@ -4,7 +4,7 @@ import { isSameOrigin } from '#/lib/security'
 import { json } from '#/lib/http.server'
 import { calculatePricing } from '#/lib/pricing.server'
 import { applyCustomerPaymentSucceeded, recordAccountEvent, registerCustomerCheckout, saveCustomerCheckoutDetails, type CustomerAddress } from '#/lib/customer/store.server'
-import { createRazorpayOrder, razorpayPublicKey, retrieveRazorpayPayment, verifyCheckoutSignature, verifyWebhookSignature } from './razorpay.server'
+import { createRazorpayOrder, RazorpayApiError, razorpayPublicKey, retrieveRazorpayPayment, verifyCheckoutSignature, verifyWebhookSignature } from './razorpay.server'
 import { BUSINESS_DETAILS, CONTACT_EMAIL, CONTACT_HOURS } from '#/content/site'
 import { recordCustomerOrder } from '#/lib/canonical-data.server'
 import { allowRequest } from '#/lib/rate-limit.server'
@@ -53,6 +53,7 @@ export async function razorpayCheckout(request:Request){
     if(discountCode&&!await allowRequest(request,'coupon_apply',20,60*60*1000,session.user.id))return json({error:'Too many promotional-code attempts. Try again later.'},429)
     const quote=await calculatePricing(db,{durationMonths,quantity,countryCode:delivery.country,discountCode,userId:session.user.id,now:Date.now()})
     if(!quote)return json({error:'This selection cannot be priced.'},422)
+    if(!Number.isSafeInteger(quote.totalMinor)||quote.totalMinor<100)return json({error:'The order total must be at least ₹1.'},422)
     const previous=await db.prepare(`SELECT razorpay_order_id,amount_minor,currency,pricing_snapshot_json FROM razorpay_orders WHERE owner_id=? AND idempotency_key=?`).bind(session.user.id,idempotencyKey).first<{razorpay_order_id:string;amount_minor:number;currency:string;pricing_snapshot_json:string}>()
     if(previous){const saved=JSON.parse(previous.pricing_snapshot_json);return json({ok:true,keyId:razorpayPublicKey(),orderId:previous.razorpay_order_id,amount:previous.amount_minor,currency:previous.currency,quote:saved,reused:true})}
     const subscriptionId=`rzp_${idempotencyKey}`,now=Date.now()
@@ -60,7 +61,10 @@ export async function razorpayCheckout(request:Request){
     await db.prepare(`UPDATE customer_subscriptions SET renewal_enabled=0 WHERE id=?`).bind(subscriptionId).run()
     await saveCustomerCheckoutDetails(db,{id:subscriptionId,userId:session.user.id,email,address:delivery,now})
     await db.prepare(`UPDATE customer_subscriptions SET contact_phone=? WHERE id=?`).bind(phone,subscriptionId).run()
-    const order=await createRazorpayOrder({amount:quote.totalMinor,currency:quote.currency,receipt:subscriptionId,notes:{subscription_id:subscriptionId,user_id:session.user.id}})
+    let order:Record<string,any>
+    try{order=await createRazorpayOrder({amount:quote.totalMinor,currency:quote.currency,receipt:subscriptionId,notes:{subscription_id:subscriptionId,user_id:session.user.id}})}
+    catch(error){if(error instanceof RazorpayApiError)return json({error:error.status===401?'Razorpay credentials were rejected.':'Payment service is unavailable. Please try again.'},error.status===401?401:500);throw error}
+    if(typeof order.id!=='string'||order.amount!==quote.totalMinor||order.currency!==quote.currency)return json({error:'Payment service returned an invalid order.'},502)
     await db.prepare(`INSERT INTO razorpay_orders(id,subscription_id,owner_id,razorpay_order_id,status,amount_minor,currency,pricing_snapshot_json,terms_accepted_at,created_at,updated_at,idempotency_key) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)`).bind(crypto.randomUUID(),subscriptionId,session.user.id,order.id,'created',quote.totalMinor,quote.currency,JSON.stringify(quote),now,now,now,idempotencyKey).run()
     await recordCustomerOrder(db,{userId:session.user.id,email,phone,subscriptionId,providerOrderId:order.id,currency:quote.currency,amountMinor:quote.totalMinor,pricingSnapshot:quote,address:delivery,termsAcceptedAt:now})
     return json({ok:true,keyId:razorpayPublicKey(),orderId:order.id,subscriptionId,amount:quote.totalMinor,currency:quote.currency,quote})
@@ -73,10 +77,12 @@ export async function razorpayCheckout(request:Request){
   }
   if(action==='verify'){
     const orderId=safe(body.razorpay_order_id),paymentId=safe(body.razorpay_payment_id),received=safe(body.razorpay_signature,300)
-    const row=await db.prepare(`SELECT subscription_id FROM razorpay_orders WHERE razorpay_order_id=? AND owner_id=?`).bind(orderId,session.user.id).first<{subscription_id:string}>()
+    if(!orderId||!paymentId||!received)return json({error:'Missing payment verification details.'},400)
+    const row=await db.prepare(`SELECT subscription_id,amount_minor,currency FROM razorpay_orders WHERE razorpay_order_id=? AND owner_id=?`).bind(orderId,session.user.id).first<{subscription_id:string;amount_minor:number;currency:string}>()
     if(!row||!verifyCheckoutSignature(orderId,paymentId,received))return json({error:'Payment verification failed.'},400)
-    const payment=await retrieveRazorpayPayment(paymentId)
-    if(payment.order_id!==orderId)return json({error:'Payment does not match this order.'},409)
+    let payment:Record<string,any>
+    try{payment=await retrieveRazorpayPayment(paymentId)}catch(error){if(error instanceof RazorpayApiError)return json({error:error.status===401?'Razorpay credentials were rejected.':'Payment verification is temporarily unavailable.'},error.status===401?401:500);throw error}
+    if(payment.order_id!==orderId||payment.amount!==row.amount_minor||payment.currency!==row.currency)return json({error:'Payment does not match this order.'},409)
     await db.prepare(`UPDATE razorpay_orders SET razorpay_payment_id=?,status=?,updated_at=? WHERE razorpay_order_id=?`).bind(paymentId,payment.status==='captured'?'captured':'verified',Date.now(),orderId).run()
     if(payment.status==='captured')await captured(db,{subscriptionId:row.subscription_id,userId:session.user.id,paymentId,paidAt:Number(payment.created_at)*1000})
     return json({ok:true,status:payment.status,subscriptionId:row.subscription_id})

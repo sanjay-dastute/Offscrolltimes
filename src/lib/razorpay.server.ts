@@ -6,16 +6,21 @@ function credentials() {
   return {keyId,keySecret}
 }
 
+export class RazorpayApiError extends Error {
+  constructor(public readonly status: number) { super(`Razorpay request failed (${status}).`) }
+}
+
 export function razorpayPublicKey(){ return credentials().keyId }
 
 async function api(path:string,init:RequestInit={}) {
   const {keyId,keySecret}=credentials()
   const response=await fetch(`https://api.razorpay.com/v1${path}`,{...init,headers:{Authorization:`Basic ${Buffer.from(`${keyId}:${keySecret}`).toString('base64')}`,'Content-Type':'application/json',...(init.headers??{})}})
-  if(!response.ok) throw new Error(`Razorpay request failed (${response.status}).`)
+  if(!response.ok) throw new RazorpayApiError(response.status)
   return response.json() as Promise<Record<string,any>>
 }
 
 export async function createRazorpayOrder(input:{amount:number;currency:string;receipt:string;notes:Record<string,string>}) {
+  if(!Number.isSafeInteger(input.amount)||input.amount<100) throw new RangeError('Order amount must be at least 100 paise.')
   return api('/orders',{method:'POST',body:JSON.stringify(input)})
 }
 

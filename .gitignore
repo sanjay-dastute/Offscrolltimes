@@ -8,6 +8,8 @@ BACKUP_FILE.sql
 backups/
 .dev.vars
 .env
+.dev.vars.*
+.env.*
 .nitro
 .tanstack
 .wrangler
