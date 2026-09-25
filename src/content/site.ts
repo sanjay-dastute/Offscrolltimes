@@ -14,7 +14,7 @@ export const WHATSAPP_URL = `https://wa.me/917373050093?text=${encodeURIComponen
 export const APPROVED_SOCIAL_LINKS: ReadonlyArray<{ label: string; href: string }> = [];
 
 export const BUSINESS_DETAILS = {
-  location: "Bengaluru, Karnataka, India",
+  location: "Coimbatore, Tamil Nadu, India",
   registration: "Legal entity name, registered address and registration numbers will be published after incorporation approval.",
 };
 
@@ -221,7 +221,7 @@ export const TESTIMONIALS: ReadonlyArray<{ initials: string; name: string; role:
 export const FAQ_PREVIEW = [
   {
     q: "What's inside each issue?",
-    a: "Each issue brings 15+ handcrafted puzzles and games, 10+ curious facts, and five Around the World and Wonder features to explore at your own pace.",
+    a: "Each issue is a newspaper with no news—just 15+ handcrafted puzzles and games, 10+ curious facts, and five Around the World and Wonder features to explore at your own pace. No headlines, no breaking news, just pure play, curiosity, and discovery.",
   },
   {
     q: "Where do you deliver?",
@@ -233,7 +233,7 @@ export const FAQ_PREVIEW = [
   },
   {
     q: "Is it suitable for kids?",
-    a: "It's built for adults and teens, but many puzzles and facts work well for families and friends to do together. It isn't a children's activity book.",
+    a: "It’s designed for adults and teens, but many of the puzzles and facts are also perfect for families and friends to enjoy together. It’s not a children’s activity book.",
   },
   {
     q: "How am I billed?",
@@ -338,7 +338,7 @@ export const FAQ_GROUPS = [
   ] },
 ] as const;
 
-export const FOOTER_DELIVERY_REGIONS = ["India (free)", "International: enquire first"] as const;
+export const FOOTER_DELIVERY_REGIONS = ["India (free)", "International — get in touch"] as const;
 
 export const FOOTER_PAYMENT_METHODS = [
   "Razorpay secure checkout",
@@ -362,7 +362,7 @@ export const WHO_WE_ARE = {
     "Life is busier now, so we made something you can pick up for five minutes or lose yourself in for an hour. Start anywhere. Play alone or challenge someone beside you. There are no rules about how you offscroll.",
     "That's how The Offscroll Times came to life: our way of bringing back paper, pencils, puzzles and a few minutes that are completely yours. We made it because we missed those moments. We hope you enjoy them too.",
   ],
-  location: "Bengaluru, India — printing and shipping across India.",
+  location: "Coimbatore, Tamil Nadu, India — printing and shipping across India.",
   image: { src: "/images/about-desk-sketches.jpg", alt: "A desk covered in early puzzle-grid sketches, a pencil and a coffee mug" },
   note: "Concept image — replace with a real studio photo.",
 };

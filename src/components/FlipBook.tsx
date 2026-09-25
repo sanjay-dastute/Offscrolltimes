@@ -118,7 +118,7 @@ export function FlipBook({ pages }: { pages: readonly FlipPage[] }) {
           onKeyDown={onKeyDown}
           onTouchStart={onTouchStart}
           onTouchEnd={onTouchEnd}
-          className="relative aspect-[3/4] w-[260px] outline-none [perspective:1800px] focus-visible:outline-2 focus-visible:outline-sun sm:w-[300px]"
+          className="relative aspect-[3/4] w-[min(260px,calc(100vw-88px))] outline-none [perspective:1800px] focus-visible:outline-2 focus-visible:outline-sun sm:w-[300px]"
         >
           <PageFace page={baseDisplay} />
 

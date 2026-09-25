@@ -16,7 +16,7 @@ export function WhatsAppFloat() {
       target="_blank"
       rel="noopener noreferrer"
       aria-label="Message us on WhatsApp"
-      className="fixed right-4 z-30 flex h-14 w-14 items-center justify-center rounded-full border border-graphite bg-[#25D366] text-paper shadow-[3px_3px_0_rgba(23,21,18,0.25)] transition-transform hover:scale-105 print:hidden"
+      className="whatsapp-float fixed right-4 z-30 flex h-14 w-14 items-center justify-center rounded-full border border-graphite bg-[#25D366] text-paper shadow-[3px_3px_0_rgba(23,21,18,0.25)] transition-transform hover:scale-105 print:hidden"
       style={{ bottom: "calc(var(--whatsapp-float-offset, 1.25rem) + env(safe-area-inset-bottom, 0px))" }}
     >
       <svg aria-hidden="true" viewBox="0 0 24 24" className="h-7 w-7" fill="currentColor">

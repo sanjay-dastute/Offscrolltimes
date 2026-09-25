@@ -66,18 +66,17 @@ export function Faq() {
 export function SiteFooter() {
   return (
     <footer id="contact" className="scroll-mt-24 bg-sun">
-      <div className={`${SHELL} grid gap-10 py-16 md:grid-cols-[1.2fr_1fr_1fr_1fr] md:gap-8 md:py-20`}>
+      <div className={`${SHELL} grid gap-10 py-16 sm:grid-cols-2 lg:grid-cols-[1.2fr_1fr_1fr_1fr] lg:gap-8 md:py-20`}>
         <div className="flex flex-col gap-3">
           <span className="font-mono text-[13px] font-bold tracking-[0.12em] text-graphite uppercase">
             {BRAND_NAME}
           </span>
+          <span className="font-display text-lg font-bold tracking-[-0.02em] text-graphite">SCROLL LESS PLAY MORE</span>
           <p className="m-0 max-w-[34ch] leading-relaxed text-graphite-soft">
             A monthly puzzle newspaper delivered to your door. Screen-free entertainment for
             individuals, couples and families.
           </p>
           <p className="m-0 font-mono text-[10.5px] leading-relaxed tracking-[0.04em] text-graphite-mute uppercase">{BUSINESS_DETAILS.location}</p>
-          <p className="m-0 text-[12px] leading-relaxed text-graphite-soft">{BUSINESS_DETAILS.registration}</p>
-          {APPROVED_SOCIAL_LINKS.length > 0 && <div className="mt-1 flex items-center gap-4">{APPROVED_SOCIAL_LINKS.map(link => <a key={link.href} href={link.href} target="_blank" rel="noopener noreferrer" className="font-mono text-[11px] tracking-[0.08em] text-graphite uppercase no-underline hover:text-founder-deep">{link.label}</a>)}</div>}
         </div>
 
         <nav aria-label="Footer" className="flex flex-col gap-3 font-mono text-[12px] tracking-[0.08em] text-graphite uppercase">
@@ -100,6 +99,7 @@ export function SiteFooter() {
             WhatsApp: {WHATSAPP_NUMBER}
           </a>
           <a href={`mailto:${CONTACT_EMAIL}`} className="text-graphite no-underline hover:text-founder-deep">{CONTACT_EMAIL}</a>
+          {APPROVED_SOCIAL_LINKS.map(link => <a key={link.href} href={link.href} target="_blank" rel="noopener noreferrer" className="text-graphite no-underline hover:text-founder-deep">{link.label}</a>)}
           {FOOTER_POLICY_LINKS.map((link) => (
             <a key={link.href} href={link.href} className="text-graphite no-underline hover:text-founder-deep">
               {link.label}

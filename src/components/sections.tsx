@@ -208,42 +208,50 @@ export function ScrollComparison() {
       <h2 id="comparison-title" className={H2}>Scrolling vs. Offscrolling</h2>
       <p className="mt-4 max-w-[55ch] leading-relaxed text-graphite-soft">Same spare moment. Two very different ways to spend it.</p>
       <span className="comparison-stamp" aria-hidden="true">PUT<br />THE<br />PHONE<br />DOWN</span>
-      <div className="comparison-scroll mt-8 overflow-x-auto" tabIndex={0} role="region" aria-label="Scrolling versus Offscrolling comparison; scroll sideways on narrow screens">
+      <div className="comparison-scroll mt-8 hidden overflow-x-auto md:block" tabIndex={0} role="region" aria-label="Scrolling versus Offscrolling comparison">
         <table className="comparison-table w-full min-w-[600px] text-left text-sm">
           <thead><tr><th scope="col">The moment</th><th scope="col"><span aria-hidden="true">↟</span> Scrolling</th><th scope="col"><span aria-hidden="true">✦</span> Offscrolling</th></tr></thead>
           <tbody>{SCROLL_COMPARISON.map(([moment, scroll, paper], index) => <tr key={moment}><th scope="row"><span className="comparison-number" aria-hidden="true">{String(index + 1).padStart(2, '0')}</span>{moment}</th><td>{scroll}</td><td><span aria-hidden="true" className="comparison-spark">✦</span>{paper}</td></tr>)}</tbody>
         </table>
       </div>
-      <p className="mt-3 text-xs text-graphite-mute">A playful comparison, not a scientific claim. <span className="comparison-mobile-hint">Swipe the table to see every column.</span></p>
+      <ol className="comparison-cards mt-8 grid gap-3 md:hidden">
+        {SCROLL_COMPARISON.map(([moment, scroll, paper], index) => <li className="comparison-card" key={moment}>
+          <h3><span aria-hidden="true">{String(index + 1).padStart(2, '0')}</span>{moment}</h3>
+          <dl><div><dt>Scrolling</dt><dd>{scroll}</dd></div><div><dt>Offscrolling</dt><dd>{paper}</dd></div></dl>
+        </li>)}
+      </ol>
+      <p className="mt-3 text-xs text-graphite-mute">A playful comparison, not a scientific claim.</p>
     </div>
   </section>
 }
 
 export function HowItWorks() {
   return (
-    <section id="how-it-works" className="border-b border-graphite bg-paper scroll-mt-24">
+    <section id="how-it-works" className="how-works-section border-b border-graphite scroll-mt-24" aria-labelledby="how-works-title">
       <Reveal className={`${SHELL} py-14 md:py-20 lg:py-24`}>
         <p className={`${EYEBROW} text-graphite-mute`}>How it works</p>
-        <h2 className={`${H2} mb-9 md:mb-13`}>From checkout to your coffee table.</h2>
+        <h2 id="how-works-title" className={`${H2} mb-9 md:mb-13`}>From checkout to your coffee table.</h2>
 
-        <ol className="m-0 grid list-none gap-0 border-t border-graphite p-0 md:grid-cols-2">
+        <ol className="how-works-steps">
           {HOW_IT_WORKS.map((step, i) => (
             <li
               key={step.num}
-              className={`flex items-start gap-4 py-6 md:p-8 ${
-                i % 2 === 0 ? "md:border-r md:border-rule" : ""
-              } ${i < HOW_IT_WORKS.length - 2 ? "border-b border-rule md:border-b-0" : ""} ${
-                i >= HOW_IT_WORKS.length - 2 ? "md:border-t md:border-rule" : ""
-              }`}
+              className="how-works-step"
             >
-              <span className="font-mono text-[13px] font-bold tracking-[0.1em] text-founder-deep">
-                {step.num}
+              <span className="how-works-number" aria-hidden="true">
+                {i + 1}
               </span>
-              <div>
-                <h3 className="m-0 mb-1.5 font-display text-[1.15rem] leading-tight font-bold tracking-[-0.015em]">
-                  {step.title}
-                </h3>
-                <p className="m-0 max-w-[48ch] leading-relaxed text-graphite-soft">{step.body}</p>
+              <div className="how-works-panel">
+                <div className="how-works-panel-heading">
+                  <svg className="how-works-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+                    {i === 0 && <><rect x="4" y="3" width="16" height="18" rx="2"/><path d="m8 9 2 2 5-5M8 15h8M8 18h5"/></>}
+                    {i === 1 && <><path d="M6 8V3h12v5M6 17H3V8h18v9h-3M6 14h12v7H6zM17 11h1"/></>}
+                    {i === 2 && <><path d="m3 7 9-4 9 4v11l-9 4-9-4V7Zm0 0 9 4 9-4M12 11v11M7 5l10 4v5"/></>}
+                    {i === 3 && <><rect x="3" y="3" width="18" height="18" rx="4"/><circle cx="8" cy="8" r="1"/><circle cx="16" cy="8" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="8" cy="16" r="1"/><circle cx="16" cy="16" r="1"/></>}
+                  </svg>
+                  <h3>{step.title}</h3>
+                </div>
+                <p>{step.body}</p>
               </div>
             </li>
           ))}
