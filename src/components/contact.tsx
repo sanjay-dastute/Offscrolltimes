@@ -1,7 +1,6 @@
-import { useEffect, useRef, useState } from "react";
-import { ENQUIRY_TYPES, WHATSAPP_URL, whatsappEnquiryMessage } from '#/content/site';
-import { submitContactEnquiry, type ContactEnquiryResult } from '#/lib/contact/actions';
-import { CTA, CTA_OUTLINE } from '#/lib/uiKit';
+import { useState } from "react";
+import { ENQUIRY_TYPES } from '#/content/site';
+import { CTA } from '#/lib/uiKit';
 
 type EnquiryKey = (typeof ENQUIRY_TYPES)[number]["key"];
 
@@ -11,8 +10,6 @@ const DETAIL_FIELD: Record<EnquiryKey, { label: string; placeholder: string } | 
   bulk: { label: "Estimated number of copies", placeholder: "e.g. 25" },
   partnership: { label: "Company / organisation name", placeholder: "e.g. Acme Retail" },
 };
-
-type Status = "idle" | "submitting" | "success" | "error";
 
 export function EnquiryCards({
   selected,
@@ -56,117 +53,23 @@ export function ContactForm({
   const [country, setCountry] = useState("");
   const [detail, setDetail] = useState("");
   const [message, setMessage] = useState("");
-  const [status, setStatus] = useState<Status>("idle");
-  const [errorMessage, setErrorMessage] = useState("");
-  const [emailSent, setEmailSent] = useState(false);
-  const [reference, setReference] = useState("");
-  const [website, setWebsite] = useState("");
-  const [startedAt] = useState(() => Date.now());
-  const formRef = useRef<HTMLFormElement>(null);
-  const turnstileSiteKey = import.meta.env.VITE_TURNSTILE_SITE_KEY as string | undefined;
-
-  useEffect(() => {
-    if (!turnstileSiteKey || document.querySelector('script[data-offscroll-turnstile]')) return;
-    const script = document.createElement('script');
-    script.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js';
-    script.async = true;
-    script.defer = true;
-    script.dataset.offscrollTurnstile = 'true';
-    document.head.appendChild(script);
-  }, [turnstileSiteKey]);
-
   const detailField = DETAIL_FIELD[enquiryType];
-  const whatsappHref = `${WHATSAPP_URL.split('?')[0]}?text=${encodeURIComponent(
-    message ? `${whatsappEnquiryMessage(country)}\n\n${message}` : whatsappEnquiryMessage(country),
-  )}`;
-
-  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (status === "submitting") return;
-    setStatus("submitting");
-    setErrorMessage("");
-
-    const turnstileToken = formRef.current?.querySelector<HTMLInputElement>('input[name="cf-turnstile-response"]')?.value ?? '';
-    let result: ContactEnquiryResult;
-    try {
-      result = await submitContactEnquiry({
-        data: { enquiryType, name, email, country, detail, message, website, startedAt, turnstileToken },
-      });
-    } catch {
-      setStatus("error");
-      setErrorMessage("We couldn't confirm your submission. Please try again or email hello@offscrolltimes.com directly.");
-      return;
-    }
-
-    if (!result.ok) {
-      setStatus("error");
-      setErrorMessage(
-        result.error === "invalid_email"
-          ? "Enter a valid email address."
-          : result.error === "invalid_name"
-            ? "Enter your name."
-            : result.error === "rate_limited"
-              ? "Too many enquiries were submitted. Please try again in an hour."
-              : result.error === "unavailable"
-                ? "Enquiry storage is temporarily unavailable. Please use WhatsApp."
-                : result.error === "spam"
-                  ? "Please wait a moment and try again."
-                  : "Enter a message of at least 10 characters.",
-      );
-      return;
-    }
-
-    setEmailSent(result.emailSent);
-    setReference(result.reference);
-    setStatus("success");
-  }
-
-  if (status === "success") {
-    return (
-      <div role="status" className="flex flex-col items-center gap-4 rounded-2xl border border-graphite bg-paper-raised p-8 text-center">
-        <p className="m-0 rounded-full border border-graphite bg-sun px-4 py-2 font-mono text-[11px] font-bold tracking-[0.08em] uppercase">Reference: {reference}</p>
-        {emailSent ? (
-          <>
-            <p className="m-0 font-display text-[1.25rem] font-bold tracking-[-0.01em]">
-              Message received.
-            </p>
-            <p className="m-0 max-w-[46ch] leading-relaxed text-graphite-soft">
-              Thank you. Our support team can reply to {email || "your email"}.
-            </p>
-            <a href={whatsappHref} target="_blank" rel="noopener noreferrer" className={CTA_OUTLINE}>
-              Prefer an instant reply? Message us on WhatsApp
-            </a>
-          </>
-        ) : (
-          <>
-            <p className="m-0 font-display text-[1.25rem] font-bold tracking-[-0.01em]">
-              Message received and saved.
-            </p>
-            <p className="m-0 max-w-[46ch] leading-relaxed text-graphite-soft">
-              Your enquiry is available to our administrators, but we couldn't confirm the email notification.
-              You can also email hello@offscrolltimes.com or send the same message through WhatsApp.
-            </p>
-            <a href={whatsappHref} target="_blank" rel="noopener noreferrer" className={CTA}>
-              Send on WhatsApp
-            </a>
-          </>
-        )}
-      </div>
-    );
-  }
 
   return (
-    <form ref={formRef} onSubmit={handleSubmit} className="flex flex-col gap-4">
-      <p className="text-sm text-graphite-soft">Your enquiry is stored for our support team and sent through FormSubmit to hello@offscrolltimes.com. Please do not include passwords or payment details. <a href="/policies/privacy" className="underline">Privacy policy</a></p>
-      <label className="absolute -left-[10000px]" aria-hidden="true">
-        Website
-        <input type="text" name="website" value={website} onChange={(event) => setWebsite(event.target.value)} tabIndex={-1} autoComplete="off" />
+    <form action="https://formsubmit.co/hello@offscrolltimes.com" method="POST" className="flex flex-col gap-4">
+      <input type="hidden" name="_subject" value="Offscroll Times contact enquiry" />
+      <input type="hidden" name="_template" value="table" />
+      <p className="text-sm text-graphite-soft">Send your enquiry to hello@offscrolltimes.com. After submitting, complete the security check on FormSubmit. Please do not include passwords or payment details. <a href="/policies/privacy" className="underline">Privacy policy</a></p>
+      <label className="hidden" aria-hidden="true">
+        Leave this field empty
+        <input type="text" name="_honey" tabIndex={-1} autoComplete="off" />
       </label>
       <label className="flex items-center justify-between gap-3 rounded-full border border-graphite bg-paper-raised px-5 py-3.5">
         <span className="font-mono text-[11px] tracking-[0.06em] text-graphite-mute uppercase">
           What can we help with?
         </span>
         <select
+          name="enquiry_type"
           value={enquiryType}
           onChange={(event) => onEnquiryTypeChange(event.target.value as EnquiryKey)}
           className="bg-transparent text-[13px] text-graphite outline-none"
@@ -184,6 +87,8 @@ export function ContactForm({
           <span className="sr-only">Name</span>
           <input
             type="text"
+            name="name"
+            maxLength={100}
             required
             value={name}
             onChange={(event) => setName(event.target.value)}
@@ -196,6 +101,8 @@ export function ContactForm({
           <span className="sr-only">Email address</span>
           <input
             type="email"
+            name="email"
+            maxLength={200}
             required
             value={email}
             onChange={(event) => setEmail(event.target.value)}
@@ -210,6 +117,8 @@ export function ContactForm({
         <span className="sr-only">Country</span>
         <input
           type="text"
+          name="country"
+          maxLength={80}
           value={country}
           onChange={(event) => setCountry(event.target.value)}
           placeholder="Your country (e.g. India, Germany)"
@@ -222,6 +131,8 @@ export function ContactForm({
           <span className="sr-only">{detailField.label}</span>
           <input
             type="text"
+            name="details"
+            maxLength={200}
             value={detail}
             onChange={(event) => setDetail(event.target.value)}
             placeholder={detailField.label}
@@ -233,6 +144,9 @@ export function ContactForm({
       <label>
         <span className="sr-only">Message</span>
         <textarea
+          name="message"
+          minLength={10}
+          maxLength={4000}
           required
           rows={5}
           value={message}
@@ -242,14 +156,8 @@ export function ContactForm({
         />
       </label>
 
-      {status === "error" && (
-        <p role="alert" className="m-0 px-1 text-[12.5px] text-founder-deep">{errorMessage}</p>
-      )}
-
-      {turnstileSiteKey && <div className="cf-turnstile" data-sitekey={turnstileSiteKey} data-theme="light" aria-label="Security check" />}
-
-      <button type="submit" disabled={status === "submitting"} className={`${CTA} disabled:opacity-60`}>
-        {status === "submitting" ? "Sending..." : "Send message"}
+      <button type="submit" className={CTA}>
+        Send message
       </button>
     </form>
   );
