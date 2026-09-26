@@ -15,7 +15,6 @@ import {
 } from '#/components/sections'
 import { Faq, SiteFooter } from '#/components/Faq'
 import { PaperPlayground } from '#/components/PaperPlayground'
-import { BlogSubscription } from '#/components/BlogSubscription'
 
 export const Route = createFileRoute('/')({
   head: () => ({
@@ -49,7 +48,6 @@ function Home() {
         <Testimonials />
         <Faq />
         <FinalCta />
-        <BlogSubscription />
       </main>
 
       <SiteFooter />

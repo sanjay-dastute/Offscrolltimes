@@ -12,6 +12,7 @@ import {
   WHATSAPP_URL,
 } from '#/content/site';
 import { Reveal } from '#/components/Reveal';
+import { BlogSubscription } from '#/components/BlogSubscription';
 
 const SHELL = "mx-auto max-w-[1180px] px-4 sm:px-6 lg:px-10";
 
@@ -67,6 +68,7 @@ export function SiteFooter() {
   return (
     <footer id="contact" className="paper-footer scroll-mt-24 bg-sun">
       <div className={`${SHELL} grid gap-10 py-16 sm:grid-cols-2 lg:grid-cols-[1.2fr_1fr_1fr_1fr] lg:gap-8 md:py-20`}>
+        <BlogSubscription />
         <div className="flex flex-col gap-3">
           <span className="font-mono text-[13px] font-bold tracking-[0.12em] text-graphite uppercase">
             {BRAND_NAME}

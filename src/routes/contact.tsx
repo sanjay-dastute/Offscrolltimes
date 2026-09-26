@@ -106,7 +106,7 @@ function ContactPage() {
 
                 <div>
                   <p className={`${EYEBROW} text-graphite-mute`}>WhatsApp</p>
-                  <p className="m-0 mb-3 leading-relaxed text-graphite-soft">{WHATSAPP_NUMBER}</p>
+                  <p className="m-0 mb-3 leading-relaxed text-graphite-soft">{WHATSAPP_NUMBER} (WhatsApp call only)</p>
                   <WhatsAppQuickButton />
                 </div>
               </div>
