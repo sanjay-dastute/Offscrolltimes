@@ -5,6 +5,7 @@ import { SubscriptionConfigurator } from '#/components/SubscriptionConfigurator'
 import { SubscriptionHero } from '#/components/subscription'
 import { SiteFooter } from '#/components/Faq'
 import { BRAND_NAME } from '#/content/site'
+import { BlogSubscription } from '#/components/BlogSubscription'
 
 export const Route = createFileRoute('/subscription')({
   head: () => ({
@@ -33,9 +34,10 @@ function SubscriptionPage() {
 
       <SiteHeader />
 
-      <main id="main-content">
+      <main id="main-content" className="paper-sections">
         <SubscriptionHero />
         <SubscriptionConfigurator />
+        <BlogSubscription />
       </main>
 
       <SiteFooter />

@@ -7,8 +7,6 @@ import { EnquiryCards, ContactForm } from '#/components/contact'
 import {
   BRAND_NAME,
   CONTACT_EMAIL,
-  CONTACT_HOURS,
-  CONTACT_REGIONS,
   ENQUIRY_TYPES,
   WHATSAPP_NUMBER,
   WHATSAPP_URL,
@@ -80,8 +78,8 @@ function ContactPage() {
 
       <SiteHeader />
 
-      <main id="main-content">
-        <section className="border-b border-graphite bg-paper">
+      <main id="main-content" className="paper-sections">
+        <section className="bg-paper">
           <div className={`${SHELL} py-14 md:py-20`}>
             <p className={`${EYEBROW} text-graphite-mute`}>Contact</p>
             <h1 className={`${H2} max-w-[18ch]`}>How can we help?</h1>
@@ -104,28 +102,6 @@ function ContactPage() {
                   <a href={`mailto:${CONTACT_EMAIL}`} className="text-[15px] underline">
                     {CONTACT_EMAIL}
                   </a>
-                </div>
-
-                <div>
-                  <p className={`${EYEBROW} text-graphite-mute`}>Hours &amp; response time</p>
-                  <p className="m-0 leading-relaxed text-graphite-soft">{CONTACT_HOURS.india}</p>
-                  <p className="m-0 leading-relaxed text-graphite-soft">
-                    {CONTACT_HOURS.responseTime}
-                  </p>
-                </div>
-
-                <div>
-                  <p className={`${EYEBROW} text-graphite-mute`}>By region</p>
-                  <div className="flex flex-col gap-3">
-                    {CONTACT_REGIONS.map((region) => (
-                      <div key={region.key}>
-                        <p className="m-0 font-display text-[1rem] font-bold tracking-[-0.01em]">
-                          {region.label}
-                        </p>
-                        <p className="m-0 leading-relaxed text-graphite-soft">{region.note}</p>
-                      </div>
-                    ))}
-                  </div>
                 </div>
 
                 <div>

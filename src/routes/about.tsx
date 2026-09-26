@@ -39,7 +39,7 @@ function AboutPage() {
 
       <SiteHeader />
 
-      <main id="main-content">
+      <main id="main-content" className="paper-sections">
         <AboutHero />
         <WhoWeAre />
         <WhyUsAbout />

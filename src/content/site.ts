@@ -1,4 +1,6 @@
 export const BRAND_NAME = "Offscroll Times";
+// Set to the approved email service's hosted subscription form when supplied.
+export const BLOG_SIGNUP_URL: string = "";
 export const BRAND_TAGLINE = "A monthly puzzle newspaper. No screens required.";
 
 // Placeholder contact channel — update to the real business WhatsApp number

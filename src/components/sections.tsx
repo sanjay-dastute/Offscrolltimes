@@ -71,7 +71,7 @@ export function Hero() {
           <p className="mx-auto mt-3 max-w-[46ch] font-display text-[1.05rem] font-semibold md:mx-0">Your monthly escape from the scroll, packed with puzzles, games and fun.</p>
           <div className="mt-8 flex flex-wrap items-center justify-center gap-x-6 gap-y-4 md:justify-start">
             <a href="#plans" className={CTA}>
-              Start a subscription
+              Become an offscroller
             </a>
             <a href="#whats-inside" className="text-[14.5px] text-graphite-soft underline">
               See what is inside
@@ -117,28 +117,27 @@ export function WhatsInside() {
   );
 }
 
-export function ProductPreview() {
+export function WhyLove() {
   return (
-    <section id="preview" className="border-b border-graphite bg-paper scroll-mt-24">
+    <section id="why-love" className="border-b border-graphite bg-paper scroll-mt-24">
       <Reveal className={`${SHELL} py-14 md:py-20 lg:py-24`}>
-        <p className={`${EYEBROW} text-graphite-mute`}>A peek inside</p>
+        <p className={`${EYEBROW} text-graphite-mute`}>Why customers love it</p>
         <h2 className={`${H2} max-w-[24ch]`}>
-          Fun awaits inside.
+          A small monthly ritual worth looking forward to.
         </h2>
-        <p className="mt-4 max-w-[54ch] text-graphite-soft">A sneak peek at our puzzles. Discover more inside your copy.</p>
 
         <div className="mt-10 grid items-center gap-12 md:mt-14 lg:grid-cols-[0.9fr_1.1fr]">
           <FlipBook pages={SAMPLE_PAGES} />
           <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-            {PREVIEW_CLIPS.map((clip) => (
+            {WHY_LOVE.map((item, index) => (
               <article
-                key={clip.key}
-                className={`${clip.rotate} border border-graphite bg-paper-raised p-5 shadow-[5px_5px_0_rgba(23,21,18,0.12)] transition-transform duration-200 hover:rotate-0`}
+                key={item.title}
+                className={`${index % 2 ? 'sm:rotate-2' : 'sm:-rotate-1'} border border-graphite bg-paper-raised p-5 shadow-[5px_5px_0_rgba(23,21,18,0.12)] transition-transform duration-200 hover:rotate-0`}
               >
                 <p className="m-0 mb-3 font-mono text-[10.5px] font-bold tracking-[0.12em] text-founder-deep uppercase">
-                  {clip.label}
+                  {item.title}
                 </p>
-                <p className="m-0 leading-relaxed text-graphite-soft">{clip.teaser}</p>
+                <p className="m-0 leading-relaxed text-graphite-soft">{item.body}</p>
               </article>
             ))}
             <p className="m-0 sm:col-span-2 font-mono text-[10.5px] leading-relaxed tracking-[0.06em] text-graphite-mute uppercase">
@@ -151,17 +150,17 @@ export function ProductPreview() {
   );
 }
 
-export function WhyLove() {
+export function ProductPreview() {
   return (
     <section
-      id="why-love"
+      id="preview"
       className="why-love-section scallop-top scallop-bottom scroll-mt-24"
       style={scallop("#f3e6c8")}
     >
       <Reveal className={`${SHELL} py-16 md:py-24`}>
-        <p className={`${EYEBROW} text-center text-graphite`}>Why customers love it</p>
+        <p className={`${EYEBROW} text-center text-graphite`}>A peek inside</p>
         <h2 className={`${H2} mx-auto max-w-[20ch] text-center text-balance`}>
-          A small monthly ritual worth looking forward to.
+          Fun awaits inside.
         </h2>
 
         <div className="why-love-composition mt-10 md:mt-14">
@@ -173,12 +172,12 @@ export function WhyLove() {
             <span className="why-pencil-lead" />
           </div>
           <ol className="why-ribbons">
-            {WHY_LOVE.map((item, index) => (
-              <li className="why-ribbon" key={item.title}>
+            {PREVIEW_CLIPS.map((item, index) => (
+              <li className="why-ribbon" key={item.key}>
                 <span className="why-ribbon-number" aria-hidden="true">{String(index + 1).padStart(2, "0")}</span>
                 <div>
-                  <h3>{item.title}</h3>
-                  <p>{item.body}</p>
+                  <h3>{item.label}</h3>
+                  <p>{item.teaser}</p>
                 </div>
               </li>
             ))}
@@ -354,24 +353,6 @@ export function WhoFor() {
             </article>
           ))}
         </div>
-      </Reveal>
-    </section>
-  );
-}
-
-export function SubscriptionPrompt() {
-  return (
-    <section className="border-b border-graphite bg-founder text-paper">
-      <Reveal className={`${SHELL} flex flex-col items-center justify-between gap-6 py-10 text-center md:flex-row md:py-12 md:text-left`}>
-        <div>
-          <p className="m-0 font-mono text-[11px] font-bold tracking-[0.14em] uppercase">Your next screen-free hour</p>
-          <h2 className="m-0 mt-2 font-display text-[clamp(1.7rem,4vw,2.6rem)] leading-none font-bold tracking-[-0.03em]">
-            Pick a plan. We will handle the post.
-          </h2>
-        </div>
-        <a href="#plans" className="stamp shrink-0 border border-graphite bg-live px-6 py-3.5 font-mono text-[12px] font-bold tracking-[0.08em] text-graphite uppercase no-underline">
-          Choose your subscription
-        </a>
       </Reveal>
     </section>
   );

@@ -604,6 +604,23 @@ a:hover .nav-arrow {
     transform: none;
   }
 }
+/* One upward scalloped edge per public section, coloured from that section's paper. */
+.paper-sections > section { position: relative; border-block-width: 0; }
+.paper-sections > section::before,
+.paper-sections > section::after { content: none; }
+.paper-footer { position: relative; }
+.paper-sections > section + section::before,
+.paper-footer::before {
+  content: '';
+  position: absolute;
+  inset: -12px 0 auto;
+  height: 13px;
+  z-index: 1;
+  background: inherit;
+  pointer-events: none;
+  -webkit-mask: radial-gradient(circle at 12px 12px, #000 12px, transparent 12.5px) 0 0 / 24px 24px repeat-x;
+  mask: radial-gradient(circle at 12px 12px, #000 12px, transparent 12.5px) 0 0 / 24px 24px repeat-x;
+}
 /* Staggered paper panels keep the four steps readable independently of the artwork. */
 .how-works-section {
   background-color: var(--color-paper-raised);
@@ -647,15 +664,16 @@ a:hover .nav-arrow {
 .why-pencil-wood { position: absolute; right: 8px; bottom: 23px; left: 8px; height: 55px; background: #e6bb86; clip-path: polygon(0 0, 100% 0, 50% 100%); }
 .why-pencil-lead { position: absolute; bottom: 0; left: 35px; width: 28px; height: 26px; background: #171512; clip-path: polygon(0 0, 100% 0, 50% 100%); }
 .why-ribbons { position: relative; z-index: 2; display: grid; gap: 14px; margin: 0; padding: 65px 0 94px; list-style: none; }
-.why-ribbon { display: flex; align-items: center; gap: 18px; width: calc(50% + 39px); min-height: 105px; padding: 17px 35px 17px 22px; color: #fffaf0; background: #0e5751; clip-path: polygon(0 0, calc(100% - 20px) 0, 100% 50%, calc(100% - 20px) 100%, 0 100%); }
-.why-ribbon:nth-child(even) { margin-left: auto; padding: 17px 22px 17px 35px; background: #ae4b31; clip-path: polygon(20px 0, 100% 0, 100% 100%, 20px 100%, 0 50%); }
-.why-ribbon:nth-child(3) { background: #313d57; }
-.why-ribbon:nth-child(4) { background: #8b4c30; }
-.why-ribbon:nth-child(5) { background: #17635c; }
+.why-ribbon { display: flex; align-items: center; gap: 18px; width: calc(50% + 39px); min-height: 105px; padding: 17px 35px 17px 22px; color: #292b25; background: #c7dbcf; clip-path: polygon(0 0, calc(100% - 20px) 0, 100% 50%, calc(100% - 20px) 100%, 0 100%); }
+.why-ribbon:nth-child(even) { margin-left: auto; padding: 17px 22px 17px 35px; background: #efd0be; clip-path: polygon(20px 0, 100% 0, 100% 100%, 20px 100%, 0 50%); }
+.why-ribbon:nth-child(3) { background: #d0dce7; }
+.why-ribbon:nth-child(4) { background: #e3d6e5; }
+.why-ribbon:nth-child(5) { background: #e3e2b9; }
+.why-ribbon:nth-child(6) { background: #f1dba7; }
 .why-ribbon-number { flex: none; font: 800 25px var(--font-display, sans-serif); opacity: .75; }
 .why-ribbon h3 { margin: 0; font: 800 clamp(15px, 1.7vw, 20px)/1.1 var(--font-display, sans-serif); }
 .why-ribbon p { max-width: 42ch; margin: 5px 0 0; font-size: 13px; line-height: 1.35; }
-@media (max-width: 700px) { .why-pencil { display: none; } .why-ribbons { gap: 10px; padding: 0; } .why-ribbon, .why-ribbon:nth-child(even) { width: 100%; min-height: 0; margin: 0; padding: 18px 24px; clip-path: polygon(0 0, calc(100% - 13px) 0, 100% 50%, calc(100% - 13px) 100%, 0 100%); } .why-ribbon p { font-size: 13px; } }
+@media (max-width: 700px) { .why-pencil { left: 24px; transform: translateX(-50%) scaleX(.48); } .why-pencil-body span { visibility: hidden; } .why-ribbons { gap: 10px; padding: 65px 0 94px 34px; } .why-ribbon, .why-ribbon:nth-child(even) { width: 100%; min-height: 0; margin: 0; padding: 18px 20px; clip-path: polygon(0 0, calc(100% - 13px) 0, 100% 50%, calc(100% - 13px) 100%, 0 100%); } .why-ribbon-number { display: none; } .why-ribbon p { font-size: 13px; } }
 /* Free home-page games: printed cards and tactile controls. */
 .scroll-comparison { background-color: #dce9e3; background-image: radial-gradient(#284b4720 1px, transparent 1px), linear-gradient(135deg, #ffffff50, transparent 70%); background-size: 14px 14px, auto; }
 .comparison-stamp { position: absolute; top: 55px; right: 50px; display: grid; place-items: center; width: 93px; height: 93px; border: 2px solid #0e5751; border-radius: 50%; color: #0e5751; font: 800 11px/1.05 var(--font-mono, monospace); text-align: center; transform: rotate(14deg); opacity: .85; }
@@ -727,7 +745,6 @@ body:has(.checkout-page) .whatsapp-float { display: none; }
 .play-picture-puzzle .play-picture-piece { display: block; position: relative; overflow: hidden; border: 0; border-radius: 0; background-color: #f5dbab; background-image: url('/images/fox-picture-puzzle.webp'); background-size: 300% 300%; box-shadow: none; clip-path: url(#play-jigsaw-shape); }
 .play-picture-puzzle .play-picture-piece[aria-pressed=true] { filter: brightness(1.25) drop-shadow(0 0 5px #ffdc42); }
 .play-picture-puzzle .play-picture-piece:focus-visible { outline: 3px solid #ffdc42; outline-offset: -5px; }
-.play-picture-puzzle .play-piece-number { position: absolute; right: 9px; bottom: 9px; display: grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; background: #fff9e6; color: #171512; font: 800 11px var(--font-mono, monospace); box-shadow: 0 1px 3px #17151280; }
 .play-die { display: grid; grid-template-columns: repeat(3, 1fr); gap: 9px; width: 108px; height: 108px; border: 3px solid #171512; border-radius: 22px; padding: 17px; margin: 28px auto; background: #ffdc42; box-shadow: 5px 6px 0 #171512; }
 .play-die .pip { background: #171512; border-radius: 50%; }
 .play-result { min-height: 48px; font-weight: 700; }

@@ -87,7 +87,7 @@ function FaqPage() {
           href="/subscription#plans"
           className="mt-9 inline-block rounded-full border border-graphite bg-graphite px-7 py-4 font-mono text-[13px] font-bold tracking-[0.1em] text-paper uppercase no-underline hover:bg-sun hover:text-graphite"
         >
-          Start a subscription
+          Become an offscroller
         </a>
       </main>
       <SiteFooter />

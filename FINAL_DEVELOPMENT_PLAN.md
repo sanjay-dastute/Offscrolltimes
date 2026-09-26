@@ -8,6 +8,18 @@
 
 ## 1. Confirmed Product Decisions
 
+### Latest approved changes — 25 September 2026
+
+These decisions supersede the earlier prepaid/manual-renewal and no-newsletter requirements below. The current payment implementation remains prepaid until the recurring flow is implemented and tested.
+
+- [x] Requested billing model: charge monthly and continue until cancelled, including the discounted 3- and 12-month options.
+- [ ] Confirm the monthly rate after the launch offer's first year.
+- [ ] Implement Razorpay Subscriptions authorisation, recurring charge verification, failure handling and provider cancellation; grant only entitlement paid for each month.
+- [ ] Migrate pricing, checkout, account controls and payment-related copy together; existing prepaid purchases must retain their original terms and entitlement.
+- [x] Blog email subscriptions are now requested on Home and Subscription pages.
+- [ ] Supply the approved email service's hosted signup URL, with subscriber consent and unsubscribe management. The visible blog section currently announces availability as coming soon.
+- [ ] Activate blog signup after that service is configured.
+
 - [x] Brand name: **Offscroll Times**.
 - [x] Product: a physical monthly puzzle newspaper delivered by post.
 - [x] Markets: India first, with selected European countries enabled only after shipping, tax and legal confirmation.

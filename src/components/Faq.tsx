@@ -65,7 +65,7 @@ export function Faq() {
 
 export function SiteFooter() {
   return (
-    <footer id="contact" className="scroll-mt-24 bg-sun">
+    <footer id="contact" className="paper-footer scroll-mt-24 bg-sun">
       <div className={`${SHELL} grid gap-10 py-16 sm:grid-cols-2 lg:grid-cols-[1.2fr_1fr_1fr_1fr] lg:gap-8 md:py-20`}>
         <div className="flex flex-col gap-3">
           <span className="font-mono text-[13px] font-bold tracking-[0.12em] text-graphite uppercase">
