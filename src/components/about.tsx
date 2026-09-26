@@ -3,7 +3,6 @@ import {
   BEHIND_THE_SCENES,
   PRODUCTION_PROCESS,
   SUBSCRIBE_HREF,
-  TEAM_ROLES,
   WHO_WE_ARE,
   WHY_US,
 } from '#/content/site';
@@ -18,9 +17,9 @@ export function AboutHero() {
         <h1 className="m-0 max-w-[20ch] font-display text-[clamp(2.3rem,6vw,3.8rem)] leading-[0.98] font-bold tracking-[-0.03em] text-balance">
           {ABOUT_INTRO.title}
         </h1>
-        <p className="mt-6 max-w-[62ch] text-[clamp(1.02rem,1.5vw,1.16rem)] leading-relaxed text-graphite-soft text-pretty">
-          {ABOUT_INTRO.body}
-        </p>
+        <div className="mt-6 flex max-w-[62ch] flex-col gap-4 text-[clamp(1.02rem,1.5vw,1.16rem)] leading-relaxed text-graphite-soft text-pretty">
+          {ABOUT_INTRO.paragraphs.map(paragraph => <p key={paragraph} className="m-0">{paragraph}</p>)}
+        </div>
       </div>
     </section>
   );
@@ -33,7 +32,7 @@ export function WhoWeAre() {
       className="scallop-top scroll-mt-24 bg-sun"
       style={scallop("var(--color-sun)")}
     >
-      <Reveal className={`${SHELL} grid items-start gap-10 py-16 md:grid-cols-2 md:gap-16 md:py-24`}>
+      <Reveal className={`${SHELL} grid items-start gap-10 py-16 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] lg:gap-16 md:py-24`}>
         <div className="relative">
           <div className="tape relative border border-graphite bg-paper-raised p-2 shadow-[8px_8px_0_rgba(23,21,18,0.16)]">
             <img
@@ -50,26 +49,19 @@ export function WhoWeAre() {
 
         <div>
           <p className={`${EYEBROW} text-graphite`}>Who we are</p>
-          <div className="flex flex-col gap-5 text-[clamp(1rem,1.4vw,1.1rem)] leading-relaxed">
-            {WHO_WE_ARE.paragraphs.map((paragraph) => (
-              <p key={paragraph} className="m-0">
-                {paragraph}
-              </p>
+          <div className="flex flex-col gap-8 text-[clamp(1rem,1.4vw,1.1rem)] leading-relaxed">
+            {WHO_WE_ARE.sections.map(story => (
+              <div key={story.title} className="flex flex-col gap-4">
+                <h2 className="m-0 font-display text-2xl font-bold leading-tight">{story.title}</h2>
+                {story.paragraphs.map(paragraph => <p key={paragraph} className="m-0 whitespace-pre-line">{paragraph}</p>)}
+                {story.closing && <p className="m-0"><strong>{story.closing}</strong></p>}
+                {story.afterword && <p className="m-0">{story.afterword}</p>}
+                {story.signoff && <p className="m-0"><strong>{story.signoff}</strong></p>}
+              </div>
             ))}
           </div>
           <p className="m-0 mt-6 border-t border-graphite pt-4 font-mono text-[11.5px] tracking-[0.08em] text-graphite uppercase">
             {WHO_WE_ARE.location}
-          </p>
-          <div className="mt-7 grid gap-3">
-            {TEAM_ROLES.map((role) => (
-              <article key={role.title} className="border-l-4 border-founder bg-paper-raised px-5 py-4">
-                <h3 className="m-0 font-display text-[1.05rem] font-bold">{role.title}</h3>
-                <p className="m-0 mt-1.5 leading-relaxed text-graphite-soft">{role.body}</p>
-              </article>
-            ))}
-          </div>
-          <p className="m-0 mt-5 font-mono text-[10.5px] leading-relaxed tracking-[0.06em] text-graphite-mute uppercase">
-            Founder names and portraits will be published after client approval.
           </p>
         </div>
       </Reveal>

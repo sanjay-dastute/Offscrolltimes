@@ -4,7 +4,6 @@ import { SiteHeader } from '#/components/SiteHeader'
 import {
   AboutCta,
   AboutHero,
-  BehindTheScenes,
   ProductionProcess,
   WhoWeAre,
   WhyUsAbout,
@@ -44,7 +43,8 @@ function AboutPage() {
         <WhoWeAre />
         <WhyUsAbout />
         <ProductionProcess />
-        <BehindTheScenes />
+        {/* Temporarily hidden: restore the import and render when ready. */}
+        {/* <BehindTheScenes /> */}
         <AboutCta />
       </main>
 

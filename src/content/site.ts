@@ -250,7 +250,7 @@ export const FAQ_MORE = [
   },
   {
     q: "What if my issue arrives damaged or missing?",
-    a: "Message us on WhatsApp with your order details within 14 days of the expected delivery date and we'll resend it or refund that issue.",
+    a: "Message us on WhatsApp with your order details within 7 days of the expected delivery date and we'll resend it or refund that issue.",
   },
   {
     q: "Can I gift a subscription?",
@@ -271,8 +271,8 @@ export const FAQ_GROUPS = [
     key: "publication",
     title: "About the publication",
     items: [
-      { q: "What is Offscroll Times?", a: "A physical monthly newspaper filled with original puzzles, games, illustrations and regional trivia. It is printed and delivered by post; it is not a digital newsletter." },
-      { q: "What is inside each issue?", a: "Each edition includes 15+ puzzles and games, 10+ curious facts, and five Around the World and Wonder features, with illustrations and challenges to enjoy alone or together." },
+      { q: "What is Offscroll Times?", a: "The Offscroll Times is a monthly, screen-free newspaper that contains no news but is filled with puzzles, games, curious facts, illustrations, challenges and things worth arguing about." },
+      { q: "What is inside each issue?", a: FAQ_PREVIEW[0].a },
       { q: "Will I see the same puzzles again?", a: "No. Each monthly edition has a fresh theme and newly prepared content. Sample previews deliberately hide full puzzles and answers." },
     ],
   },
@@ -281,8 +281,8 @@ export const FAQ_GROUPS = [
     title: "Subscription and renewals",
     items: [
       { q: "What is the monthly print cut-off?", a: "Orders and address changes received by the 20th are included in the next month's print run. For example, an order placed on 18 August is eligible for the September edition; an order placed on 22 August starts with October." },
-      { q: "When does my subscription start and end?", a: "Your subscription starts with the first eligible edition shown before checkout. A 3-month term includes three monthly editions and ends after the third edition unless you manually buy a new term. The same rule applies to 1 and 12-month terms." },
-      { q: "How many copies will I receive?", a: "The selected duration multiplied by copies per edition gives the total. For example, 3 months with 2 copies per edition provides 6 printed copies." },
+      { q: "When does my subscription start and end?", a: "You can choose a subscription plan, and your subscription will continue until you decide to cancel it. For example, if you choose a 3-month plan, it will automatically renew for another 3 months once the initial period ends. If you wish to stop your subscription, please cancel it by the 10th of the month to avoid being charged for the upcoming month’s delivery. If you cancel after the 10th, the payment will be processed, and the next month’s delivery will be sent to your postbox." },
+      { q: "How many copies will I receive?", a: "Usually, 1 copy per edition is selected automatically when you place your order. If you need more copies, you can choose the number of copies you’d like while selecting your subscription plan. For bulk orders, please contact us at hello@offscrolltimes.com and we’ll be happy to help." },
       { q: "Can I buy it as a gift or for a workplace?", a: "Yes. Use the recipient, office or reception delivery address during checkout. Multiple copies can be sent to the same address." },
     ],
   },
@@ -290,29 +290,27 @@ export const FAQ_GROUPS = [
     key: "payment",
     title: "Payments and currencies",
     items: [
-      { q: "What does the payment cover?", a: "One payment covers every monthly copy in the selected term, including delivery. Any applicable tax is shown and confirmed by the payment provider at checkout." },
-      { q: "Which currencies and payment methods are supported?", a: "Online checkout currently supports INR for India delivery. Available payment methods appear in Razorpay Checkout. For Europe, contact us before ordering." },
-      { q: "How do offers and duration discounts work?", a: "Longer terms receive the percentage shown beside the duration. A valid offer code is applied after the duration discount, and the exact monetary saving appears in the order summary." },
+      { q: "What does the payment cover?", a: "One payment covers all copies, delivery, and applicable taxes for your selected subscription term." },
+      { q: "Which currencies and payment methods are supported?", a: "Online checkout currently supports INR for India delivery. Available payment methods appear in Razorpay Checkout. For international orders, contact us before ordering." },
     ],
   },
   {
     key: "delivery",
     title: "India delivery",
     items: [
-      { q: "How long does delivery take in India?", a: "We normally dispatch in the first week of the month. Delivery within India is estimated at 3–7 business days after dispatch, depending on the destination and postal service." },
+      { q: "How long does delivery take in India?", a: "We normally dispatch copies during the last week of each month, so you can expect to receive your copy during the first week of the following month. Delivery within India typically takes 3–7 business days after dispatch, depending on the destination and postal service." },
       { q: "Where is delivery available?", a: "Online checkout currently supports India, with free delivery included in every plan." },
     ],
   },
-  { key: "europe", title: "European delivery", items: [
-    { q: "Can I subscribe from Europe?", a: "European checkout is not yet available. Email hello@offscrolltimes.com or use WhatsApp with your country so we can confirm availability, price and shipping before an order." },
+  { key: "international", title: "International Delivery", items: [
+    { q: "Can I subscribe internationally?", a: "International checkout is not yet available. Email hello@offscrolltimes.com or use WhatsApp with your country so we can confirm availability, price and shipping before an order." },
   ] },
   {
     key: "cancellation",
     title: "Pause or cancellation",
     items: [
-      { q: "Can I cancel within seven days?", a: "You may request cancellation within 7 days of purchase for a full refund if the first issue has not already been prepared or dispatched." },
-      { q: "Can I pause my subscription?", a: "You can request a pause before the monthly cut-off on the 20th. A request after the cut-off applies from the following edition because the next copy may already be in production." },
-      { q: "Does my subscription renew automatically?", a: "No. The current Razorpay checkout is prepaid for the selected term and renewal is manual. No future payment is taken without a new authorisation; editions already paid for remain scheduled." },
+      { q: "Can I pause my subscription?", a: "You can request a pause before the monthly cut-off on the 10th. A request after the cut-off applies from the following edition because the next copy may already be in production." },
+      { q: "Does my subscription renew automatically?", a: "Yes, the subscription will renew automatically at the end of each term and will continue until you decide to cancel it. You will not need to manually renew your subscription each time." },
     ],
   },
   {
@@ -326,7 +324,7 @@ export const FAQ_GROUPS = [
     ],
   },
   { key: "returns", title: "Returns, refunds and damaged copies", items: [
-    { q: "What if my issue is damaged, missing or delayed?", a: "Contact support with your order details and, for damage, a photo. Report a missing issue within 14 days of the expected delivery date. We will investigate and, where eligible, arrange a replacement or refund for that issue." },
+    { q: "What if my issue is damaged, missing or delayed?", a: "Contact support with your order details and, for damage, a photo. Report a missing issue within 7 days of the expected delivery date. We will investigate and, where eligible, arrange a replacement or refund for that issue." },
     { q: "When can I receive a refund?", a: "Request cancellation within seven days of purchase before preparation or dispatch for a full refund under the published policy. A damaged or missing eligible issue may be replaced or refunded. Copies delivered in good condition are generally not refundable." },
   ] },
   { key: "gift", title: "Gift subscriptions", items: [
@@ -334,9 +332,6 @@ export const FAQ_GROUPS = [
   ] },
   { key: "bulk", title: "Bulk and corporate orders", items: [
     { q: "Can our office order multiple copies?", a: "Yes. Choose a quantity for one India delivery address, or contact us for a tailored bulk enquiry." },
-  ] },
-  { key: "privacy", title: "Privacy and email preferences", items: [
-    { q: "Will a purchase subscribe me to marketing emails?", a: "No. Purchasing the newspaper does not add you to a marketing list. There is no newsletter signup at present." },
   ] },
 ] as const;
 
@@ -353,16 +348,53 @@ export const FOOTER_PAYMENT_METHODS = [
  */
 export const ABOUT_INTRO = {
   eyebrow: "About us",
-  title: "What if a newspaper was something you did?",
-  body: "The Offscroll Times began with a simple question: what if a newspaper wasn't something you just read, but something you actually did? So we made one. Every monthly issue is filled with puzzles, games, curious facts, illustrations and challenges. Pick a page, grab a pencil and make a little time your own.",
+  title: "What if a newspaper had no news?",
+  paragraphs: [
+    "The Offscroll Times started with a simple question:",
+    "What if a newspaper wasn't something you just read? What if it was something you actually did?",
+    "So we made one.",
+    "The Offscroll Times is a monthly, screen-free newspaper filled with puzzles, games, curious facts, illustrations, challenges and things worth arguing about.",
+    "It looks a little like a newspaper.",
+    "But it refuses to behave like one.",
+    "You don't have to start at page one. You don't have to read everything. You don't even have to be particularly good at puzzles.",
+    "Grab a pencil. Pick a page. Get stuck. Come back later. Challenge someone sitting next to you.",
+  ],
 };
 
 export const WHO_WE_ARE = {
-  paragraphs: [
-    "We kept reaching for our phones without noticing. A few minutes of scrolling became half an hour, and we missed the small things: a pencil, a puzzle, a silly answer shared across the table.",
-    "For some of us, it brought back childhood afternoons solving riddles and crosswords with our parents. We would guess, argue, laugh and keep going. They felt ordinary then, but became the moments we remember.",
-    "Life is busier now, so we made something you can pick up for five minutes or lose yourself in for an hour. Start anywhere. Play alone or challenge someone beside you. There are no rules about how you offscroll.",
-    "That's how The Offscroll Times came to life: our way of bringing back paper, pencils, puzzles and a few minutes that are completely yours. We made it because we missed those moments. We hope you enjoy them too.",
+  sections: [
+    {
+      title: "We Missed the Little Things.",
+      paragraphs: [
+        "Somewhere along the way, our phones started taking up more of our time than we realised.",
+        "A few minutes of scrolling became half an hour. One thing led to another, and before we knew it, the day had moved on.",
+        "And honestly, we started missing the simple things.",
+        "Sitting down with a pencil. Getting lost in a puzzle. Laughing over a silly answer. Sharing a crossword across the table with someone else.",
+        "For some of us, it brought back memories of childhood — sitting with our parents, solving riddles and crosswords together. We had nowhere else to be. We would think, guess, argue over answers, laugh, and keep going.",
+        "They were ordinary moments.",
+      ],
+      closing: "But somehow, they became the ones we remember.",
+    },
+    {
+      title: "So, We Made Something Different.",
+      paragraphs: [
+        "Life is busier now. There is always something to do, somewhere to be, or something waiting on our phones.",
+        "So we wanted to create something that could fit into those little gaps.",
+        "Something you could pick up for five minutes, or get completely lost in for an hour.",
+        "Something you could enjoy on your own, or pass across the table to someone else.",
+        "And that's how The Offscroll Times came to life.",
+      ],
+    },
+    {
+      title: "A Newspaper for Slower Moments.",
+      paragraphs: [
+        "The Offscroll Times is our little way of bringing back the joy of paper, pencils, puzzles, and simply being together.",
+        "No notifications.\nNo endless scrolling.\nNo pressure to keep up.",
+      ],
+      closing: "Just a newspaper, a little curiosity, and a few minutes that are completely yours.",
+      afterword: "We made it because we missed those moments.",
+      signoff: "We hope you enjoy them too.",
+    },
   ],
   location: "Coimbatore, Tamil Nadu, India — printing and shipping across India.",
   image: { src: "/images/about-desk-sketches.jpg", alt: "A desk covered in early puzzle-grid sketches, a pencil and a coffee mug" },
@@ -385,11 +417,11 @@ export const TEAM_ROLES = [
 ] as const;
 
 export const WHY_US = [
-  { title: "Original puzzles, every time", body: "We create each edition's puzzles, games and ideas for the issue rather than dropping a generic puzzle collection onto the page." },
+  { title: "Original puzzles, every time", body: "We create each edition's puzzles, games and ideas for the edition rather than dropping a generic puzzle collection onto the page." },
   { title: "Made for our Offscrollers", body: "Trivia and little details are chosen with our readers in mind, so each edition feels familiar, relevant and personal." },
   { title: "Designed to be played", body: "Type, illustrations and spacing are designed for pencils, scribbles and real hands." },
   { title: "Tested until it's right", body: "We write, solve, test and rethink puzzles until the clues and difficulty feel right." },
-  { title: "Printed properly", body: "We choose paper and printing for how the issue feels and how a pencil moves across it." },
+  { title: "Printed properly", body: "We choose paper and printing for how the edition feels and how a pencil moves across it." },
   { title: "Delivered to your door", body: "We handle printing, packing and posting so the newspaper arrives ready to open and play." },
 ] as const;
 
