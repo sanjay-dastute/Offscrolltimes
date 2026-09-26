@@ -617,6 +617,12 @@ a:hover .nav-arrow {
 .paper-sections > section#plans:has(.subscription-mobile-summary) > div:first-child {
   padding-top: 8px;
 }
+.paper-sections.contact-page > section:first-child > div:first-child {
+  padding-bottom: 12px;
+}
+.paper-sections.contact-page > #enquiry-form > div:first-child {
+  padding-top: 12px;
+}
 .paper-sections > section::before,
 .paper-sections > section::after { content: none; }
 .paper-footer { position: relative; }

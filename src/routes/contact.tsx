@@ -78,7 +78,7 @@ function ContactPage() {
 
       <SiteHeader />
 
-      <main id="main-content" className="paper-sections">
+      <main id="main-content" className="paper-sections contact-page">
         <section className="bg-paper">
           <div className={`${SHELL} py-14 md:py-20`}>
             <p className={`${EYEBROW} text-graphite-mute`}>Contact</p>
