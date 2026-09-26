@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Reveal } from '#/components/Reveal'
 import type { PricingQuote } from '#/lib/pricing.server'
 import { firstEditionDate, formatLongDate } from '#/lib/dates'
-import { CTA, EYEBROW, H2, SHELL } from '#/lib/uiKit'
+import { CTA, EYEBROW, SHELL } from '#/lib/uiKit'
 
 const DURATIONS = [1, 3, 12] as const
 const COUNTRIES = [
@@ -18,8 +18,8 @@ export function SubscriptionConfigurator(){
   const country=COUNTRIES.find(item=>item.code===countryCode)??COUNTRIES[0],copies=months*quantity,dispatchDate=formatLongDate(firstEditionDate()),savings=quote?quote.durationDiscountMinor+quote.offerDiscountMinor:0
   const checkoutHref=`/checkout/razorpay?duration=${months}&quantity=${quantity}&country=${country.code}${quote?.promotion?`&code=${encodeURIComponent(offer.trim())}`:''}`
   return <section id="plans" className="border-b border-graphite bg-paper scroll-mt-24">
-    <Reveal className={`${SHELL} py-14 md:py-20 lg:py-24`}>
-      <p className={`${EYEBROW} text-graphite-mute`}>Authoritative pricing calculator</p><h2 className={H2}>A new edition every month, choose your term.</h2><p className="mt-3 text-graphite-soft">Prices are in INR and delivery is free across India. For international subscription enquiries, message us on Instagram or email <a href="mailto:hello@offscrolltimes.com">hello@offscrolltimes.com</a>.</p>
+    <Reveal className={`${SHELL} pt-4 pb-14 md:pb-20 lg:pb-24`}>
+      <h2 className="sr-only">Choose your subscription plan</h2><p className="text-graphite-soft">Prices are in INR and delivery is free across India. For international subscription enquiries, message us on Instagram or email <a href="mailto:hello@offscrolltimes.com">hello@offscrolltimes.com</a>.</p>
       <div className="mt-10 grid items-start gap-8 lg:grid-cols-[1.15fr_0.85fr]">
         <div className="rounded-2xl border border-graphite bg-paper-raised p-6 shadow-[6px_6px_0_rgba(23,21,18,0.12)] md:p-8">
           <fieldset className="m-0 border-0 p-0"><legend className="font-display text-xl font-bold">Choose a duration</legend><div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">{DURATIONS.map(value=><label key={value} className={`cursor-pointer rounded-xl border p-4 text-center ${months===value?'border-2 border-graphite bg-sun':'border-graphite bg-paper'}`}><input data-analytics-duration={value} className="sr-only" type="radio" name="duration" checked={months===value} onChange={()=>setMonths(value)}/><span className="block font-display text-lg font-bold">{value} {value===1?'month':'months'}</span><span className="mt-1 block font-mono text-[9.5px] uppercase">{quote&&months===value?(quote.durationDiscountMinor?`${Math.round(quote.durationDiscountMinor/quote.subtotalMinor*100)}% term saving`:'Base price'):'Select'}</span></label>)}</div></fieldset>
