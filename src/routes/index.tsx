@@ -12,7 +12,6 @@ import {
   WhoFor,
   WhyLove,
   ScrollComparison,
-  MiniPackPrompt,
 } from '#/components/sections'
 import { Faq, SiteFooter } from '#/components/Faq'
 import { PaperPlayground } from '#/components/PaperPlayground'
@@ -49,7 +48,6 @@ function Home() {
         <WhoFor />
         <Testimonials />
         <Faq />
-        <MiniPackPrompt />
         <FinalCta />
         <BlogSubscription />
       </main>

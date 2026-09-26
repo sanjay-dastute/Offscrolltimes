@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { ENQUIRY_TYPES, WHATSAPP_URL, whatsappEnquiryMessage } from '#/content/site';
-import { submitContactEnquiry } from '#/lib/contact/actions';
+import { submitContactEnquiry, type ContactEnquiryResult } from '#/lib/contact/actions';
 import { CTA, CTA_OUTLINE } from '#/lib/uiKit';
 
 type EnquiryKey = (typeof ENQUIRY_TYPES)[number]["key"];
@@ -82,13 +82,21 @@ export function ContactForm({
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (status === "submitting") return;
     setStatus("submitting");
     setErrorMessage("");
 
     const turnstileToken = formRef.current?.querySelector<HTMLInputElement>('input[name="cf-turnstile-response"]')?.value ?? '';
-    const result = await submitContactEnquiry({
-      data: { enquiryType, name, email, country, detail, message, website, startedAt, turnstileToken },
-    });
+    let result: ContactEnquiryResult;
+    try {
+      result = await submitContactEnquiry({
+        data: { enquiryType, name, email, country, detail, message, website, startedAt, turnstileToken },
+      });
+    } catch {
+      setStatus("error");
+      setErrorMessage("We couldn't confirm your submission. Please try again or email hello@offscrolltimes.com directly.");
+      return;
+    }
 
     if (!result.ok) {
       setStatus("error");
@@ -115,7 +123,7 @@ export function ContactForm({
 
   if (status === "success") {
     return (
-      <div className="flex flex-col items-center gap-4 rounded-2xl border border-graphite bg-paper-raised p-8 text-center">
+      <div role="status" className="flex flex-col items-center gap-4 rounded-2xl border border-graphite bg-paper-raised p-8 text-center">
         <p className="m-0 rounded-full border border-graphite bg-sun px-4 py-2 font-mono text-[11px] font-bold tracking-[0.08em] uppercase">Reference: {reference}</p>
         {emailSent ? (
           <>
@@ -123,7 +131,7 @@ export function ContactForm({
               Message received.
             </p>
             <p className="m-0 max-w-[46ch] leading-relaxed text-graphite-soft">
-              We'll reply to {email || "your email"} within 1 business day.
+              Thank you. Our support team can reply to {email || "your email"}.
             </p>
             <a href={whatsappHref} target="_blank" rel="noopener noreferrer" className={CTA_OUTLINE}>
               Prefer an instant reply? Message us on WhatsApp
@@ -135,8 +143,8 @@ export function ContactForm({
               Message received and saved.
             </p>
             <p className="m-0 max-w-[46ch] leading-relaxed text-graphite-soft">
-              Your enquiry is available to our administrators. Email notifications are not configured yet;
-              for a faster reply, you can also send the same message through WhatsApp.
+              Your enquiry is available to our administrators, but we couldn't confirm the email notification.
+              You can also email hello@offscrolltimes.com or send the same message through WhatsApp.
             </p>
             <a href={whatsappHref} target="_blank" rel="noopener noreferrer" className={CTA}>
               Send on WhatsApp

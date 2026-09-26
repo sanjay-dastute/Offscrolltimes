@@ -606,6 +606,17 @@ a:hover .nav-arrow {
 }
 /* One upward scalloped edge per public section, coloured from that section's paper. */
 .paper-sections > section { position: relative; border-block-width: 0; }
+/* Compact public-page spacing; leave form controls and card interiors untouched. */
+.paper-sections > section:not(.paper-playground) > div:first-child,
+.paper-footer > div:first-child {
+  padding-block: clamp(28px, 4vw, 48px);
+}
+.paper-sections > .paper-playground {
+  padding-block: clamp(28px, 4vw, 48px);
+}
+.paper-sections > section#plans:has(.subscription-mobile-summary) > div:first-child {
+  padding-top: 8px;
+}
 .paper-sections > section::before,
 .paper-sections > section::after { content: none; }
 .paper-footer { position: relative; }

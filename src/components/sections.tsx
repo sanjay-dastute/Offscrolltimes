@@ -417,16 +417,3 @@ export function FinalCta() {
     </section>
   );
 }
-
-export function MiniPackPrompt() {
-  return <section className="border-b border-graphite bg-teal text-paper">
-    <div className={`${SHELL} flex flex-col items-start justify-between gap-6 py-12 md:flex-row md:items-center md:py-16`}>
-      <div>
-        <p className={`${EYEBROW} text-paper`}>A little something for right now</p>
-        <h2 className={`${H2} max-w-[18ch]`}>Get a free mini puzzle pack.</h2>
-        <p className="mt-3 max-w-[45ch]">Play three bite-sized games on this page. No account or email needed.</p>
-      </div>
-      <a href="#mini-puzzle-pack" className={`${CTA_OUTLINE} shrink-0`}>Play the free games</a>
-    </div>
-  </section>
-}

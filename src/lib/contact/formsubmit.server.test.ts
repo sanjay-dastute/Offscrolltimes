@@ -12,3 +12,16 @@ it('does not report delivery acceptance on provider failure',async()=>{
   vi.stubGlobal('fetch',vi.fn().mockRejectedValue(new Error('offline')))
   expect(await forwardEnquiry({reference:'OT-123'})).toBe(false)
 })
+it.each([
+  [500, {success:true}],
+  [200, {success:false}],
+  [200, {success:'false'}],
+  [200, {message:'Activation required'}],
+])('rejects unaccepted responses (%s, %j)',async(status,body)=>{
+  vi.stubGlobal('fetch',vi.fn().mockResolvedValue(new Response(JSON.stringify(body),{status})))
+  expect(await forwardEnquiry({reference:'OT-123'})).toBe(false)
+})
+it('handles non-JSON provider responses',async()=>{
+  vi.stubGlobal('fetch',vi.fn().mockResolvedValue(new Response('<html>Unavailable</html>')))
+  expect(await forwardEnquiry({reference:'OT-123'})).toBe(false)
+})
