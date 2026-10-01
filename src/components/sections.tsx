@@ -11,6 +11,7 @@ import {
 } from '#/content/site';
 import { Reveal } from '#/components/Reveal';
 import { FlipBook } from '#/components/FlipBook';
+import { NextIssueNotice } from '#/components/NextIssueNotice';
 import { CTA, CTA_OUTLINE, EYEBROW, H2, SHELL, scallop } from '#/lib/uiKit';
 
 function IssueMockup() {
@@ -69,6 +70,7 @@ export function Hero() {
             No scrolling. Just fun.
           </p>
           <p className="mx-auto mt-3 max-w-[46ch] font-display text-[1.05rem] font-semibold md:mx-0">Your monthly escape from the scroll, packed with puzzles, games and fun.</p>
+          <NextIssueNotice />
           <div className="mt-8 flex flex-wrap items-center justify-center gap-x-6 gap-y-4 md:justify-start">
             <a href="#plans" className={CTA}>
               Become an offscroller

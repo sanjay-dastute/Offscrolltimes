@@ -1,0 +1,33 @@
+# Administrator console
+
+The console is at `/admin`. Sign in through Google or Microsoft with an identity
+listed in the `ADMIN_IDENTITY_IDS` Worker secret. Use provider-qualified identity
+IDs (for example `google:<subject>`), not an email address. Existing allowlisted
+administrators retain access. Never put provider secrets in source control.
+
+Apply all pending D1 migrations before using the updated console. Migration
+`0028_customer_directory.sql` adds customer names and separate WhatsApp numbers
+and preserves existing records. Use `pnpm run db:migrate:local` locally. Apply
+production migrations to `LIFECYCLE_DB` only during the approved deployment.
+
+- **Customers:** all registered accounts, including non-subscribers. Search by
+  name, email, phone or WhatsApp; filter by subscription ownership. The directory
+  uses server-side pagination with 25 users per page. Contact corrections require
+  a reason and are audited. WhatsApp numbers use international format, such as
+  `+917373050093`; an existing phone number is not assumed to be WhatsApp.
+- **Subscriptions:** recipient names, full delivery addresses, subscription
+  status, pricing and recorded payment/fulfilment history. Lists show 25 records
+  per page with searchable filters. The overview currently loads complete
+  commercial history to calculate totals rather than silently truncating it at
+  500 records; very large installations should move those aggregates into SQL.
+- **Offers:** create or edit discount rules and activate/deactivate saved codes.
+  Date controls use the administrator's local timezone. Fixed amounts use minor
+  currency units; percentage values use basis points. Eligibility, expiry and
+  redemption limits are enforced by the existing server pricing calculation.
+  Saved-offer previews and promotion reports remain in Catalogue.
+- **Account:** customers can maintain their own name, contact email, phone and
+  WhatsApp number. Contact email does not change the identity used to sign in.
+
+Payment gateway credentials and live payment verification are outside this
+update. Production administrator credentials, live deployment and browser
+acceptance cannot be certified from local automated checks.

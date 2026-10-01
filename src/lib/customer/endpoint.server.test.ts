@@ -37,6 +37,16 @@ beforeEach(() => {
 afterEach(() => resetRequestLifecycleBindings())
 
 describe('customer role and ownership endpoints', () => {
+  it('updates only the signed-in customer contact profile and validates WhatsApp and CSRF',async()=>{
+    for(const index of [1,2])await db.prepare(`INSERT INTO users(id,owner_id,role,account_state,created_at,updated_at) VALUES(?,?,'customer','active',1,1)`).bind(`user_${index}`,`owner_${index}`).run()
+    const change=(body:Record<string,unknown>)=>requestFor('owner_1','/api/customer',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'profile.contact',csrf:'csrf-owner_1',name:'Reader',email:'reader@example.com',phone:'',whatsapp:'+917373050093',...body})}).then(patchCustomerDashboard)
+    expect((await change({userId:'user_2'})).status).toBe(200)
+    expect(await db.prepare('SELECT user_id,whatsapp_number FROM customers').first()).toMatchObject({user_id:'user_1',whatsapp_number:'+917373050093'})
+    expect((await change({csrf:'wrong'})).status).toBe(403)
+    expect((await change({whatsapp:'7373050093'})).status).toBe(422)
+    const response=await getCustomerDashboard(await requestFor('owner_1','/api/customer'))
+    expect(await response.json()).toMatchObject({profile:{display_name:'Reader',whatsapp_number:'+917373050093'}})
+  })
   it('uses the India business timezone at the exact address cut-off boundary', () => {
     expect(isAddressChangeBeforeCutoff(Date.parse('2026-08-20T18:29:59.999Z'))).toBe(true)
     expect(isAddressChangeBeforeCutoff(Date.parse('2026-08-20T18:30:00.000Z'))).toBe(false)

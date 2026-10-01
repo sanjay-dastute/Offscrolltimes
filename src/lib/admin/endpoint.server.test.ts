@@ -27,6 +27,14 @@ async function mutation(userId: string, body: Record<string, unknown>) {
 }
 
 describe('administrator authorization and fulfilment', () => {
+  it('requires administrator authorization and CSRF for customer corrections and offer activation',async()=>{
+    expect((await mutation('customer_1',{action:'customer.contact'})).status).toBe(403)
+    expect((await mutation('admin_1',{action:'customer.contact',csrf:'wrong'})).status).toBe(403)
+    expect((await mutation('admin_1',{action:'customer.contact',userId:'user_1',name:'Reader',email:'reader@example.com',whatsapp:'123',reason:'Contact correction'})).status).toBe(422)
+    expect((await mutation('admin_1',{action:'discount.toggle',discountId:'launch-159',active:false})).status).toBe(200)
+    expect(await db.prepare(`SELECT active FROM admin_discounts WHERE id='launch-159'`).first()).toMatchObject({active:0})
+    expect((await mutation('admin_1',{action:'catalog.upsert',kind:'discount',id:'invalid',code:'INVALID',discountKind:'percentage',value:10001})).status).toBe(422)
+  })
   it('rejects a signed-in customer who is not configured as an administrator', async () => {
     expect((await getAdmin(await request('customer_1', '/api/admin'))).status).toBe(403)
     expect((await mutation('customer_1', { action: 'edition.create' })).status).toBe(403)

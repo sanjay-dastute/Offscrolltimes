@@ -6,10 +6,12 @@ import { CTA, CTA_OUTLINE, EYEBROW, H2 } from '#/lib/uiKit'
 import { BUSINESS_DETAILS, CONTACT_EMAIL, CONTACT_HOURS, WHATSAPP_URL } from '#/content/site'
 import type { CustomerAccountEvent, CustomerAddress, CustomerFulfilment, CustomerPayment, CustomerSubscription } from '#/lib/customer/store.server'
 import { DamageEvidenceUpload } from '#/components/DamageEvidenceUpload'
+import { AccountContact, type ContactProfile } from '#/components/AccountContact'
 
 type DashboardData = {
   user: { id: string; name?: string; username?: string; provider?: 'google'|'microsoft' }
   csrf: string
+  profile: ContactProfile | null
   identities: Array<{provider:'google'|'microsoft';provider_email:string|null;created_at:number}>
   subscriptions: CustomerSubscription[]
   payments: CustomerPayment[]
@@ -124,6 +126,7 @@ function AccountPage() {
         </div>
         {error && <p role="alert" className="mt-6 rounded-xl border border-red-700 bg-red-50 p-4 text-red-900">{error}</p>}
         {notice&&<p role="status" className="mt-6 rounded-xl border border-graphite bg-sun p-4">{notice}</p>}
+        <AccountContact profile={data.profile} csrf={data.csrf} />
         {data.subscriptions.length === 0 ? <section className="mt-10 rounded-3xl border border-graphite bg-sun/20 p-8">
           <h2 className={H2}>No subscription yet.</h2><p className="mt-3">Choose a duration and your subscription will appear here after checkout starts.</p>
           <a href="/subscription" className={`${CTA} mt-6 inline-flex`}>Choose a subscription</a>

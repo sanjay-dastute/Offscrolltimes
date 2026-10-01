@@ -29,6 +29,7 @@ import { Route as ApiReadinessRouteImport } from './routes/api.readiness'
 import { Route as ApiSessionRouteImport } from './routes/api.session'
 import { Route as CheckoutRazorpayRouteImport } from './routes/checkout.razorpay'
 import { Route as PoliciesSlugRouteImport } from './routes/policies.$slug'
+import { Route as ApiAdminCustomersRouteImport } from './routes/api.admin.customers'
 import { Route as ApiAdminDispatchRouteImport } from './routes/api.admin.dispatch'
 import { Route as ApiAdminFilesRouteImport } from './routes/api.admin.files'
 import { Route as ApiAssetsIdRouteImport } from './routes/api.assets.$id'
@@ -141,6 +142,11 @@ const PoliciesSlugRoute = PoliciesSlugRouteImport.update({
   path: '/policies/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiAdminCustomersRoute = ApiAdminCustomersRouteImport.update({
+  id: '/customers',
+  path: '/customers',
+  getParentRoute: () => ApiAdminRoute,
+} as any)
 const ApiAdminDispatchRoute = ApiAdminDispatchRouteImport.update({
   id: '/dispatch',
   path: '/dispatch',
@@ -219,6 +225,7 @@ export interface FileRoutesByFullPath {
   '/api/session': typeof ApiSessionRoute
   '/checkout/razorpay': typeof CheckoutRazorpayRoute
   '/policies/$slug': typeof PoliciesSlugRoute
+  '/api/admin/customers': typeof ApiAdminCustomersRoute
   '/api/admin/dispatch': typeof ApiAdminDispatchRoute
   '/api/admin/files': typeof ApiAdminFilesRoute
   '/api/assets/$id': typeof ApiAssetsIdRoute
@@ -252,6 +259,7 @@ export interface FileRoutesByTo {
   '/api/session': typeof ApiSessionRoute
   '/checkout/razorpay': typeof CheckoutRazorpayRoute
   '/policies/$slug': typeof PoliciesSlugRoute
+  '/api/admin/customers': typeof ApiAdminCustomersRoute
   '/api/admin/dispatch': typeof ApiAdminDispatchRoute
   '/api/admin/files': typeof ApiAdminFilesRoute
   '/api/assets/$id': typeof ApiAssetsIdRoute
@@ -286,6 +294,7 @@ export interface FileRoutesById {
   '/api/session': typeof ApiSessionRoute
   '/checkout/razorpay': typeof CheckoutRazorpayRoute
   '/policies/$slug': typeof PoliciesSlugRoute
+  '/api/admin/customers': typeof ApiAdminCustomersRoute
   '/api/admin/dispatch': typeof ApiAdminDispatchRoute
   '/api/admin/files': typeof ApiAdminFilesRoute
   '/api/assets/$id': typeof ApiAssetsIdRoute
@@ -321,6 +330,7 @@ export interface FileRouteTypes {
     | '/api/session'
     | '/checkout/razorpay'
     | '/policies/$slug'
+    | '/api/admin/customers'
     | '/api/admin/dispatch'
     | '/api/admin/files'
     | '/api/assets/$id'
@@ -354,6 +364,7 @@ export interface FileRouteTypes {
     | '/api/session'
     | '/checkout/razorpay'
     | '/policies/$slug'
+    | '/api/admin/customers'
     | '/api/admin/dispatch'
     | '/api/admin/files'
     | '/api/assets/$id'
@@ -387,6 +398,7 @@ export interface FileRouteTypes {
     | '/api/session'
     | '/checkout/razorpay'
     | '/policies/$slug'
+    | '/api/admin/customers'
     | '/api/admin/dispatch'
     | '/api/admin/files'
     | '/api/assets/$id'
@@ -570,6 +582,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PoliciesSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/admin/customers': {
+      id: '/api/admin/customers'
+      path: '/customers'
+      fullPath: '/api/admin/customers'
+      preLoaderRoute: typeof ApiAdminCustomersRouteImport
+      parentRoute: typeof ApiAdminRoute
+    }
     '/api/admin/dispatch': {
       id: '/api/admin/dispatch'
       path: '/dispatch'
@@ -651,12 +670,14 @@ declare module '@tanstack/react-router' {
 }
 
 interface ApiAdminRouteChildren {
+  ApiAdminCustomersRoute: typeof ApiAdminCustomersRoute
   ApiAdminDispatchRoute: typeof ApiAdminDispatchRoute
   ApiAdminFilesRoute: typeof ApiAdminFilesRoute
   ApiAdminFileIdRoute: typeof ApiAdminFileIdRoute
 }
 
 const ApiAdminRouteChildren: ApiAdminRouteChildren = {
+  ApiAdminCustomersRoute: ApiAdminCustomersRoute,
   ApiAdminDispatchRoute: ApiAdminDispatchRoute,
   ApiAdminFilesRoute: ApiAdminFilesRoute,
   ApiAdminFileIdRoute: ApiAdminFileIdRoute,

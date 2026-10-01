@@ -319,8 +319,10 @@ async function persistSocialIdentity(provider: SocialProvider, subject: string, 
     VALUES(?,?,?,?,?,1,?,?,?) ON CONFLICT(provider,provider_subject) DO UPDATE SET provider_email=excluded.provider_email,email_verified=1,verified_claims_json=excluded.verified_claims_json,updated_at=excluded.updated_at`)
     .bind(`identity_${provider}_${(await stableUserId(subject)).slice(5)}`, userId, provider, subject, email ?? null, JSON.stringify(verifiedClaims), now, now).run()
   await db.prepare(`INSERT INTO customers(id,user_id,email,phone,transactional_contact_basis,marketing_consent,privacy_request_state,created_at,updated_at)
-    VALUES(?,?,?,NULL,'contract',0,'none',?,?) ON CONFLICT(user_id) DO UPDATE SET email=COALESCE(excluded.email,customers.email),updated_at=excluded.updated_at`)
+    VALUES(?,?,?,NULL,'contract',0,'none',?,?) ON CONFLICT(user_id) DO UPDATE SET email=COALESCE(customers.email,excluded.email),updated_at=excluded.updated_at`)
     .bind(`customer_${userId.slice(5)}`, userId, email ?? null, now, now).run()
+  const displayName=typeof verifiedClaims.name==='string'?verifiedClaims.name.trim().slice(0,100):null
+  if(displayName)await db.prepare('UPDATE customers SET display_name=COALESCE(display_name,?) WHERE user_id=?').bind(displayName,userId).run()
   if (linkUserId && !existing) {
     const summary = JSON.stringify({ provider, outcome: 'linked' })
     await db.prepare(`INSERT INTO identity_security_events(id,actor_user_id,action,provider,provider_subject,summary_json,created_at)

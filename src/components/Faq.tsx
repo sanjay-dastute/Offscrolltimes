@@ -68,7 +68,6 @@ export function SiteFooter() {
   return (
     <footer id="contact" className="paper-footer scroll-mt-24 bg-sun">
       <div className={`${SHELL} grid gap-10 py-16 sm:grid-cols-2 lg:grid-cols-[1.2fr_1fr_1fr_1fr] lg:gap-8 md:py-20`}>
-        <BlogSubscription />
         <div className="flex flex-col gap-3">
           <span className="font-mono text-[13px] font-bold tracking-[0.12em] text-graphite uppercase">
             {BRAND_NAME}
@@ -109,6 +108,8 @@ export function SiteFooter() {
           ))}
         </div>
 
+        <div className="flex min-w-0 flex-col gap-6">
+          <BlogSubscription />
         <div className="flex flex-col gap-3 font-mono text-[12px] tracking-[0.08em] uppercase">
           <span className="mb-1 text-graphite-mute">We deliver to</span>
           <p className="m-0 normal-case tracking-normal text-graphite-soft lowercase-none">
@@ -118,6 +119,7 @@ export function SiteFooter() {
           <p className="m-0 normal-case tracking-normal text-graphite-soft">
             {FOOTER_PAYMENT_METHODS.join(" · ")}
           </p>
+        </div>
         </div>
       </div>
 

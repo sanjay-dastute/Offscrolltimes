@@ -59,7 +59,8 @@ export async function getCustomerDashboard(request: Request): Promise<Response> 
   const identities = session.internalUserId
     ? await db.prepare(`SELECT provider,provider_email,created_at FROM auth_identities WHERE user_id=? ORDER BY created_at`).bind(session.internalUserId).all<{provider:string;provider_email:string|null;created_at:number}>()
     : { results: [] }
-  return json({ user: session.user, csrf: session.csrf, identities: identities.results, ...data })
+  const profile=await db.prepare(`SELECT c.display_name,c.email,c.phone,c.whatsapp_number FROM customers c JOIN users u ON u.id=c.user_id WHERE u.owner_id=?`).bind(session.user.id).first()
+  return json({ user: session.user, csrf: session.csrf, identities: identities.results, profile, ...data })
 }
 
 export async function patchCustomerDashboard(request: Request): Promise<Response> {
@@ -71,6 +72,15 @@ export async function patchCustomerDashboard(request: Request): Promise<Response
   let body: Record<string, unknown>
   try { body = await request.json() as Record<string, unknown> } catch { return json({ error: 'Invalid request.' }, 400) }
   if (body.csrf !== session.csrf) return json({ error: 'Your session changed. Refresh and retry.' }, 403)
+  if(body.action==='profile.contact') {
+    const name=cleanText(body.name,100), email=cleanText(body.email,200).toLowerCase(), phone=cleanText(body.phone,30), whatsapp=cleanText(body.whatsapp,30)
+    if(!name||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)||(phone&&!/^\+?[0-9 ()-]{7,30}$/.test(phone))||(whatsapp&&!/^\+[1-9][0-9]{7,14}$/.test(whatsapp)))return json({error:'Enter a full name, valid email and WhatsApp number including country code.'},422)
+    const now=Date.now()
+    const user=await db.prepare('SELECT id FROM users WHERE owner_id=?').bind(session.user.id).first<{id:string}>()
+    if(!user)return json({error:'Account not found.'},404)
+    await db.prepare(`INSERT INTO customers(id,user_id,email,phone,display_name,whatsapp_number,transactional_contact_basis,marketing_consent,privacy_request_state,created_at,updated_at) VALUES(?,?,?,?,?,?,'contract',0,'none',?,?) ON CONFLICT(user_id) DO UPDATE SET email=excluded.email,phone=excluded.phone,display_name=excluded.display_name,whatsapp_number=excluded.whatsapp_number,updated_at=excluded.updated_at`).bind(`customer_${user.id}`,user.id,email,phone||null,name,whatsapp||null,now,now).run()
+    return json({ok:true})
+  }
   if(body.action==='identity.unlink'){
     if(!session.internalUserId)return json({error:'Account linking is unavailable for this session.'},409)
     const provider=cleanText(body.provider,20)

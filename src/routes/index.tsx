@@ -7,7 +7,6 @@ import {
   FinalCta,
   Plans,
   ProductPreview,
-  Testimonials,
   WhatsInside,
   WhoFor,
   WhyLove,
@@ -45,7 +44,6 @@ function Home() {
         <HowItWorks />
         <Plans />
         <WhoFor />
-        <Testimonials />
         <Faq />
         <FinalCta />
       </main>

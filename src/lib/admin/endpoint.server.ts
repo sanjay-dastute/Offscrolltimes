@@ -6,6 +6,7 @@ import { calculatePricing } from '#/lib/pricing.server'
 import { recordUserRole } from '#/lib/canonical-data.server'
 import { base64url, fromBase64url } from '#/lib/codec'
 import { storeObject } from '#/lib/object-storage.server'
+import { updateCustomerContact } from './directory.server'
 import {
   audit, createEdition, dispatchRows, generateEditionEligibility, getAdminDashboard, lockEdition, overrideEditionEligibility,
   updateAdminAddress, updateEnquiry, updateFulfilment, updateSubscriptionStatus, upsertCatalog, upsertContent,
@@ -40,6 +41,19 @@ export async function mutateAdmin(request: Request) {
   if (body.csrf !== session.csrf) return json({ error: 'Your session changed. Refresh and retry.' }, 403)
   const action = text(body.action, 80)
   try {
+    if (action === 'customer.contact') {
+      const userId=text(body.userId), name=text(body.name,100), email=text(body.email,200).toLowerCase(), phone=text(body.phone,30), whatsapp=text(body.whatsapp,30), reason=text(body.reason,500)
+      if(!SAFE_ID.test(userId)||!name||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)||reason.length<5||(phone&&!/^\+?[0-9 ()-]{7,30}$/.test(phone))||(whatsapp&&!/^\+[1-9][0-9]{7,14}$/.test(whatsapp)))return json({error:'Enter a name, valid email, correction reason and WhatsApp number with country code (for example +917373050093).'},422)
+      return await updateCustomerContact(database,session.user.id,{userId,name,email,phone,whatsapp,reason})?json({ok:true}):json({error:'Customer not found.'},404)
+    }
+    if (action === 'discount.toggle') {
+      const discountId=text(body.discountId)
+      if(!SAFE_ID.test(discountId)||typeof body.active!=='boolean')return json({error:'Invalid offer.'},422)
+      const result=await database.prepare('UPDATE admin_discounts SET active=?,updated_at=? WHERE id=?').bind(body.active?1:0,Date.now(),discountId).run()
+      if((result.meta.changes??0)!==1)return json({error:'Offer not found.'},404)
+      await audit(database,session.user.id,'discount.activation_changed','discount',discountId,{active:body.active})
+      return json({ok:true})
+    }
     if (action === 'edition.create') {
       const label = text(body.label, 100), issueNumber = Number(body.issueNumber), cutoff = Date.parse(String(body.cutoff)), dispatch = Date.parse(String(body.dispatch))
       if (!label || !Number.isInteger(issueNumber) || issueNumber < 1 || !Number.isFinite(cutoff) || !Number.isFinite(dispatch) || dispatch <= cutoff) return json({ error: 'Enter valid edition dates and issue number.' }, 422)
@@ -97,6 +111,11 @@ export async function mutateAdmin(request: Request) {
         combinable: body.combinable === true || body.combinable === 'on', active: body.active !== false,
       } : {
         countryCode: text(body.countryCode, 2).toUpperCase(), countryName: text(body.countryName), currency: text(body.currency, 3).toUpperCase(), shippingMinor: Number(body.shippingMinor), additionalCopyMinor:Number(body.additionalCopyMinor ?? 0), taxRateBasisPoints: Number(body.taxRateBasisPoints), active: body.active !== false,
+      }
+      if(kind==='discount') {
+        const nonnegative=(value:unknown)=>Number.isSafeInteger(value)&&Number(value)>=0
+        const optionalPositive=(value:unknown)=>value===null||(Number.isSafeInteger(value)&&Number(value)>0)
+        if(!SAFE_ID.test(String(safe.id))||!safe.code||!['percentage','fixed','free_shipping'].includes(String(safe.kind))||!nonnegative(safe.value)||(safe.kind==='percentage'&&Number(safe.value)>10000)||!optionalPositive(safe.usageLimit)||!optionalPositive(safe.perCustomerLimit)||!optionalPositive(safe.minimumDurationMonths)||(safe.minimumOrderMinor!==null&&!nonnegative(safe.minimumOrderMinor))||(safe.startsAt!==null&&!Number.isFinite(safe.startsAt))||(safe.endsAt!==null&&!Number.isFinite(safe.endsAt))||(safe.startsAt!==null&&safe.endsAt!==null&&Number(safe.endsAt)<=Number(safe.startsAt)))return json({error:'Enter valid discount amounts, limits and dates; expiry must follow the start.'},422)
       }
       if (!await upsertCatalog(database, session.user.id, kind, safe)) return json({ error: 'Invalid catalogue type.' }, 422)
       return json({ ok: true })

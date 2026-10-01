@@ -24,11 +24,11 @@ export async function getAdminDashboard(db: D1Database) {
     db.prepare(`SELECT id, owner_id customer_id, plan_name, duration_months, quantity, status, currency,
       amount_minor, contact_email, contact_phone, delivery_address_json, starts_at, ends_at, paid_through_at,
       next_dispatch_at, copies_total, copies_fulfilled, entitlement_status, pricing_snapshot_json, created_at
-      FROM customer_subscriptions ORDER BY created_at DESC LIMIT 500`).all(),
+      FROM customer_subscriptions ORDER BY created_at DESC,id DESC`).all(),
     db.prepare(`SELECT id, subscription_id, owner_id customer_id, provider_payment_id, status,
-      amount_minor, currency, paid_at, created_at FROM customer_payments ORDER BY created_at DESC LIMIT 500`).all(),
+      amount_minor, currency, paid_at, created_at FROM customer_payments ORDER BY created_at DESC,id DESC`).all(),
     db.prepare(`SELECT id, subscription_id, owner_id customer_id, edition_label, status,
-      tracking_url, dispatched_at, delivered_at, created_at FROM customer_fulfilments ORDER BY created_at DESC LIMIT 1000`).all(),
+      tracking_url, dispatched_at, delivered_at, created_at FROM customer_fulfilments ORDER BY created_at DESC,id DESC`).all(),
     db.prepare(`SELECT * FROM editions ORDER BY dispatch_at DESC LIMIT 100`).all(),
     db.prepare(`SELECT * FROM edition_eligibility_snapshots ORDER BY created_at DESC LIMIT 5000`).all(),
     db.prepare(`SELECT * FROM admin_products ORDER BY name`).all(),
@@ -47,7 +47,7 @@ export async function getAdminDashboard(db: D1Database) {
     db.prepare(`SELECT event_name,COUNT(*) total FROM first_party_analytics_events GROUP BY event_name`).all(),
   ])
   const rows = subscriptions.results as Array<Record<string, unknown>>
-  const paymentRows = payments.results as Array<{ status: string; amount_minor: number }>
+  const paymentRows = payments.results as Array<{ status: string; amount_minor: number; currency:string }>
   const fulfilmentRows = fulfilments.results as Array<{ subscription_id: string; edition_label: string; status: string }>
   const editionRows = editions.results as Array<{ label: string; dispatch_at: number; status: string }>
   const now = Date.now()
@@ -101,6 +101,7 @@ export async function getAdminDashboard(db: D1Database) {
     promotionReports: promotionReports.results,
     audits: audits.results,
     reports: {
+      financialByCurrency: Array.from(new Set(paymentRows.map(row=>row.currency)),currency=>({currency,revenueMinor:paymentRows.filter(row=>row.currency===currency&&row.status==='paid').reduce((sum,row)=>sum+Number(row.amount_minor),0),refundMinor:paymentRows.filter(row=>row.currency===currency&&row.status==='refunded').reduce((sum,row)=>sum+Number(row.amount_minor),0)})),
       customers: new Set(rows.map(row => row.customer_id)).size,
       activeSubscriptions: rows.filter(row => row.status === 'active').length,
       activePaidEntitlements: paidEntitled.length,
