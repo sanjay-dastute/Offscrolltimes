@@ -16,6 +16,18 @@ describe('deployment health and alerts',()=>{
     expect(body.status).toBe('not_ready')
     expect(JSON.stringify(body)).not.toContain('secret-at-least')
   })
+  it('checks profile and newsletter migrations independently of database connectivity',async()=>{
+    const db=(await import('#/lib/lifecycle/env.server')).lifecycleBindings().db
+    const readChecks=async()=>await (await healthResponse(true)).json() as {checks:Record<string,boolean>}
+    let body=await readChecks()
+    expect(body.checks).toMatchObject({database:true,customerProfiles:true,newsletterSignups:true})
+    await db.prepare('DROP TABLE newsletter_subscribers').run()
+    body=await readChecks()
+    expect(body.checks).toMatchObject({database:true,customerProfiles:true,newsletterSignups:false})
+    await db.prepare('ALTER TABLE customers DROP COLUMN whatsapp_number').run()
+    body=await readChecks()
+    expect(body.checks).toMatchObject({database:true,customerProfiles:false,newsletterSignups:false})
+  })
   it('records healthy runs and creates an alert for recent operational failure counts',async()=>{
     const db=(await import('#/lib/lifecycle/env.server')).lifecycleBindings().db,now=Date.now()
     expect(await recordOperationalHealth(db)).toMatchObject({status:'healthy'})

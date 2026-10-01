@@ -7,9 +7,9 @@ export function Mark() {
       aria-hidden="true"
       alt=""
       src="/offscroll-times-logo.jpeg"
-      className="h-11 w-11 rounded-lg object-cover"
-      width="44"
-      height="44"
+      className="h-16 w-16 shrink-0 rounded-lg object-contain sm:h-11 sm:w-11"
+      width="64"
+      height="64"
     />
   );
 }
@@ -45,7 +45,7 @@ export function SiteHeader() {
             className="col-start-1 row-start-1 flex w-fit items-center gap-2.5 rounded-sm no-underline outline-none focus-visible:ring-2 focus-visible:ring-founder-deep focus-visible:ring-offset-2 focus-visible:ring-offset-paper"
           >
             <Mark />
-            <span className="hidden whitespace-nowrap font-display text-[17px] font-bold tracking-[-0.02em] sm:inline sm:text-[19px]">
+            <span className="font-display text-[17px] font-bold leading-tight tracking-[-0.02em] sm:whitespace-nowrap sm:text-[19px]">
               {BRAND_NAME}
             </span>
           </a>
@@ -57,7 +57,7 @@ export function SiteHeader() {
             {navItems}
           </nav>
 
-          <div className="col-start-2 row-start-1 flex items-center justify-self-end gap-2 md:col-start-3">
+          <div className="col-start-2 row-start-1 flex flex-col items-center justify-self-end gap-2 sm:flex-row md:col-start-3">
             <a href="/account" aria-label="My profile" className="inline-block rounded-full border border-graphite px-3 py-2.5 font-mono text-[10px] font-semibold tracking-[0.06em] uppercase no-underline outline-none hover:bg-sun focus-visible:ring-2 focus-visible:ring-founder-deep focus-visible:ring-offset-2 sm:text-[11px]">My profile</a>
             <a
               href={SUBSCRIBE_HREF}

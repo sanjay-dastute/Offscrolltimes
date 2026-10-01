@@ -4,6 +4,8 @@ export async function healthResponse(readiness = false) {
   if (!readiness) return Response.json({ status: 'ok', service: 'offscroll-times' }, { headers: { 'Cache-Control': 'no-store' } })
   const checks: Record<string, boolean> = {
     database: false,
+    customerProfiles: false,
+    newsletterSignups: false,
     googleAuth: Boolean(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET),
     microsoftAuth: Boolean(process.env.MICROSOFT_CLIENT_ID && process.env.MICROSOFT_CLIENT_SECRET),
     razorpay: Boolean(process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET && process.env.RAZORPAY_WEBHOOK_SECRET),
@@ -13,6 +15,14 @@ export async function healthResponse(readiness = false) {
     const db=lifecycleBindings().db
     const row=await db.prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name='operational_health_runs'`).first<{name:string}>()
     checks.database=row?.name==='operational_health_runs'
+    // A reachable database can still be missing the migrations required by
+    // recently deployed features. Probe columns without reading customer data.
+    await Promise.all([
+      db.prepare('SELECT display_name, whatsapp_number FROM customers LIMIT 0').all()
+        .then(()=>{checks.customerProfiles=true},()=>{checks.customerProfiles=false}),
+      db.prepare('SELECT id, email, status, consent_at, consent_text, unsubscribe_token_hash, created_at, updated_at FROM newsletter_subscribers LIMIT 0').all()
+        .then(()=>{checks.newsletterSignups=true},()=>{checks.newsletterSignups=false}),
+    ])
   } catch { checks.database=false }
   const ready=Object.values(checks).every(Boolean)
   return Response.json({ status: ready ? 'ready' : 'not_ready', checks }, { status: ready ? 200 : 503, headers: { 'Cache-Control': 'no-store' } })

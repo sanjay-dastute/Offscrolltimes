@@ -1,14 +1,15 @@
 import { useEffect, useState } from 'react';
+import { nextIssueSchedule } from '#/lib/dates';
 import { SUBSCRIBE_HREF } from '#/content/site';
 
-// Joining remains open throughout November 20 in the business timezone (IST).
-const JOIN_DEADLINE = Date.parse('2026-11-21T00:00:00+05:30');
+
 
 export function NextIssueNotice() {
+  const [schedule, setSchedule] = useState(() => nextIssueSchedule());
   const [remaining, setRemaining] = useState<number | null>(null);
 
   useEffect(() => {
-    const update = () => setRemaining(Math.max(0, Math.ceil((JOIN_DEADLINE - Date.now()) / 1000)));
+    const update = () => { const now = Date.now(); const next = nextIssueSchedule(now); setSchedule(next); setRemaining(Math.max(0, Math.ceil((next.deadline - now) / 1000))); };
     update();
     const interval = window.setInterval(update, 1000);
     return () => window.clearInterval(interval);
@@ -28,14 +29,14 @@ export function NextIssueNotice() {
       aria-labelledby="next-issue-title"
       aria-describedby="next-issue-description"
     >
-      <h2 id="next-issue-title" className="m-0 font-display text-xl font-bold">Next : December 2026 Issue</h2>
+      <h2 id="next-issue-title" className="m-0 font-display text-xl font-bold">Next : {schedule.issue} Issue</h2>
       <p id="next-issue-description" className="mt-3 text-sm leading-relaxed">
-        Become an Offscroller by November 20, 2026 to receive the December 2026 issue.
+        Become an Offscroller by {schedule.cutoff} to receive the {schedule.issue} issue.
       </p>
       <p className="mt-3 text-sm font-semibold">Time remaining to join:</p>
-      <div role="timer" aria-label="Time remaining until the November 20, 2026 joining deadline, India time" className="mt-2">
+      <div role="timer" aria-label={`Time remaining until the ${schedule.cutoff} joining deadline, India time`} className="mt-2">
         {remaining === 0 ? (
-          <p className="font-semibold">Joining for the December issue has closed.</p>
+          <p className="font-semibold">Joining for the {schedule.issueMonth} issue has closed.</p>
         ) : units ? (
           <div className="grid max-w-[20rem] grid-cols-4 gap-2">
             {units.map(({ label, value }) => (
@@ -46,11 +47,11 @@ export function NextIssueNotice() {
             ))}
           </div>
         ) : (
-          <p className="text-sm">Join by November 20, 2026, 11:59 p.m. IST.</p>
+          <p className="text-sm">Join by {schedule.cutoff}, 11:59 p.m. IST.</p>
         )}
       </div>
       <p className="mt-3 text-sm font-semibold">
-        {remaining === 0 ? 'Explore subscription options →' : 'Don’t miss the December issue — join before the deadline.'}
+        {remaining === 0 ? 'Explore subscription options →' : `Don’t miss the ${schedule.issueMonth} issue — join before the deadline.`}
       </p>
     </a>
   );

@@ -71,7 +71,7 @@ export function Hero() {
           </p>
           <p className="mx-auto mt-6 max-w-[46ch] text-[clamp(1.02rem,1.5vw,1.16rem)] leading-relaxed text-graphite-soft text-pretty md:mx-0">
             Forget doomscrolling. Every month, we deliver a real newspaper straight to your doorstep
-            packed with things to play — crossword puzzles, sudoku, word searches, mazes, trivia and more.
+            packed with things to play.
           </p>
           <p className="mx-auto mt-3 max-w-[46ch] font-display text-[1.05rem] font-semibold md:mx-0">No news. No scrolling. Just fun.</p>
           <NextIssueNotice />

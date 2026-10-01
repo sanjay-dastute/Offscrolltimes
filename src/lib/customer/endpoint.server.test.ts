@@ -63,8 +63,8 @@ describe('customer role and ownership endpoints', () => {
     expect(isAddressChangeBeforeCutoff(Date.parse('2026-08-20T22:30:00.000Z'), 'Europe/London')).toBe(true)
   })
   it('stores dispatch boundaries as UTC timestamps derived from the business timezone', () => {
-    expect(new Date(firstEditionTimestamp(Date.parse('2026-08-20T18:29:59.999Z'))).toISOString()).toBe('2026-09-05T04:30:00.000Z')
-    expect(new Date(firstEditionTimestamp(Date.parse('2026-08-20T18:30:00.000Z'))).toISOString()).toBe('2026-10-05T04:30:00.000Z')
+    expect(new Date(firstEditionTimestamp(Date.parse('2026-08-20T18:29:59.999Z'))).toISOString()).toBe('2026-09-25T04:30:00.000Z')
+    expect(new Date(firstEditionTimestamp(Date.parse('2026-08-20T18:30:00.000Z'))).toISOString()).toBe('2026-10-25T04:30:00.000Z')
   })
   it('rejects an anonymous dashboard request', async () => {
     const response = await getCustomerDashboard(new Request(`${origin}/api/customer`))
