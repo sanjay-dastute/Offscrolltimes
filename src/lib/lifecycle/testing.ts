@@ -94,6 +94,13 @@ function wrapAsD1(sqliteDb: DatabaseSync): D1Database {
           const results = sqliteDb.prepare(query).all(...boundArgs) as T[]
           return { results, success: true, meta: {} }
         },
+        async raw(options?: {columnNames?:boolean}) {
+          const prepared=sqliteDb.prepare(query)
+          const names=prepared.columns().map(column=>column.name)
+          prepared.setReturnArrays(true)
+          const rows=prepared.all(...boundArgs)
+          return options?.columnNames?[names,...rows]:rows
+        },
         async first<T>() {
           const row = sqliteDb.prepare(query).get(...boundArgs)
           return (row as T | undefined) ?? null

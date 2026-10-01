@@ -42,6 +42,15 @@ production migrations to `LIFECYCLE_DB` only during the approved deployment.
   confirmation message is sent by this feature; connect an email delivery service
   before sending updates and verifying email ownership.
 
+- **Exports:** download each of the 24 business data categories separately as CSV
+  or JSON. Downloads read all records directly from D1, require an authenticated
+  administrator and CSRF, and record the category, format and row count in the audit
+  history. CSV uses UTF-8 and guards against spreadsheet formulas in customer text.
+  JSON preserves stored values; timestamp fields are Unix milliseconds and amount
+  fields ending in `_minor` are minor currency units. Sessions, password hashes,
+  OAuth credentials and unsubscribe tokens are excluded. Files are business exports,
+  not a replacement for a full database backup.
+
 Local verification on 1 October 2026 includes applying all D1 migrations,
 TypeScript checking, the 56-test unit/integration suite, a production build,
 and the client bundle secret scan. `pnpm run test:browser` exercises the customer

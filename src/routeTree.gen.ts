@@ -33,6 +33,7 @@ import { Route as NewsletterUnsubscribeRouteImport } from './routes/newsletter.u
 import { Route as PoliciesSlugRouteImport } from './routes/policies.$slug'
 import { Route as ApiAdminCustomersRouteImport } from './routes/api.admin.customers'
 import { Route as ApiAdminDispatchRouteImport } from './routes/api.admin.dispatch'
+import { Route as ApiAdminExportRouteImport } from './routes/api.admin.export'
 import { Route as ApiAdminFilesRouteImport } from './routes/api.admin.files'
 import { Route as ApiAdminLoginRouteImport } from './routes/api.admin.login'
 import { Route as ApiAssetsIdRouteImport } from './routes/api.assets.$id'
@@ -165,6 +166,11 @@ const ApiAdminDispatchRoute = ApiAdminDispatchRouteImport.update({
   path: '/dispatch',
   getParentRoute: () => ApiAdminRoute,
 } as any)
+const ApiAdminExportRoute = ApiAdminExportRouteImport.update({
+  id: '/export',
+  path: '/export',
+  getParentRoute: () => ApiAdminRoute,
+} as any)
 const ApiAdminFilesRoute = ApiAdminFilesRouteImport.update({
   id: '/files',
   path: '/files',
@@ -247,6 +253,7 @@ export interface FileRoutesByFullPath {
   '/policies/$slug': typeof PoliciesSlugRoute
   '/api/admin/customers': typeof ApiAdminCustomersRoute
   '/api/admin/dispatch': typeof ApiAdminDispatchRoute
+  '/api/admin/export': typeof ApiAdminExportRoute
   '/api/admin/files': typeof ApiAdminFilesRoute
   '/api/admin/login': typeof ApiAdminLoginRoute
   '/api/assets/$id': typeof ApiAssetsIdRoute
@@ -284,6 +291,7 @@ export interface FileRoutesByTo {
   '/policies/$slug': typeof PoliciesSlugRoute
   '/api/admin/customers': typeof ApiAdminCustomersRoute
   '/api/admin/dispatch': typeof ApiAdminDispatchRoute
+  '/api/admin/export': typeof ApiAdminExportRoute
   '/api/admin/files': typeof ApiAdminFilesRoute
   '/api/admin/login': typeof ApiAdminLoginRoute
   '/api/assets/$id': typeof ApiAssetsIdRoute
@@ -322,6 +330,7 @@ export interface FileRoutesById {
   '/policies/$slug': typeof PoliciesSlugRoute
   '/api/admin/customers': typeof ApiAdminCustomersRoute
   '/api/admin/dispatch': typeof ApiAdminDispatchRoute
+  '/api/admin/export': typeof ApiAdminExportRoute
   '/api/admin/files': typeof ApiAdminFilesRoute
   '/api/admin/login': typeof ApiAdminLoginRoute
   '/api/assets/$id': typeof ApiAssetsIdRoute
@@ -361,6 +370,7 @@ export interface FileRouteTypes {
     | '/policies/$slug'
     | '/api/admin/customers'
     | '/api/admin/dispatch'
+    | '/api/admin/export'
     | '/api/admin/files'
     | '/api/admin/login'
     | '/api/assets/$id'
@@ -398,6 +408,7 @@ export interface FileRouteTypes {
     | '/policies/$slug'
     | '/api/admin/customers'
     | '/api/admin/dispatch'
+    | '/api/admin/export'
     | '/api/admin/files'
     | '/api/admin/login'
     | '/api/assets/$id'
@@ -435,6 +446,7 @@ export interface FileRouteTypes {
     | '/policies/$slug'
     | '/api/admin/customers'
     | '/api/admin/dispatch'
+    | '/api/admin/export'
     | '/api/admin/files'
     | '/api/admin/login'
     | '/api/assets/$id'
@@ -648,6 +660,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAdminDispatchRouteImport
       parentRoute: typeof ApiAdminRoute
     }
+    '/api/admin/export': {
+      id: '/api/admin/export'
+      path: '/export'
+      fullPath: '/api/admin/export'
+      preLoaderRoute: typeof ApiAdminExportRouteImport
+      parentRoute: typeof ApiAdminRoute
+    }
     '/api/admin/files': {
       id: '/api/admin/files'
       path: '/files'
@@ -731,6 +750,7 @@ declare module '@tanstack/react-router' {
 interface ApiAdminRouteChildren {
   ApiAdminCustomersRoute: typeof ApiAdminCustomersRoute
   ApiAdminDispatchRoute: typeof ApiAdminDispatchRoute
+  ApiAdminExportRoute: typeof ApiAdminExportRoute
   ApiAdminFilesRoute: typeof ApiAdminFilesRoute
   ApiAdminLoginRoute: typeof ApiAdminLoginRoute
   ApiAdminFileIdRoute: typeof ApiAdminFileIdRoute
@@ -739,6 +759,7 @@ interface ApiAdminRouteChildren {
 const ApiAdminRouteChildren: ApiAdminRouteChildren = {
   ApiAdminCustomersRoute: ApiAdminCustomersRoute,
   ApiAdminDispatchRoute: ApiAdminDispatchRoute,
+  ApiAdminExportRoute: ApiAdminExportRoute,
   ApiAdminFilesRoute: ApiAdminFilesRoute,
   ApiAdminLoginRoute: ApiAdminLoginRoute,
   ApiAdminFileIdRoute: ApiAdminFileIdRoute,
