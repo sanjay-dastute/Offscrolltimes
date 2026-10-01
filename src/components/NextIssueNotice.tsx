@@ -24,23 +24,23 @@ export function NextIssueNotice() {
   return (
     <a
       href={SUBSCRIBE_HREF}
-      className="mt-7 block rounded-2xl border-2 border-graphite bg-paper-raised p-5 text-left text-graphite no-underline shadow-[4px_4px_0_var(--color-graphite)] transition-colors hover:bg-paper hover:text-graphite sm:p-6"
+      className="mx-auto mt-6 block w-full max-w-[28rem] rounded-xl border-2 border-graphite bg-paper-raised p-4 text-left text-graphite no-underline shadow-[3px_3px_0_var(--color-graphite)] transition-colors hover:bg-paper hover:text-graphite md:mx-0"
       aria-labelledby="next-issue-title"
       aria-describedby="next-issue-description"
     >
-      <h2 id="next-issue-title" className="m-0 font-display text-2xl font-bold">Next : December 2026 Issue</h2>
+      <h2 id="next-issue-title" className="m-0 font-display text-xl font-bold">Next : December 2026 Issue</h2>
       <p id="next-issue-description" className="mt-3 text-sm leading-relaxed">
         Become an Offscroller by November 20, 2026 to receive the December 2026 issue.
       </p>
-      <p className="mt-4 text-sm font-semibold">Time remaining to join:</p>
+      <p className="mt-3 text-sm font-semibold">Time remaining to join:</p>
       <div role="timer" aria-label="Time remaining until the November 20, 2026 joining deadline, India time" className="mt-2">
         {remaining === 0 ? (
           <p className="font-semibold">Joining for the December issue has closed.</p>
         ) : units ? (
-          <div className="grid grid-cols-4 gap-2">
+          <div className="grid max-w-[20rem] grid-cols-4 gap-2">
             {units.map(({ label, value }) => (
-              <div key={label} className="rounded-lg border border-graphite bg-sun px-1 py-3 text-center">
-                <span className="block font-mono text-2xl font-bold tabular-nums sm:text-3xl">{String(value).padStart(2, '0')}</span>
+              <div key={label} className="rounded-lg border border-graphite bg-sun px-1 py-2 text-center">
+                <span className="block font-mono text-xl font-bold tabular-nums sm:text-2xl">{String(value).padStart(2, '0')}</span>
                 <span className="mt-1 block font-mono text-[9px] uppercase tracking-wide sm:text-[10px]">{label}</span>
               </div>
             ))}
@@ -49,7 +49,7 @@ export function NextIssueNotice() {
           <p className="text-sm">Join by November 20, 2026, 11:59 p.m. IST.</p>
         )}
       </div>
-      <p className="mt-4 text-sm font-semibold">
+      <p className="mt-3 text-sm font-semibold">
         {remaining === 0 ? 'Explore subscription options →' : 'Don’t miss the December issue — join before the deadline.'}
       </p>
     </a>

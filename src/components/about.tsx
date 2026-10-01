@@ -38,7 +38,9 @@ export function WhoWeAre() {
             <img
               src={WHO_WE_ARE.image.src}
               alt={WHO_WE_ARE.image.alt}
-              className="aspect-[4/3] w-full rounded-sm object-cover"
+              className="aspect-square w-full rounded-sm object-contain"
+              width={1254}
+              height={1254}
               loading="lazy"
             />
           </div>

@@ -397,8 +397,8 @@ export const WHO_WE_ARE = {
     },
   ],
   location: "Coimbatore, Tamil Nadu, India — printing and shipping across India.",
-  image: { src: "/images/about-desk-sketches.jpg", alt: "A desk covered in early puzzle-grid sketches, a pencil and a coffee mug" },
-  note: "Concept image — replace with a real studio photo.",
+  image: { src: "/images/about-portrait.png", alt: "Illustrated portrait of a smiling woman with long dark hair wearing black" },
+  note: "Offscroll Times",
 };
 
 export const TEAM_ROLES = [
