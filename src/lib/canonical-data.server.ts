@@ -5,8 +5,13 @@ export async function recordUserRole(db:D1Database,ownerId:string,role:'customer
 }
 
 export async function recordCustomerOrder(db:D1Database,input:{userId:string;email:string;phone?:string;subscriptionId:string;providerOrderId:string;currency:string;amountMinor:number;pricingSnapshot:unknown;address:CustomerAddress;termsAcceptedAt:number}){
-  const now=Date.now(),userId=`user_${input.userId}`,customerId=`customer_${input.userId}`
-  await db.prepare(`INSERT INTO users(id,owner_id,role,account_state,created_at,updated_at) VALUES(?,?,'customer','active',?,?) ON CONFLICT(owner_id) DO UPDATE SET updated_at=excluded.updated_at`).bind(userId,input.userId,now,now).run()
+  const now=Date.now()
+  await db.prepare(`INSERT INTO users(id,owner_id,role,account_state,created_at,updated_at) VALUES(?,?,'customer','active',?,?) ON CONFLICT(owner_id) DO UPDATE SET updated_at=excluded.updated_at`).bind(`user_${input.userId}`,input.userId,now,now).run()
+  const user=await db.prepare('SELECT id FROM users WHERE owner_id=?').bind(input.userId).first<{id:string}>()
+  if(!user)throw new Error('Customer identity is unavailable.')
+  const userId=user.id
+  const existingCustomer=await db.prepare('SELECT id FROM customers WHERE user_id=?').bind(userId).first<{id:string}>()
+  const customerId=existingCustomer?.id??`customer_${input.userId}`
   await db.prepare(`INSERT INTO customers(id,user_id,email,phone,transactional_contact_basis,marketing_consent,privacy_request_state,created_at,updated_at) VALUES(?,?,?,?,'contract',0,'none',?,?) ON CONFLICT(user_id) DO UPDATE SET email=excluded.email,phone=COALESCE(excluded.phone,customers.phone),updated_at=excluded.updated_at`).bind(customerId,userId,input.email,input.phone||null,now,now).run()
   const version=(await db.prepare(`SELECT COALESCE(MAX(version),0)+1 next_version FROM addresses WHERE customer_id=? AND address_type='delivery'`).bind(customerId).first<{next_version:number}>())?.next_version??1
   await db.prepare(`UPDATE addresses SET active_to=? WHERE customer_id=? AND address_type='delivery' AND active_to IS NULL`).bind(now,customerId).run()

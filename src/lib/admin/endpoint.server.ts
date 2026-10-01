@@ -19,6 +19,7 @@ const ENQUIRY_STATUSES = new Set(['new','in_progress','waiting_customer','resolv
 
 function db() { try { return lifecycleBindings().db } catch { return null } }
 function text(value: unknown, max = 160) { return typeof value === 'string' ? value.trim().slice(0, max) : '' }
+function optionalNumber(value:unknown) { return value===undefined||value===null||value===''?null:Number(value) }
 
 export async function getAdmin(request: Request) {
   const session = await readAdministratorSession(request)
@@ -103,9 +104,9 @@ export async function mutateAdmin(request: Request) {
       } : kind === 'discount' ? {
         id: text(body.id), code: text(body.code, 50).toUpperCase(), kind: text(body.discountKind, 30), value: Number(body.value),
         startsAt: body.startsAt ? Date.parse(String(body.startsAt)) : null, endsAt: body.endsAt ? Date.parse(String(body.endsAt)) : null,
-        usageLimit: body.usageLimit ? Number(body.usageLimit) : null, perCustomerLimit: body.perCustomerLimit ? Number(body.perCustomerLimit) : null,
-        minimumDurationMonths: body.minimumDurationMonths ? Number(body.minimumDurationMonths) : null,
-        minimumOrderMinor: body.minimumOrderMinor ? Number(body.minimumOrderMinor) : null,
+        usageLimit: optionalNumber(body.usageLimit), perCustomerLimit: optionalNumber(body.perCustomerLimit),
+        minimumDurationMonths: optionalNumber(body.minimumDurationMonths),
+        minimumOrderMinor: optionalNumber(body.minimumOrderMinor),
         eligibleDurations: text(body.eligibleDurations,200) ? JSON.stringify(text(body.eligibleDurations,200).split(',').map(Number).filter(Number.isFinite)) : null,
         eligibleCountries: text(body.eligibleCountries,200) ? JSON.stringify(text(body.eligibleCountries,200).split(',').map(v=>v.trim().toUpperCase()).filter(Boolean)) : null,
         combinable: body.combinable === true || body.combinable === 'on', active: body.active !== false,
@@ -113,6 +114,8 @@ export async function mutateAdmin(request: Request) {
         countryCode: text(body.countryCode, 2).toUpperCase(), countryName: text(body.countryName), currency: text(body.currency, 3).toUpperCase(), shippingMinor: Number(body.shippingMinor), additionalCopyMinor:Number(body.additionalCopyMinor ?? 0), taxRateBasisPoints: Number(body.taxRateBasisPoints), active: body.active !== false,
       }
       if(kind==='discount') {
+        const durations=text(body.eligibleDurations,200), countries=text(body.eligibleCountries,200)
+        if((durations&&!durations.split(',').every(value=>/^\d+$/.test(value.trim())&&Number(value)>0&&Number.isSafeInteger(Number(value))))||(countries&&!countries.split(',').every(value=>/^[A-Za-z]{2}$/.test(value.trim()))))return json({error:'Enter positive whole months and two-letter country codes, separated by commas.'},422)
         const nonnegative=(value:unknown)=>Number.isSafeInteger(value)&&Number(value)>=0
         const optionalPositive=(value:unknown)=>value===null||(Number.isSafeInteger(value)&&Number(value)>0)
         if(!SAFE_ID.test(String(safe.id))||!safe.code||!['percentage','fixed','free_shipping'].includes(String(safe.kind))||!nonnegative(safe.value)||(safe.kind==='percentage'&&Number(safe.value)>10000)||!optionalPositive(safe.usageLimit)||!optionalPositive(safe.perCustomerLimit)||!optionalPositive(safe.minimumDurationMonths)||(safe.minimumOrderMinor!==null&&!nonnegative(safe.minimumOrderMinor))||(safe.startsAt!==null&&!Number.isFinite(safe.startsAt))||(safe.endsAt!==null&&!Number.isFinite(safe.endsAt))||(safe.startsAt!==null&&safe.endsAt!==null&&Number(safe.endsAt)<=Number(safe.startsAt)))return json({error:'Enter valid discount amounts, limits and dates; expiry must follow the start.'},422)

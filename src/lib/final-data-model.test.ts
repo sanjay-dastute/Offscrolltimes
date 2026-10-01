@@ -1,7 +1,19 @@
 import { describe, expect, it } from 'vitest'
 import { createTestD1 } from './lifecycle/testing'
+import { recordCustomerOrder } from './canonical-data.server'
+import { registerCustomerCheckout } from './customer/store.server'
 
 describe('final canonical data model', () => {
+  it('links orders and delivery addresses to the existing social-auth customer identity',async()=>{
+    const db=createTestD1(),now=Date.now()
+    await db.prepare(`INSERT INTO users(id,owner_id,role,account_state,created_at,updated_at) VALUES('user_hashed','google:123','customer','active',?,?)`).bind(now,now).run()
+    await db.prepare(`INSERT INTO customers(id,user_id,email,created_at,updated_at) VALUES('customer_hashed','user_hashed','reader@example.com',?,?)`).bind(now,now).run()
+    await registerCustomerCheckout(db,{id:'test_order',userId:'google:123',planId:'monthly',planName:'Monthly',durationMonths:1,quantity:1,currency:'INR',amountMinor:19900,now})
+    await recordCustomerOrder(db,{userId:'google:123',email:'reader@example.com',subscriptionId:'test_order',providerOrderId:'test_provider_order',currency:'INR',amountMinor:19900,pricingSnapshot:{totalMinor:19900},address:{name:'Reader',line1:'1 Test Street',city:'Pune',postalCode:'411001',country:'IN'},termsAcceptedAt:now})
+    expect(await db.prepare('SELECT customer_id FROM orders').first()).toMatchObject({customer_id:'customer_hashed'})
+    expect(await db.prepare('SELECT customer_id FROM addresses').first()).toMatchObject({customer_id:'customer_hashed'})
+    expect(await db.prepare('SELECT COUNT(*) total FROM customers').first()).toMatchObject({total:1})
+  })
   it('exposes every application entity through a table or canonical view', async () => {
     const db=createTestD1()
     const expected=[

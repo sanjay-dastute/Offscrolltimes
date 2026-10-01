@@ -60,16 +60,20 @@ export function Hero() {
         className={`${SHELL} grid items-center gap-10 py-14 pb-16 md:grid-cols-2 md:gap-16 md:py-20 md:pb-24 lg:py-24 lg:pb-28`}
       >
         <div className="hero-reveal text-center md:text-left">
-          <p className={`${EYEBROW} text-graphite`}>A fresh issue every month</p>
+          <p className={`${EYEBROW} text-graphite`}>A FRESH ISSUE EVERY MONTH</p>
           <h1 className="m-0 font-display text-[clamp(2.3rem,6.4vw,3.8rem)] leading-[0.98] font-bold tracking-[-0.03em] text-balance">
-            A monthly newspaper full of puzzles, games, laughs and fun facts.
+            A NEWSPAPER
+            <br />
+            WITH NO NEWS.
           </h1>
-          <p className="mx-auto mt-6 max-w-[46ch] text-[clamp(1.02rem,1.5vw,1.16rem)] leading-relaxed text-graphite-soft text-pretty md:mx-0">
-            Every issue brings screen-free ways to play, from crosswords and brain teasers to
-            family games and curious trivia, delivered straight to your doorstep. One newspaper.
-            No scrolling. Just fun.
+          <p className="mx-auto mt-4 max-w-[46ch] font-display text-[clamp(1.15rem,2vw,1.4rem)] font-semibold md:mx-0">
+            Just puzzles, games, trivia, laughs and fun facts.
           </p>
-          <p className="mx-auto mt-3 max-w-[46ch] font-display text-[1.05rem] font-semibold md:mx-0">Your monthly escape from the scroll, packed with puzzles, games and fun.</p>
+          <p className="mx-auto mt-6 max-w-[46ch] text-[clamp(1.02rem,1.5vw,1.16rem)] leading-relaxed text-graphite-soft text-pretty md:mx-0">
+            Forget doomscrolling. Every month, we deliver a real newspaper straight to your doorstep
+            packed with things to play — crossword puzzles, sudoku, word searches, mazes, trivia and more.
+          </p>
+          <p className="mx-auto mt-3 max-w-[46ch] font-display text-[1.05rem] font-semibold md:mx-0">No news. No scrolling. Just fun.</p>
           <NextIssueNotice />
           <div className="mt-8 flex flex-wrap items-center justify-center gap-x-6 gap-y-4 md:justify-start">
             <a href="#plans" className={CTA}>

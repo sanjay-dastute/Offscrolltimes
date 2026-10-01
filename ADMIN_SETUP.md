@@ -28,6 +28,20 @@ production migrations to `LIFECYCLE_DB` only during the approved deployment.
 - **Account:** customers can maintain their own name, contact email, phone and
   WhatsApp number. Contact email does not change the identity used to sign in.
 
+Local verification on 1 October 2026 includes applying all D1 migrations,
+TypeScript checking, the 56-test unit/integration suite, a production build,
+and the client bundle secret scan. `pnpm run test:browser` exercises the customer
+directory, pagination, audited contact correction, offer editing/activation and
+customer WhatsApp form at desktop and mobile viewport sizes. Browser form tests
+use controlled API fixtures; anonymous admin-access checks use the actual local
+server. Database and authenticated ownership checks use real SQLite migrations
+in the integration suite. This does not certify live Google/Microsoft callbacks.
+
+Local Vite development disables remote bindings so it can run with local D1/R2
+without a Cloudflare login. Production bindings remain in `wrangler.jsonc`.
+
 Payment gateway credentials and live payment verification are outside this
-update. Production administrator credentials, live deployment and browser
-acceptance cannot be certified from local automated checks.
+update. Live activation requires Cloudflare authentication, production migration
+application, the approved administrator's provider subject ID, and configured
+Google/Microsoft applications. No Cloudflare login or real provider credentials
+were available in this workspace during verification.

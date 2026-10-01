@@ -11,7 +11,7 @@ export async function customerDirectory(db: D1Database, url: URL) {
   const count = await db.prepare(`SELECT COUNT(*) total FROM users u LEFT JOIN customers c ON c.user_id=u.id ${where}`).bind(...args).first<{total:number}>()
   const total = Number(count?.total ?? 0), pages = Math.max(1, Math.ceil(total / 25)), current = Math.min(page, pages)
   const rows = await db.prepare(`SELECT u.id user_id,u.owner_id,u.account_state,u.created_at,c.id customer_id,c.display_name,COALESCE(c.email,u.primary_email) email,c.phone,c.whatsapp_number,
-    (SELECT json_object('name',a.name,'line1',a.line1,'line2',a.line2,'city',a.city,'region',a.region,'postalCode',a.postal_code,'country',a.country) FROM addresses a WHERE a.customer_id=c.id ORDER BY a.version DESC LIMIT 1) address_json,
+    (SELECT json_object('name',a.name,'line1',a.line1,'line2',a.line2,'city',a.city,'region',a.region,'postalCode',a.postal_code,'country',a.country) FROM addresses a WHERE a.customer_id=c.id AND a.active_to IS NULL ORDER BY a.version DESC LIMIT 1) address_json,
     (SELECT COUNT(*) FROM customer_subscriptions s WHERE s.owner_id=u.owner_id) subscription_count,
     (SELECT s.status FROM customer_subscriptions s WHERE s.owner_id=u.owner_id ORDER BY s.created_at DESC,s.id DESC LIMIT 1) subscription_status,
     (SELECT p.status FROM customer_payments p WHERE p.owner_id=u.owner_id ORDER BY p.created_at DESC,p.id DESC LIMIT 1) payment_status

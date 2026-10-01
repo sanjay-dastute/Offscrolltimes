@@ -34,6 +34,7 @@ describe('administrator authorization and fulfilment', () => {
     expect((await mutation('admin_1',{action:'discount.toggle',discountId:'launch-159',active:false})).status).toBe(200)
     expect(await db.prepare(`SELECT active FROM admin_discounts WHERE id='launch-159'`).first()).toMatchObject({active:0})
     expect((await mutation('admin_1',{action:'catalog.upsert',kind:'discount',id:'invalid',code:'INVALID',discountKind:'percentage',value:10001})).status).toBe(422)
+    for(const fields of [{eligibleDurations:'3,invalid'},{eligibleCountries:'IN,INVALID'},{usageLimit:0}])expect((await mutation('admin_1',{action:'catalog.upsert',kind:'discount',id:'invalid',code:'INVALID',discountKind:'percentage',value:1000,...fields})).status).toBe(422)
   })
   it('rejects a signed-in customer who is not configured as an administrator', async () => {
     expect((await getAdmin(await request('customer_1', '/api/admin'))).status).toBe(403)
