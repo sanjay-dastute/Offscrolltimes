@@ -6,6 +6,7 @@ import { CTA, CTA_OUTLINE, EYEBROW, H2 } from '#/lib/uiKit'
 import { AdminFileLibrary } from '#/components/AdminFileLibrary'
 import { AdminCustomers } from '#/components/AdminCustomers'
 import { AdminOffers } from '#/components/AdminOffers'
+import { AdminLogin } from '#/components/AdminLogin'
 import { AdminNewsletter } from '#/components/AdminNewsletter'
 
 type Row = Record<string, any>
@@ -42,7 +43,7 @@ function AdminPage() {
 
   async function load() {
     const response = await fetch('/api/admin', { headers: { Accept: 'application/json' } })
-    if (response.status === 403) { setState('denied'); return }
+    if (response.status === 403) { setData(null); setState('denied'); return }
     const result = await response.json() as AdminData & { error?: string }
     if (!response.ok) { setError(result.error ?? 'Admin data could not be loaded.'); setState('error'); return }
     setData(result); setState('ready')
@@ -63,10 +64,10 @@ function AdminPage() {
 
   return <><SiteHeader /><main className="mx-auto min-h-[70vh] max-w-[1400px] px-4 py-12 sm:px-6 lg:px-10">
     {state === 'loading' && <p className={EYEBROW}>Checking administrator access…</p>}
-    {state === 'denied' && <section className={`${card} mx-auto max-w-xl text-center`}><p className={EYEBROW}>Restricted area</p><h1 className={`${H2} mt-3`}>Administrator access required.</h1><p className="mt-4 text-graphite-soft">Sign in with an explicitly approved Google or Microsoft identity. Customer accounts cannot access this dashboard.</p><a className={`${CTA} mt-6`} href="/login?returnTo=/admin">Administrator sign in</a><a className={`${CTA_OUTLINE} ml-3 mt-6`} href="/">Return home</a></section>}
+    {state === 'denied' && <AdminLogin onSuccess={load} />}
     {error && <p role="alert" className="mb-6 rounded-xl border border-red-700 bg-red-50 p-4 text-red-900">{error}</p>}
     {data && <>
-      <header className="flex flex-wrap items-end justify-between gap-5 border-b border-graphite pb-7"><div><p className={EYEBROW}>Administrator</p><h1 className="m-0 font-display text-5xl font-bold tracking-tight">Business control room</h1><p className="mt-3 text-graphite-soft">Signed in as {data.user.name ?? data.user.id}</p></div><a className={CTA_OUTLINE} href="/account">Customer view</a></header>
+      <header className="flex flex-wrap items-end justify-between gap-5 border-b border-graphite pb-7"><div><p className={EYEBROW}>Administrator</p><h1 className="m-0 font-display text-5xl font-bold tracking-tight">Business control room</h1><p className="mt-3 text-graphite-soft">Signed in as {data.user.name ?? data.user.id}</p></div><button className={CTA_OUTLINE} onClick={async()=>{const response=await fetch('/api/admin/login',{method:'DELETE',headers:{'Content-Type':'application/json'},body:JSON.stringify({csrf:data.csrf})});if(response.ok){setData(null);setState('denied')}else{setError('Sign-out failed. Please retry.')}}}>Sign out</button></header>
       <nav className="my-7 flex flex-wrap gap-2" aria-label="Admin sections">{['overview','customers','email signups','subscriptions','editions','enquiries','offers','catalogue','files','content','audit'].map(item => <button key={item} onClick={() => setTab(item)} className={`rounded-full border border-graphite px-4 py-2 font-mono text-xs uppercase ${tab === item ? 'bg-graphite text-paper' : 'bg-paper'}`}>{item}</button>)}</nav>
       {tab === 'customers' && <AdminCustomers mutate={mutate} />}
       {tab === 'email signups' && <AdminNewsletter mutate={mutate} />}

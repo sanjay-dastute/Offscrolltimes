@@ -34,6 +34,7 @@ import { Route as PoliciesSlugRouteImport } from './routes/policies.$slug'
 import { Route as ApiAdminCustomersRouteImport } from './routes/api.admin.customers'
 import { Route as ApiAdminDispatchRouteImport } from './routes/api.admin.dispatch'
 import { Route as ApiAdminFilesRouteImport } from './routes/api.admin.files'
+import { Route as ApiAdminLoginRouteImport } from './routes/api.admin.login'
 import { Route as ApiAssetsIdRouteImport } from './routes/api.assets.$id'
 import { Route as ApiCustomerFilesRouteImport } from './routes/api.customer.files'
 import { Route as ApiRazorpayCheckoutRouteImport } from './routes/api.razorpay.checkout'
@@ -169,6 +170,11 @@ const ApiAdminFilesRoute = ApiAdminFilesRouteImport.update({
   path: '/files',
   getParentRoute: () => ApiAdminRoute,
 } as any)
+const ApiAdminLoginRoute = ApiAdminLoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => ApiAdminRoute,
+} as any)
 const ApiAssetsIdRoute = ApiAssetsIdRouteImport.update({
   id: '/api/assets/$id',
   path: '/api/assets/$id',
@@ -242,6 +248,7 @@ export interface FileRoutesByFullPath {
   '/api/admin/customers': typeof ApiAdminCustomersRoute
   '/api/admin/dispatch': typeof ApiAdminDispatchRoute
   '/api/admin/files': typeof ApiAdminFilesRoute
+  '/api/admin/login': typeof ApiAdminLoginRoute
   '/api/assets/$id': typeof ApiAssetsIdRoute
   '/api/customer/files': typeof ApiCustomerFilesRoute
   '/api/razorpay/checkout': typeof ApiRazorpayCheckoutRoute
@@ -278,6 +285,7 @@ export interface FileRoutesByTo {
   '/api/admin/customers': typeof ApiAdminCustomersRoute
   '/api/admin/dispatch': typeof ApiAdminDispatchRoute
   '/api/admin/files': typeof ApiAdminFilesRoute
+  '/api/admin/login': typeof ApiAdminLoginRoute
   '/api/assets/$id': typeof ApiAssetsIdRoute
   '/api/customer/files': typeof ApiCustomerFilesRoute
   '/api/razorpay/checkout': typeof ApiRazorpayCheckoutRoute
@@ -315,6 +323,7 @@ export interface FileRoutesById {
   '/api/admin/customers': typeof ApiAdminCustomersRoute
   '/api/admin/dispatch': typeof ApiAdminDispatchRoute
   '/api/admin/files': typeof ApiAdminFilesRoute
+  '/api/admin/login': typeof ApiAdminLoginRoute
   '/api/assets/$id': typeof ApiAssetsIdRoute
   '/api/customer/files': typeof ApiCustomerFilesRoute
   '/api/razorpay/checkout': typeof ApiRazorpayCheckoutRoute
@@ -353,6 +362,7 @@ export interface FileRouteTypes {
     | '/api/admin/customers'
     | '/api/admin/dispatch'
     | '/api/admin/files'
+    | '/api/admin/login'
     | '/api/assets/$id'
     | '/api/customer/files'
     | '/api/razorpay/checkout'
@@ -389,6 +399,7 @@ export interface FileRouteTypes {
     | '/api/admin/customers'
     | '/api/admin/dispatch'
     | '/api/admin/files'
+    | '/api/admin/login'
     | '/api/assets/$id'
     | '/api/customer/files'
     | '/api/razorpay/checkout'
@@ -425,6 +436,7 @@ export interface FileRouteTypes {
     | '/api/admin/customers'
     | '/api/admin/dispatch'
     | '/api/admin/files'
+    | '/api/admin/login'
     | '/api/assets/$id'
     | '/api/customer/files'
     | '/api/razorpay/checkout'
@@ -643,6 +655,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAdminFilesRouteImport
       parentRoute: typeof ApiAdminRoute
     }
+    '/api/admin/login': {
+      id: '/api/admin/login'
+      path: '/login'
+      fullPath: '/api/admin/login'
+      preLoaderRoute: typeof ApiAdminLoginRouteImport
+      parentRoute: typeof ApiAdminRoute
+    }
     '/api/assets/$id': {
       id: '/api/assets/$id'
       path: '/api/assets/$id'
@@ -713,6 +732,7 @@ interface ApiAdminRouteChildren {
   ApiAdminCustomersRoute: typeof ApiAdminCustomersRoute
   ApiAdminDispatchRoute: typeof ApiAdminDispatchRoute
   ApiAdminFilesRoute: typeof ApiAdminFilesRoute
+  ApiAdminLoginRoute: typeof ApiAdminLoginRoute
   ApiAdminFileIdRoute: typeof ApiAdminFileIdRoute
 }
 
@@ -720,6 +740,7 @@ const ApiAdminRouteChildren: ApiAdminRouteChildren = {
   ApiAdminCustomersRoute: ApiAdminCustomersRoute,
   ApiAdminDispatchRoute: ApiAdminDispatchRoute,
   ApiAdminFilesRoute: ApiAdminFilesRoute,
+  ApiAdminLoginRoute: ApiAdminLoginRoute,
   ApiAdminFileIdRoute: ApiAdminFileIdRoute,
 }
 

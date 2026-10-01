@@ -326,7 +326,7 @@ export const FAQ_GROUPS = [
     { q: "When can I receive a refund?", a: "Request cancellation within seven days of purchase before preparation or dispatch for a full refund under the published policy. A damaged or missing eligible issue may be replaced or refunded. Copies delivered in good condition are generally not refundable." },
   ] },
   { key: "gift", title: "Gift subscriptions", items: [
-    { q: "Can I send it as a gift?", a: "Yes. Enter the recipient's India delivery address at checkout. Ask support first if you need an international delivery or a gift message." },
+    { q: "Can I send it as a gift?", a: "Yes. Enter the recipient's India delivery address at checkout. Request support if you need an international delivery or a gift message." },
   ] },
   { key: "bulk", title: "Bulk and corporate orders", items: [
     { q: "Can our office order multiple copies?", a: "Yes. Choose a quantity for one India delivery address, or contact us for a tailored bulk enquiry." },

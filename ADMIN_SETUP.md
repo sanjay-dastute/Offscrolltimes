@@ -1,9 +1,16 @@
 # Administrator console
 
-The console is at `/admin`. Sign in through Google or Microsoft with an identity
-listed in the `ADMIN_IDENTITY_IDS` Worker secret. Use provider-qualified identity
-IDs (for example `google:<subject>`), not an email address. Existing allowlisted
-administrators retain access. Never put provider secrets in source control.
+The console is at `/admin` with a separate username and password form. Set the
+`ADMIN_USERNAME` and `ADMIN_PASSWORD_HASH` Worker secrets. The password hash format
+is `pbkdf2-sha256-100000$<32 hex salt characters>$<64 hex digest characters>`.
+Use a randomly generated password; keep plaintext passwords out of source control.
+The ignored `admin-credentials.local` file contains the initial local credentials.
+Login allows five attempts per IP and thirty total per fifteen minutes. Sessions
+use a signed HttpOnly, Secure, SameSite=Strict cookie, expire after eight hours,
+and become invalid when either credential changes. Admin mutations require CSRF.
+When password login is configured, Google/Microsoft sessions cannot grant admin
+access. Customer Google sign-in remains separate. Without password configuration,
+the previous `ADMIN_IDENTITY_IDS` allowlist remains a compatibility fallback.
 
 Apply all pending D1 migrations before using the updated console. Migration
 `0028_customer_directory.sql` adds customer names and separate WhatsApp numbers

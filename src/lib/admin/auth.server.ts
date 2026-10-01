@@ -1,4 +1,5 @@
 import { readSession, type SessionData } from '#/lib/auth.server'
+import { passwordAdminConfigured, readPasswordAdministrator } from './password.server'
 
 export function isAdministratorUserId(userId: string): boolean {
   const configured = process.env.ADMIN_IDENTITY_IDS ?? ''
@@ -6,6 +7,7 @@ export function isAdministratorUserId(userId: string): boolean {
 }
 
 export async function readAdministratorSession(request: Request): Promise<SessionData | null> {
+  if(passwordAdminConfigured())return readPasswordAdministrator(request)
   const session = await readSession(request)
   return session && isAdministratorUserId(session.user.id) ? session : null
 }
