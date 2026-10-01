@@ -60,7 +60,8 @@ export async function getCustomerDashboard(request: Request): Promise<Response> 
     ? await db.prepare(`SELECT provider,provider_email,created_at FROM auth_identities WHERE user_id=? ORDER BY created_at`).bind(session.internalUserId).all<{provider:string;provider_email:string|null;created_at:number}>()
     : { results: [] }
   const profile=await db.prepare(`SELECT c.display_name,c.email,c.phone,c.whatsapp_number FROM customers c JOIN users u ON u.id=c.user_id WHERE u.owner_id=?`).bind(session.user.id).first()
-  return json({ user: session.user, csrf: session.csrf, identities: identities.results, profile, ...data })
+  const address=await db.prepare(`SELECT a.name,a.line1,a.line2,a.city,a.region,a.postal_code postalCode,a.country FROM addresses a JOIN customers c ON c.id=a.customer_id JOIN users u ON u.id=c.user_id WHERE u.owner_id=? AND a.active_to IS NULL ORDER BY a.version DESC LIMIT 1`).bind(session.user.id).first()
+  return json({ user: session.user, csrf: session.csrf, identities: identities.results, profile, address, ...data })
 }
 
 export async function patchCustomerDashboard(request: Request): Promise<Response> {
@@ -72,6 +73,18 @@ export async function patchCustomerDashboard(request: Request): Promise<Response
   let body: Record<string, unknown>
   try { body = await request.json() as Record<string, unknown> } catch { return json({ error: 'Invalid request.' }, 400) }
   if (body.csrf !== session.csrf) return json({ error: 'Your session changed. Refresh and retry.' }, 403)
+  if(body.action==='profile.address') {
+    const address=validAddress(body.address)
+    if(!address)return json({error:'Enter a complete delivery address.'},422)
+    const subscription=await db.prepare('SELECT id FROM customer_subscriptions WHERE owner_id=? LIMIT 1').bind(session.user.id).first()
+    if(subscription)return json({error:'Update the delivery address within your subscription below.'},409)
+    const user=await db.prepare('SELECT id FROM users WHERE owner_id=?').bind(session.user.id).first<{id:string}>()
+    if(!user)return json({error:'Account not found.'},404)
+    const now=Date.now()
+    await db.prepare(`INSERT INTO customers(id,user_id,created_at,updated_at) VALUES(?,?,?,?) ON CONFLICT(user_id) DO NOTHING`).bind(`customer_${user.id}`,user.id,now,now).run()
+    await recordAddressVersion(db,{ownerId:session.user.id,address,reason:'Customer profile address update',now})
+    return json({ok:true})
+  }
   if(body.action==='profile.contact') {
     const name=cleanText(body.name,100), email=cleanText(body.email,200).toLowerCase(), phone=cleanText(body.phone,30), whatsapp=cleanText(body.whatsapp,30)
     if(!name||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)||(phone&&!/^\+?[0-9 ()-]{7,30}$/.test(phone))||(whatsapp&&!/^\+[1-9][0-9]{7,14}$/.test(whatsapp)))return json({error:'Enter a full name, valid email and WhatsApp number including country code.'},422)

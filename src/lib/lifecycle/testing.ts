@@ -34,6 +34,7 @@ const MIGRATION_FILES = [
   '0026_india_launch_pricing.sql',
   '0027_private_object_storage.sql',
   '0028_customer_directory.sql',
+  '0029_newsletter_signups.sql',
 ]
 
 export function createTestD1(): D1Database {

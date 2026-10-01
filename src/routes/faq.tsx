@@ -59,7 +59,7 @@ function FaqPage() {
           Search questions and answers
         </label>
         <div className="relative mt-2">
-          <input id="faq-search" type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Try “address”, “refund” or “Europe”" className="w-full rounded-2xl border-2 border-graphite bg-paper-raised px-5 py-4 pr-24 text-[16px] shadow-[5px_5px_0_rgba(23,21,18,0.12)]" />
+          <input id="faq-search" type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Try “address”, “refund” or “international”" className="w-full rounded-2xl border-2 border-graphite bg-paper-raised px-5 py-4 pr-24 text-[16px] shadow-[5px_5px_0_rgba(23,21,18,0.12)]" />
           {query && <button type="button" onClick={() => setQuery('')} className="absolute top-1/2 right-4 -translate-y-1/2 border-0 bg-transparent font-mono text-[10px] font-bold tracking-[0.06em] uppercase underline">Clear</button>}
         </div>
         <p aria-live="polite" className="mt-3 font-mono text-[10.5px] tracking-[0.06em] text-graphite-mute uppercase">{resultCount} {resultCount === 1 ? 'answer' : 'answers'} found</p>

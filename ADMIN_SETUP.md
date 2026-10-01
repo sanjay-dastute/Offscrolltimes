@@ -27,6 +27,13 @@ production migrations to `LIFECYCLE_DB` only during the approved deployment.
   Saved-offer previews and promotion reports remain in Catalogue.
 - **Account:** customers can maintain their own name, contact email, phone and
   WhatsApp number. Contact email does not change the identity used to sign in.
+- **Email signups:** footer subscriptions are stored separately from paid plans
+  after explicit email-update consent. Migration `0029_newsletter_signups.sql`
+  adds these records. Administrators can view paginated signups and unsubscribe
+  them. A management link is shown after signup so users can unsubscribe without
+  an account. Unsubscribe tokens are stored as hashes. No email campaign or
+  confirmation message is sent by this feature; connect an email delivery service
+  before sending updates and verifying email ownership.
 
 Local verification on 1 October 2026 includes applying all D1 migrations,
 TypeScript checking, the 56-test unit/integration suite, a production build,

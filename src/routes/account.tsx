@@ -7,11 +7,13 @@ import { BUSINESS_DETAILS, CONTACT_EMAIL, CONTACT_HOURS, WHATSAPP_URL } from '#/
 import type { CustomerAccountEvent, CustomerAddress, CustomerFulfilment, CustomerPayment, CustomerSubscription } from '#/lib/customer/store.server'
 import { DamageEvidenceUpload } from '#/components/DamageEvidenceUpload'
 import { AccountContact, type ContactProfile } from '#/components/AccountContact'
+import { AccountDeliveryAddress } from '#/components/AccountDeliveryAddress'
 
 type DashboardData = {
   user: { id: string; name?: string; username?: string; provider?: 'google'|'microsoft' }
   csrf: string
   profile: ContactProfile | null
+  address: CustomerAddress | null
   identities: Array<{provider:'google'|'microsoft';provider_email:string|null;created_at:number}>
   subscriptions: CustomerSubscription[]
   payments: CustomerPayment[]
@@ -57,6 +59,8 @@ function AccountPage() {
 
   async function load() {
     setLoading(true)
+    setError('')
+    try {
     const response = await fetch('/api/customer', { headers: { Accept: 'application/json' } })
     if (response.status === 401) {
       setUnauthenticated(true)
@@ -65,8 +69,9 @@ function AccountPage() {
     }
     const result = await response.json() as DashboardData & { error?: string }
     if (!response.ok) setError(result.error ?? 'Your account could not be loaded.')
-    else setData(result)
-    setLoading(false)
+    else { setData(result); setUnauthenticated(false) }
+    } catch { setError('Your profile could not be loaded. Check your connection and retry.') }
+    finally { setLoading(false) }
   }
 
   useEffect(() => { void load() }, [])
@@ -75,6 +80,7 @@ function AccountPage() {
     if (!data || busy) return
     if (actionName === 'cancel' && !window.confirm('Cancel future service? Copies already paid for remain available under the cancellation policy.')) return
     setBusy(true); setError('')
+    try {
     const response = await fetch('/api/customer', {
       method: 'PATCH', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ csrf: data.csrf, subscriptionId, action: actionName }),
@@ -82,13 +88,15 @@ function AccountPage() {
     const result = await response.json() as { error?: string }
     if (!response.ok) setError(result.error ?? 'The subscription could not be updated.')
     else await load()
-    setBusy(false)
+    } catch { setError('Your subscription could not be updated. Check your connection and retry.') }
+    finally { setBusy(false) }
   }
 
   async function saveAddress(event: React.FormEvent, subscriptionId: string) {
     event.preventDefault()
     if (!data || busy) return
     setBusy(true); setError('')
+    try {
     const response = await fetch('/api/customer', {
       method: 'PATCH', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ csrf: data.csrf, subscriptionId, action: 'address', address }),
@@ -96,7 +104,8 @@ function AccountPage() {
     const result = await response.json() as { error?: string; effectiveAt?:number|null }
     if (!response.ok) setError(result.error ?? 'The address could not be updated.')
     else { setEditing(null); setNotice(result.effectiveAt?`Address saved. It applies from the ${new Intl.DateTimeFormat('en',{month:'long',year:'numeric'}).format(result.effectiveAt)} edition.`:'Address saved.'); await load() }
-    setBusy(false)
+    } catch { setError('Your address could not be updated. Check your connection and retry.') }
+    finally { setBusy(false) }
   }
 
   async function privacy(actionName:'privacy.access'|'privacy.deletion') {if(!data||busy)return;if(actionName==='privacy.deletion'&&!window.confirm('Request account deletion? We must retain invoices and transaction records where legally required. Active paid-copy fulfilment will be reviewed before deletion.'))return;setBusy(true);const response=await fetch('/api/customer',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({csrf:data.csrf,action:actionName})});const result=await response.json() as {error?:string;message?:string};setNotice(response.ok?(result.message??'Request received.'):(result.error??'Request failed.'));setBusy(false)}
@@ -108,25 +117,26 @@ function AccountPage() {
   return <>
     <SiteHeader />
     <main id="main-content" className="mx-auto min-h-[65vh] max-w-[1180px] px-4 py-14 sm:px-6 lg:px-10">
+      {error && <div role="alert" className="mb-6 rounded-xl border border-red-700 bg-red-50 p-4 text-red-900"><p>{error}</p><button type="button" className={`${CTA_OUTLINE} mt-3`} onClick={()=>void load()}>Retry loading profile</button></div>}
       {loading && <p className="font-mono text-sm uppercase tracking-wider">Loading your account…</p>}
       {unauthenticated && <section className="mx-auto max-w-xl rounded-3xl border border-graphite bg-cream p-8 text-center">
         <p className={EYEBROW}>Customer account</p>
-        <h1 className={`${H1} mt-3`}>Sign in to see your subscription.</h1>
-        <p className="mt-4 text-graphite-soft">Your payment, delivery address and dispatch history are private to your account.</p>
+        <h1 className={`${H1} mt-3`}>Your profile, in one place.</h1>
+        <p className="mt-4 text-graphite-soft">Sign in to edit your name, phone, email and delivery address, manage your subscription, and view payments and receipts.</p>
         <div className="mt-7 flex flex-wrap justify-center gap-3">
-          <a className={CTA} href="/login">Sign in</a>
-          <a className={CTA_OUTLINE} href="/register">Create account</a>
+          <a className={CTA} href="/login?returnTo=/account">Sign in to my profile</a>
+          <a className={CTA_OUTLINE} href="/register?returnTo=/account">Create account</a>
           <a className="w-full text-sm underline" href="/login">Trouble signing in? Choose Google or Microsoft</a>
         </div>
       </section>}
       {data && <>
         <div className="flex flex-wrap items-end justify-between gap-5 border-b border-graphite pb-8">
-          <div><p className={EYEBROW}>Profile & subscriptions</p><h1 className={`${H1} mt-2`}>Hello, {data.user.name ?? data.user.username ?? 'puzzle solver'}.</h1><p className="mt-3 text-graphite-soft">Manage your paid term, deliveries, address and account records.</p></div>
+          <div><p className={EYEBROW}>My profile</p><h1 className={`${H1} mt-2`}>Hello, {data.profile?.display_name || data.user.name || data.user.username || 'puzzle solver'}.</h1><p className="mt-3 text-graphite-soft">Edit your name, phone and email, update delivery addresses, and view subscriptions, payments and receipts.</p></div>
           <form method="post" action="/api/logout"><button className={CTA_OUTLINE} type="submit">Sign out</button></form>
         </div>
-        {error && <p role="alert" className="mt-6 rounded-xl border border-red-700 bg-red-50 p-4 text-red-900">{error}</p>}
         {notice&&<p role="status" className="mt-6 rounded-xl border border-graphite bg-sun p-4">{notice}</p>}
-        <AccountContact profile={data.profile} csrf={data.csrf} />
+        <AccountContact profile={data.profile} csrf={data.csrf} onSaved={load} />
+        {data.subscriptions.length===0&&<AccountDeliveryAddress address={data.address} csrf={data.csrf}/>}
         {data.subscriptions.length === 0 ? <section className="mt-10 rounded-3xl border border-graphite bg-sun/20 p-8">
           <h2 className={H2}>No subscription yet.</h2><p className="mt-3">Choose a duration and your subscription will appear here after checkout starts.</p>
           <a href="/subscription" className={`${CTA} mt-6 inline-flex`}>Choose a subscription</a>

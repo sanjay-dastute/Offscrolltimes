@@ -24,10 +24,12 @@ import { Route as ApiAnalyticsRouteImport } from './routes/api.analytics'
 import { Route as ApiCustomerRouteImport } from './routes/api.customer'
 import { Route as ApiHealthRouteImport } from './routes/api.health'
 import { Route as ApiLogoutRouteImport } from './routes/api.logout'
+import { Route as ApiNewsletterRouteImport } from './routes/api.newsletter'
 import { Route as ApiPricingRouteImport } from './routes/api.pricing'
 import { Route as ApiReadinessRouteImport } from './routes/api.readiness'
 import { Route as ApiSessionRouteImport } from './routes/api.session'
 import { Route as CheckoutRazorpayRouteImport } from './routes/checkout.razorpay'
+import { Route as NewsletterUnsubscribeRouteImport } from './routes/newsletter.unsubscribe'
 import { Route as PoliciesSlugRouteImport } from './routes/policies.$slug'
 import { Route as ApiAdminCustomersRouteImport } from './routes/api.admin.customers'
 import { Route as ApiAdminDispatchRouteImport } from './routes/api.admin.dispatch'
@@ -117,6 +119,11 @@ const ApiLogoutRoute = ApiLogoutRouteImport.update({
   path: '/api/logout',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiNewsletterRoute = ApiNewsletterRouteImport.update({
+  id: '/api/newsletter',
+  path: '/api/newsletter',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPricingRoute = ApiPricingRouteImport.update({
   id: '/api/pricing',
   path: '/api/pricing',
@@ -135,6 +142,11 @@ const ApiSessionRoute = ApiSessionRouteImport.update({
 const CheckoutRazorpayRoute = CheckoutRazorpayRouteImport.update({
   id: '/checkout/razorpay',
   path: '/checkout/razorpay',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const NewsletterUnsubscribeRoute = NewsletterUnsubscribeRouteImport.update({
+  id: '/newsletter/unsubscribe',
+  path: '/newsletter/unsubscribe',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PoliciesSlugRoute = PoliciesSlugRouteImport.update({
@@ -220,10 +232,12 @@ export interface FileRoutesByFullPath {
   '/api/customer': typeof ApiCustomerRouteWithChildren
   '/api/health': typeof ApiHealthRoute
   '/api/logout': typeof ApiLogoutRoute
+  '/api/newsletter': typeof ApiNewsletterRoute
   '/api/pricing': typeof ApiPricingRoute
   '/api/readiness': typeof ApiReadinessRoute
   '/api/session': typeof ApiSessionRoute
   '/checkout/razorpay': typeof CheckoutRazorpayRoute
+  '/newsletter/unsubscribe': typeof NewsletterUnsubscribeRoute
   '/policies/$slug': typeof PoliciesSlugRoute
   '/api/admin/customers': typeof ApiAdminCustomersRoute
   '/api/admin/dispatch': typeof ApiAdminDispatchRoute
@@ -254,10 +268,12 @@ export interface FileRoutesByTo {
   '/api/customer': typeof ApiCustomerRouteWithChildren
   '/api/health': typeof ApiHealthRoute
   '/api/logout': typeof ApiLogoutRoute
+  '/api/newsletter': typeof ApiNewsletterRoute
   '/api/pricing': typeof ApiPricingRoute
   '/api/readiness': typeof ApiReadinessRoute
   '/api/session': typeof ApiSessionRoute
   '/checkout/razorpay': typeof CheckoutRazorpayRoute
+  '/newsletter/unsubscribe': typeof NewsletterUnsubscribeRoute
   '/policies/$slug': typeof PoliciesSlugRoute
   '/api/admin/customers': typeof ApiAdminCustomersRoute
   '/api/admin/dispatch': typeof ApiAdminDispatchRoute
@@ -289,10 +305,12 @@ export interface FileRoutesById {
   '/api/customer': typeof ApiCustomerRouteWithChildren
   '/api/health': typeof ApiHealthRoute
   '/api/logout': typeof ApiLogoutRoute
+  '/api/newsletter': typeof ApiNewsletterRoute
   '/api/pricing': typeof ApiPricingRoute
   '/api/readiness': typeof ApiReadinessRoute
   '/api/session': typeof ApiSessionRoute
   '/checkout/razorpay': typeof CheckoutRazorpayRoute
+  '/newsletter/unsubscribe': typeof NewsletterUnsubscribeRoute
   '/policies/$slug': typeof PoliciesSlugRoute
   '/api/admin/customers': typeof ApiAdminCustomersRoute
   '/api/admin/dispatch': typeof ApiAdminDispatchRoute
@@ -325,10 +343,12 @@ export interface FileRouteTypes {
     | '/api/customer'
     | '/api/health'
     | '/api/logout'
+    | '/api/newsletter'
     | '/api/pricing'
     | '/api/readiness'
     | '/api/session'
     | '/checkout/razorpay'
+    | '/newsletter/unsubscribe'
     | '/policies/$slug'
     | '/api/admin/customers'
     | '/api/admin/dispatch'
@@ -359,10 +379,12 @@ export interface FileRouteTypes {
     | '/api/customer'
     | '/api/health'
     | '/api/logout'
+    | '/api/newsletter'
     | '/api/pricing'
     | '/api/readiness'
     | '/api/session'
     | '/checkout/razorpay'
+    | '/newsletter/unsubscribe'
     | '/policies/$slug'
     | '/api/admin/customers'
     | '/api/admin/dispatch'
@@ -393,10 +415,12 @@ export interface FileRouteTypes {
     | '/api/customer'
     | '/api/health'
     | '/api/logout'
+    | '/api/newsletter'
     | '/api/pricing'
     | '/api/readiness'
     | '/api/session'
     | '/checkout/razorpay'
+    | '/newsletter/unsubscribe'
     | '/policies/$slug'
     | '/api/admin/customers'
     | '/api/admin/dispatch'
@@ -428,10 +452,12 @@ export interface RootRouteChildren {
   ApiCustomerRoute: typeof ApiCustomerRouteWithChildren
   ApiHealthRoute: typeof ApiHealthRoute
   ApiLogoutRoute: typeof ApiLogoutRoute
+  ApiNewsletterRoute: typeof ApiNewsletterRoute
   ApiPricingRoute: typeof ApiPricingRoute
   ApiReadinessRoute: typeof ApiReadinessRoute
   ApiSessionRoute: typeof ApiSessionRoute
   CheckoutRazorpayRoute: typeof CheckoutRazorpayRoute
+  NewsletterUnsubscribeRoute: typeof NewsletterUnsubscribeRoute
   PoliciesSlugRoute: typeof PoliciesSlugRoute
   ApiAssetsIdRoute: typeof ApiAssetsIdRoute
   ApiRazorpayCheckoutRoute: typeof ApiRazorpayCheckoutRoute
@@ -547,6 +573,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiLogoutRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/newsletter': {
+      id: '/api/newsletter'
+      path: '/api/newsletter'
+      fullPath: '/api/newsletter'
+      preLoaderRoute: typeof ApiNewsletterRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/pricing': {
       id: '/api/pricing'
       path: '/api/pricing'
@@ -573,6 +606,13 @@ declare module '@tanstack/react-router' {
       path: '/checkout/razorpay'
       fullPath: '/checkout/razorpay'
       preLoaderRoute: typeof CheckoutRazorpayRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/newsletter/unsubscribe': {
+      id: '/newsletter/unsubscribe'
+      path: '/newsletter/unsubscribe'
+      fullPath: '/newsletter/unsubscribe'
+      preLoaderRoute: typeof NewsletterUnsubscribeRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/policies/$slug': {
@@ -719,10 +759,12 @@ const rootRouteChildren: RootRouteChildren = {
   ApiCustomerRoute: ApiCustomerRouteWithChildren,
   ApiHealthRoute: ApiHealthRoute,
   ApiLogoutRoute: ApiLogoutRoute,
+  ApiNewsletterRoute: ApiNewsletterRoute,
   ApiPricingRoute: ApiPricingRoute,
   ApiReadinessRoute: ApiReadinessRoute,
   ApiSessionRoute: ApiSessionRoute,
   CheckoutRazorpayRoute: CheckoutRazorpayRoute,
+  NewsletterUnsubscribeRoute: NewsletterUnsubscribeRoute,
   PoliciesSlugRoute: PoliciesSlugRoute,
   ApiAssetsIdRoute: ApiAssetsIdRoute,
   ApiRazorpayCheckoutRoute: ApiRazorpayCheckoutRoute,

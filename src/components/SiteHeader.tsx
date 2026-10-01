@@ -58,7 +58,7 @@ export function SiteHeader() {
           </nav>
 
           <div className="col-start-2 row-start-1 flex items-center justify-self-end gap-2 md:col-start-3">
-            <a href="/account" aria-label="Sign in or open your customer account" className="hidden rounded-full border border-graphite px-3 py-2.5 font-mono text-[11px] font-semibold tracking-[0.08em] uppercase no-underline outline-none hover:bg-cream focus-visible:ring-2 focus-visible:ring-founder-deep focus-visible:ring-offset-2 sm:inline-block">Account</a>
+            <a href="/account" aria-label="My profile" className="inline-block rounded-full border border-graphite px-3 py-2.5 font-mono text-[10px] font-semibold tracking-[0.06em] uppercase no-underline outline-none hover:bg-sun focus-visible:ring-2 focus-visible:ring-founder-deep focus-visible:ring-offset-2 sm:text-[11px]">My profile</a>
             <a
               href={SUBSCRIBE_HREF}
               className="rounded-full border border-graphite bg-graphite px-3 py-2.5 font-mono text-[10.5px] font-semibold tracking-[0.08em] text-paper uppercase no-underline outline-none transition-colors hover:bg-sun hover:text-graphite focus-visible:ring-2 focus-visible:ring-founder-deep focus-visible:ring-offset-2 sm:px-4 sm:text-[11.5px]"
@@ -75,7 +75,7 @@ export function SiteHeader() {
             <nav aria-label="Mobile primary" className="grid grid-cols-2 gap-x-5 gap-y-3 px-1 pb-3 pt-2 font-mono text-[11.5px] tracking-[0.08em] uppercase">
               {navItems}
               <a href="/account" className="rounded-sm border-b border-transparent py-1 no-underline outline-none hover:border-founder-deep focus-visible:ring-2 focus-visible:ring-founder-deep">
-                Account / Sign in
+                My profile / Sign in
               </a>
             </nav>
           </details>

@@ -42,6 +42,14 @@ export async function mutateAdmin(request: Request) {
   if (body.csrf !== session.csrf) return json({ error: 'Your session changed. Refresh and retry.' }, 403)
   const action = text(body.action, 80)
   try {
+    if(action==='newsletter.unsubscribe') {
+      const subscriberId=text(body.subscriberId)
+      if(!SAFE_ID.test(subscriberId))return json({error:'Invalid email signup.'},422)
+      const result=await database.prepare(`UPDATE newsletter_subscribers SET status='unsubscribed',updated_at=? WHERE id=?`).bind(Date.now(),subscriberId).run()
+      if((result.meta.changes??0)!==1)return json({error:'Email signup not found.'},404)
+      await audit(database,session.user.id,'newsletter.unsubscribed','newsletter',subscriberId,{source:'administrator'})
+      return json({ok:true})
+    }
     if (action === 'customer.contact') {
       const userId=text(body.userId), name=text(body.name,100), email=text(body.email,200).toLowerCase(), phone=text(body.phone,30), whatsapp=text(body.whatsapp,30), reason=text(body.reason,500)
       if(!SAFE_ID.test(userId)||!name||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)||reason.length<5||(phone&&!/^\+?[0-9 ()-]{7,30}$/.test(phone))||(whatsapp&&!/^\+[1-9][0-9]{7,14}$/.test(whatsapp)))return json({error:'Enter a name, valid email, correction reason and WhatsApp number with country code (for example +917373050093).'},422)

@@ -82,6 +82,7 @@ export function SiteFooter() {
 
         <nav aria-label="Footer" className="flex flex-col gap-3 font-mono text-[12px] tracking-[0.08em] text-graphite uppercase">
           <span className="mb-1 text-graphite-mute">Explore</span>
+          <a href="/account" className="no-underline hover:text-founder-deep">My profile</a>
           {NAV_LINKS.map((link) => (
             <a key={link.href + link.label} href={link.href} className="no-underline hover:text-founder-deep">
               {link.label}

@@ -27,6 +27,14 @@ async function mutation(userId: string, body: Record<string, unknown>) {
 }
 
 describe('administrator authorization and fulfilment', () => {
+  it('permits only administrators to unsubscribe an email signup and records an audit',async()=>{
+    await db.prepare(`INSERT INTO newsletter_subscribers(id,email,status,consent_at,consent_text,unsubscribe_token_hash,created_at,updated_at) VALUES('signup_test','reader@example.com','subscribed',1,'Explicit consent','hash',1,1)`).run()
+    expect((await mutation('customer_1',{action:'newsletter.unsubscribe',subscriberId:'signup_test'})).status).toBe(403)
+    expect((await mutation('admin_1',{action:'newsletter.unsubscribe',subscriberId:'signup_test',csrf:'wrong'})).status).toBe(403)
+    expect((await mutation('admin_1',{action:'newsletter.unsubscribe',subscriberId:'signup_test'})).status).toBe(200)
+    expect(await db.prepare('SELECT status FROM newsletter_subscribers').first()).toMatchObject({status:'unsubscribed'})
+    expect(await db.prepare(`SELECT action FROM admin_audit_log WHERE target_id='signup_test'`).first()).toMatchObject({action:'newsletter.unsubscribed'})
+  })
   it('requires administrator authorization and CSRF for customer corrections and offer activation',async()=>{
     expect((await mutation('customer_1',{action:'customer.contact'})).status).toBe(403)
     expect((await mutation('admin_1',{action:'customer.contact',csrf:'wrong'})).status).toBe(403)

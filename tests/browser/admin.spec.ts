@@ -68,3 +68,35 @@ test('customers can save their WhatsApp contact information',async({page})=>{
   expect((await save).postDataJSON()).toMatchObject({action:'profile.contact',whatsapp:'+917373050093',csrf:'customer-csrf'})
   await expect(page.getByText('Contact details saved.')).toBeVisible()
 })
+
+test('profile is reachable from the header and a new user can save a delivery address',async({page})=>{
+  await page.route('**/api/customer',async route=>{
+    if(route.request().method()==='PATCH')return route.fulfill({json:{ok:true}})
+    await route.fulfill({json:{user:{id:'reader_test',name:'Test Reader'},csrf:'customer-csrf',profile:null,address:null,identities:[],subscriptions:[],payments:[],fulfilments:[],events:[]}})
+  })
+  await page.goto('/faq')
+  await expect(page.getByPlaceholder('Try “address”, “refund” or “international”')).toBeVisible()
+  await page.getByRole('link',{name:'My profile',exact:true}).first().click()
+  await expect(page).toHaveURL(/\/account$/)
+  const form=page.locator('form').filter({has:page.getByRole('button',{name:'Save delivery address'})})
+  await form.getByLabel('Recipient name').fill('Test Reader')
+  await form.getByLabel('Address line 1',{exact:true}).fill('1 Test Street')
+  await form.getByLabel('City',{exact:true}).fill('Pune')
+  await form.getByLabel('Postal code').fill('411001')
+  const save=page.waitForRequest(request=>request.url().endsWith('/api/customer')&&request.method()==='PATCH')
+  await form.getByRole('button',{name:'Save delivery address'}).click()
+  expect((await save).postDataJSON()).toMatchObject({action:'profile.address',address:{name:'Test Reader',line1:'1 Test Street',country:'IN'}})
+  await expect(page.getByText('Delivery address saved.')).toBeVisible()
+})
+
+test('email signup saves to the local database and the management link unsubscribes',async({page})=>{
+  await page.goto('/')
+  const email=`browser-${Date.now()}-${Math.random().toString(16).slice(2)}@example.com`
+  await page.getByLabel('Email address for blog updates').fill(email)
+  await page.getByRole('checkbox',{name:/I agree to receive Offscroll Times email updates/}).check()
+  await page.locator('footer').getByRole('button',{name:'Subscribe',exact:true}).click()
+  await expect(page.getByText('You’re subscribed to Offscroll Times email updates.')).toBeVisible()
+  await page.getByRole('link',{name:'Manage email signup'}).click()
+  await page.getByRole('button',{name:'Unsubscribe from email updates'}).click()
+  await expect(page.getByText('You have been unsubscribed.')).toBeVisible()
+})

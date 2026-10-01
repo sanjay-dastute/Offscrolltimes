@@ -6,6 +6,7 @@ import { CTA, CTA_OUTLINE, EYEBROW, H2 } from '#/lib/uiKit'
 import { AdminFileLibrary } from '#/components/AdminFileLibrary'
 import { AdminCustomers } from '#/components/AdminCustomers'
 import { AdminOffers } from '#/components/AdminOffers'
+import { AdminNewsletter } from '#/components/AdminNewsletter'
 
 type Row = Record<string, any>
 type AdminData = {
@@ -66,8 +67,9 @@ function AdminPage() {
     {error && <p role="alert" className="mb-6 rounded-xl border border-red-700 bg-red-50 p-4 text-red-900">{error}</p>}
     {data && <>
       <header className="flex flex-wrap items-end justify-between gap-5 border-b border-graphite pb-7"><div><p className={EYEBROW}>Administrator</p><h1 className="m-0 font-display text-5xl font-bold tracking-tight">Business control room</h1><p className="mt-3 text-graphite-soft">Signed in as {data.user.name ?? data.user.id}</p></div><a className={CTA_OUTLINE} href="/account">Customer view</a></header>
-      <nav className="my-7 flex flex-wrap gap-2" aria-label="Admin sections">{['overview','customers','subscriptions','editions','enquiries','offers','catalogue','files','content','audit'].map(item => <button key={item} onClick={() => setTab(item)} className={`rounded-full border border-graphite px-4 py-2 font-mono text-xs uppercase ${tab === item ? 'bg-graphite text-paper' : 'bg-paper'}`}>{item}</button>)}</nav>
+      <nav className="my-7 flex flex-wrap gap-2" aria-label="Admin sections">{['overview','customers','email signups','subscriptions','editions','enquiries','offers','catalogue','files','content','audit'].map(item => <button key={item} onClick={() => setTab(item)} className={`rounded-full border border-graphite px-4 py-2 font-mono text-xs uppercase ${tab === item ? 'bg-graphite text-paper' : 'bg-paper'}`}>{item}</button>)}</nav>
       {tab === 'customers' && <AdminCustomers mutate={mutate} />}
+      {tab === 'email signups' && <AdminNewsletter mutate={mutate} />}
       {tab === 'overview' && <Overview data={data} />}
       {tab === 'subscriptions' && <Subscriptions data={data} busy={busy} mutate={mutate} />}
       {tab === 'editions' && <Editions data={data} busy={busy} mutate={mutate} />}

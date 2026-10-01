@@ -1,6 +1,4 @@
 export const BRAND_NAME = "Offscroll Times";
-// Set to the approved email service's hosted subscription form when supplied.
-export const BLOG_SIGNUP_URL: string = "";
 export const BRAND_TAGLINE = "A monthly puzzle newspaper. No screens required.";
 
 // Placeholder contact channel — update to the real business WhatsApp number
@@ -47,9 +45,9 @@ export const CONTACT_REGIONS = [
     note: "Our team is based here. WhatsApp and email both reach us directly during India hours.",
   },
   {
-    key: "europe",
-    label: "Europe",
-    note: "We're India-based, so evenings in Europe overlap with our working day. Email anytime — we reply within 1 business day.",
+    key: "international",
+    label: "International",
+    note: "We're India-based and welcome international enquiries. Email anytime — we reply within 1 business day.",
   },
 ] as const;
 

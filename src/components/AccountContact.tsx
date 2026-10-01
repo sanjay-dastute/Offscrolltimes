@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { CTA, FIELD } from '#/lib/uiKit'
 
 export type ContactProfile={display_name:string|null;email:string|null;phone:string|null;whatsapp_number:string|null}
-export function AccountContact({profile,csrf}:{profile:ContactProfile|null;csrf:string}) {
+export function AccountContact({profile,csrf,onSaved}:{profile:ContactProfile|null;csrf:string;onSaved?:()=>Promise<void>}) {
   const [busy,setBusy]=useState(false),[message,setMessage]=useState(''),[error,setError]=useState('')
   async function save(event:React.FormEvent<HTMLFormElement>) {
     event.preventDefault();setBusy(true);setError('');setMessage('')
@@ -12,6 +12,7 @@ export function AccountContact({profile,csrf}:{profile:ContactProfile|null;csrf:
       const result=await response.json() as {error?:string}
       if(!response.ok)throw new Error(result.error||'Contact details could not be saved.')
       setMessage('Contact details saved.')
+      await onSaved?.()
     }catch(cause){setError(cause instanceof Error?cause.message:'Please retry.')}finally{setBusy(false)}
   }
   return <section className="mt-10 rounded-2xl border border-graphite bg-paper p-6"><h2 className="text-2xl font-bold">Contact details</h2><p className="mt-2 text-sm">Keep your contact details current. Your login email and existing order details remain separate.</p><form className="mt-4 grid gap-4 sm:grid-cols-2" onSubmit={save}>
