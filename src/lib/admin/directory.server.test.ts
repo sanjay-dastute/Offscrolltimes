@@ -8,6 +8,13 @@ async function user(index:number) {
   await db.prepare(`INSERT INTO users(id,owner_id,role,account_state,primary_email,created_at,updated_at) VALUES(?,?,'customer','active',?,?,?)`).bind(`user_${index}`,`owner_${index}`,`reader${index}@example.com`,index,index).run()
 }
 describe('customer directory',()=>{
+  it('keeps administrator identities out of the customer list',async()=>{
+    await user(1)
+    await db.prepare("INSERT INTO users(id,owner_id,role,account_state,created_at,updated_at) VALUES('admin_user','admin:admin','admin','active',1,1)").run()
+    const result=await customerDirectory(db,new URL('https://example.com/api/admin/customers'))
+    expect(result.total).toBe(1)
+    expect(result.customers[0].user_id).toBe('user_1')
+  })
   it('includes registered users without orders and pages beyond 500 records without duplicates',async()=>{
     for(let index=0;index<526;index++)await user(index)
     const first=await customerDirectory(db,new URL('https://example.com/api/admin/customers'))

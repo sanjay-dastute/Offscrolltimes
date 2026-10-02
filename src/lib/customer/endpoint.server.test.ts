@@ -5,6 +5,8 @@ import { createTestD1 } from '#/lib/lifecycle/testing'
 import { getCustomerDashboard, isAddressChangeBeforeCutoff, patchCustomerDashboard } from './endpoint.server'
 import { listCustomerSubscriptions, registerCustomerCheckout } from './store.server'
 import { firstEditionTimestamp } from '#/lib/dates'
+import { testing as authTesting } from '#/lib/auth.server'
+import { customerDirectory } from '#/lib/admin/directory.server'
 
 const origin = 'https://example.com'
 let db: D1Database
@@ -37,6 +39,22 @@ beforeEach(() => {
 afterEach(() => resetRequestLifecycleBindings())
 
 describe('customer role and ownership endpoints', () => {
+  it('persists identity, contact and address details and exposes them in the admin directory',async()=>{
+    const identity=await authTesting.persistSocialIdentity('google','profile-test-subject','login@example.com',undefined,{name:'Original Reader'})
+    const change=(body:Record<string,unknown>)=>requestFor(identity.ownerId,'/api/customer',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({csrf:`csrf-${identity.ownerId}`,...body})}).then(patchCustomerDashboard)
+    const initial=await customerDirectory(db,new URL('https://example.com/api/admin/customers'))
+    expect(initial.customers[0]).toMatchObject({display_name:'Original Reader',email:'login@example.com'})
+    expect((await change({action:'profile.contact',name:'Updated Reader',email:'contact@example.com',phone:'+919999999999',whatsapp:'+918888888888'})).status).toBe(200)
+    const address={name:'Updated Reader',line1:'1 Reader Street',line2:'Floor 2',city:'Pune',region:'Maharashtra',postalCode:'411001',country:'IN'}
+    expect((await change({action:'profile.address',address})).status).toBe(200)
+    const directory=await customerDirectory(db,new URL('https://example.com/api/admin/customers?query=contact%40example.com'))
+    expect(directory.customers).toHaveLength(1)
+    expect(directory.customers[0]).toMatchObject({display_name:'Updated Reader',email:'contact@example.com',phone:'+919999999999',whatsapp_number:'+918888888888',address,subscription_count:0,payment_status:null})
+    const reloaded=await getCustomerDashboard(await requestFor(identity.ownerId,'/api/customer'))
+    expect(await reloaded.json()).toMatchObject({profile:{display_name:'Updated Reader',email:'contact@example.com',phone:'+919999999999',whatsapp_number:'+918888888888'},address})
+    await authTesting.persistSocialIdentity('google','profile-test-subject','login@example.com',undefined,{name:'Provider Name'})
+    expect((await customerDirectory(db,new URL('https://example.com/api/admin/customers'))).customers[0]).toMatchObject({display_name:'Updated Reader',email:'contact@example.com'})
+  })
   it('lets a registered customer save a profile address without a subscription',async()=>{
     await db.prepare(`INSERT INTO users(id,owner_id,role,account_state,created_at,updated_at) VALUES('user_profile','profile_owner','customer','active',1,1)`).run()
     const address={name:'Reader',line1:'1 Test Road',city:'Pune',region:'Maharashtra',postalCode:'411001',country:'IN'}

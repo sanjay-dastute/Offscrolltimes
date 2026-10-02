@@ -354,7 +354,7 @@ export async function finishSocialOAuth(request: Request, provider: SocialProvid
     const name = typeof claims.name === 'string' ? claims.name : undefined
     const previous = await readSession(request)
     if (flow.mode === 'link' && (!previous?.internalUserId || previous.internalUserId !== flow.linkUserId)) throw new Error('link_session_changed')
-    const identity = await persistSocialIdentity(provider, subject, email, flow.linkUserId,{issuer:claims.iss,audience:claims.aud,emailVerified:claims.email_verified,tenant:claims.tid})
+    const identity = await persistSocialIdentity(provider, subject, email, flow.linkUserId,{issuer:claims.iss,audience:claims.aud,emailVerified:claims.email_verified,tenant:claims.tid,name})
     const session: SessionData = {
       accessToken: '',
       refreshToken: '',

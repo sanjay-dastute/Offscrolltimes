@@ -6,7 +6,7 @@ import { json } from '../http.server'
 import { audit } from './store.server'
 
 const queries:Record<string,string>={
-  customers:`SELECT u.id user_id,u.owner_id,u.account_state,c.id customer_id,c.display_name,c.email,c.phone,c.whatsapp_number,c.marketing_consent,c.created_at,c.updated_at,a.name delivery_name,a.line1 address_line_1,a.line2 address_line_2,a.city,a.region,a.postal_code,a.country FROM users u LEFT JOIN customers c ON c.user_id=u.id LEFT JOIN addresses a ON a.id=(SELECT id FROM addresses WHERE customer_id=c.id AND active_to IS NULL ORDER BY version DESC LIMIT 1) WHERE u.role='customer' ORDER BY u.created_at,u.id`,
+  customers:`SELECT u.id user_id,u.owner_id,u.account_state,c.id customer_id,c.display_name,COALESCE(c.email,u.primary_email) email,c.phone,c.whatsapp_number,c.marketing_consent,c.created_at,c.updated_at,a.name delivery_name,a.line1 address_line_1,a.line2 address_line_2,a.city,a.region,a.postal_code,a.country FROM users u LEFT JOIN customers c ON c.user_id=u.id LEFT JOIN addresses a ON a.id=(SELECT id FROM addresses WHERE customer_id=c.id AND address_type='delivery' AND active_to IS NULL ORDER BY version DESC LIMIT 1) WHERE u.role='customer' ORDER BY u.created_at,u.id`,
   addresses:'SELECT * FROM addresses ORDER BY created_at,id',
   orders:'SELECT * FROM orders ORDER BY created_at,id',
   subscriptions:'SELECT * FROM customer_subscriptions ORDER BY created_at,id',
