@@ -4,7 +4,7 @@ import { SiteHeader } from '#/components/SiteHeader'
 import { SiteFooter } from '#/components/Faq'
 import { CTA, H2 } from '#/lib/uiKit'
 import type { CustomerAddress } from '#/lib/customer/store.server'
-import { firstEditionDate } from '#/lib/dates'
+import { firstEditionDate,novemberLaunchTerm } from '#/lib/dates'
 
 type State='form'|'creating'|'failed'
 type Quote={currency:string;subtotalMinor:number;durationDiscountMinor:number;offerDiscountMinor:number;shippingMinor:number;taxMinor:number;totalMinor:number}
@@ -21,8 +21,10 @@ function StripePage(){
   const term=search.duration===1?'month':'months'
   const billingParts=billingToday?new Intl.DateTimeFormat('en-GB',{year:'numeric',month:'numeric',day:'numeric',timeZone:'Asia/Kolkata'}).formatToParts(billingToday):[]
   const billingPart=(type:string)=>Number(billingParts.find(part=>part.type===type)?.value)
+  const launchTerm=billingToday?novemberLaunchTerm(billingToday.getTime(),search.duration):null
   const nextCharge=billingToday?new Date(Date.UTC(billingPart('year'),billingPart('month')-1,billingPart('day'))):null
-  if(nextCharge){const day=nextCharge.getUTCDate();nextCharge.setUTCDate(1);nextCharge.setUTCMonth(nextCharge.getUTCMonth()+search.duration);const lastDay=new Date(Date.UTC(nextCharge.getUTCFullYear(),nextCharge.getUTCMonth()+1,0)).getUTCDate();nextCharge.setUTCDate(Math.min(day,lastDay))}
+  if(nextCharge&&launchTerm)nextCharge.setTime(launchTerm.end)
+  if(nextCharge&&!launchTerm){const day=nextCharge.getUTCDate();nextCharge.setUTCDate(1);nextCharge.setUTCMonth(nextCharge.getUTCMonth()+search.duration);const lastDay=new Date(Date.UTC(nextCharge.getUTCFullYear(),nextCharge.getUTCMonth()+1,0)).getUTCDate();nextCharge.setUTCDate(Math.min(day,lastDay))}
   const dateLabel=(date:Date)=>new Intl.DateTimeFormat('en-GB',{day:'numeric',month:'short',year:'numeric',timeZone:'Asia/Kolkata'}).format(date)
 
   useEffect(()=>{
@@ -46,7 +48,8 @@ function StripePage(){
     <aside className="order-first rounded-3xl border border-graphite/20 bg-paper-raised p-5 shadow-sm lg:order-last md:p-6">
       <div className="rounded-2xl bg-sun/25 p-5">
         <h2 className="text-2xl font-bold uppercase">{search.duration} {term} plan</h2>
-        {billingToday&&<p className="mt-2 font-semibold">First issue expected to dispatch on {dateLabel(firstEditionDate(billingToday))}.</p>}
+        {launchTerm&&<p className="mt-2 font-semibold">Subscription starts on {dateLabel(new Date(launchTerm.start))}.</p>}
+        {billingToday&&<p className="mt-2 font-semibold">First issue expected to dispatch on {dateLabel(launchTerm?new Date(launchTerm.dispatch):firstEditionDate(billingToday))}.</p>}
         {renewalQuote&&<p className="mt-4 rounded-2xl bg-white px-4 py-3 font-bold">{money(renewalQuote.totalMinor/search.duration,renewalQuote.currency)}/month<br/><span className="mt-1 block text-sm font-medium">{search.duration*search.quantity} {search.duration*search.quantity===1?'copy':'copies'} every {search.duration} {term}</span><span className="mt-1 block text-sm font-medium">{renewalQuote.shippingMinor===0?'Free delivery':'Delivery included'}</span></p>}
         <p className="mt-3 inline-block rounded-full bg-graphite px-3 py-1 text-xs font-bold tracking-wide text-paper">AUTO-RENEWS</p>
       </div>
@@ -66,7 +69,7 @@ function StripePage(){
       </div>}
       <p className="mt-4 text-sm">The full {search.duration}-month term is paid upfront. The monthly amount is a price breakdown; you are charged once every {search.duration} {term}. Cancel before renewal to stop the next charge.</p>
       {quote&&renewalQuote&&quote.totalMinor!==renewalQuote.totalMinor&&<p className="mt-3 text-sm">Your first-term offer applies today only. Renewals use the regular amount shown above.</p>}
-      <p className="mt-3 text-xs text-graphite-soft">The next charge date assumes payment is completed today. Stripe confirms the billing date when your subscription starts.</p>
+      <p className="mt-3 text-xs text-graphite-soft">Your payment is collected today. October launch subscriptions start on 1 November 2026 and renew after the selected term. Stripe confirms your next charge date.</p>
     </aside>
   </div></main><SiteFooter/></>
 }

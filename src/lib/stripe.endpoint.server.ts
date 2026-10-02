@@ -1,3 +1,4 @@
+import { alignNovemberRenewal } from './stripe-launch.server'
 import {recordStripeCancellationRefund} from './stripe-refund.server'
 import { createHash } from 'node:crypto'
 import { readSession } from './auth.server'
@@ -8,7 +9,7 @@ import { allowRequest } from './rate-limit.server'
 import { calculatePricing } from './pricing.server'
 import { recordCustomerOrder } from './canonical-data.server'
 import { registerCustomerCheckout,saveCustomerCheckoutDetails,recordAccountEvent } from './customer/store.server'
-import { firstEditionTimestamp } from './dates'
+import { firstEditionTimestamp,novemberLaunchTerm,editionDispatchForTerm } from './dates'
 import { stripeApi,verifyStripeWebhook } from './stripe.server'
 const hash=(value:string)=>createHash('sha256').update(value).digest('hex')
 const text=(value:unknown,max=160)=>typeof value==='string'?value.trim().slice(0,max):''
@@ -84,6 +85,8 @@ export async function applyStripeInvoice(db:D1Database,invoice:Record<string,any
   const start=Number(line?.period?.start)*1000,end=Number(line?.period?.end)*1000
   if(!Number.isFinite(start)||!Number.isFinite(end)||end<=start)throw new Error('Invalid invoice period')
   const now=Date.now(),paymentId=`stripe_${invoice.id}`,paidAt=Number(invoice.status_transitions?.paid_at??invoice.created)*1000
+  const term=invoice.billing_reason==='subscription_create'?novemberLaunchTerm(paidAt,row.duration_months):null
+  const termStart=term?.start??start,termEnd=term?.end??end
   const unprocessed="NOT EXISTS(SELECT 1 FROM customer_payments WHERE provider_payment_id=? AND status='paid')"
   await db.batch([
     db.prepare(`UPDATE customer_subscriptions SET stripe_subscription_id=?,stripe_customer_id=?,renewal_at=?,renewal_enabled=?,
@@ -91,7 +94,7 @@ export async function applyStripeInvoice(db:D1Database,invoice:Record<string,any
       starts_at=COALESCE(starts_at,?),ends_at=MAX(COALESCE(ends_at,0),?),paid_through_at=MAX(COALESCE(paid_through_at,0),?),
       next_dispatch_at=CASE WHEN starts_at IS NULL OR copies_fulfilled>=copies_total THEN ? ELSE next_dispatch_at END,
       copies_total=copies_total+CASE WHEN EXISTS(SELECT 1 FROM customer_payments WHERE subscription_id=? AND status='paid') THEN duration_months*quantity ELSE 0 END,updated_at=? WHERE id=? AND ${unprocessed}`)
-      .bind(subscription.id,providerId(subscription.customer),Number(item.current_period_end??subscription.current_period_end??line.period.end)*1000,subscription.cancel_at_period_end?0:1,subscription.cancel_at_period_end?1:0,start,end,end,firstEditionTimestamp(paidAt),id,now,id,invoice.id),
+      .bind(subscription.id,providerId(subscription.customer),Number(item.current_period_end??subscription.current_period_end??line.period.end)*1000,subscription.cancel_at_period_end?0:1,subscription.cancel_at_period_end?1:0,termStart,termEnd,termEnd,term?.dispatch??(invoice.billing_reason==='subscription_cycle'?editionDispatchForTerm(start):firstEditionTimestamp(paidAt)),id,now,id,invoice.id),
     db.prepare(`INSERT INTO customer_payments(id,subscription_id,owner_id,provider_payment_id,status,amount_minor,currency,invoice_url,paid_at,pricing_snapshot_json,created_at,updated_at) VALUES(?,?,?,?,'paid',?,?,?,?,?,?,?) ON CONFLICT(provider_payment_id) WHERE provider_payment_id LIKE 'in_%' DO UPDATE SET status='paid',paid_at=excluded.paid_at,invoice_url=excluded.invoice_url,updated_at=excluded.updated_at`)
       .bind(paymentId,id,row.owner_id,invoice.id,expected,row.currency,invoice.hosted_invoice_url??null,paidAt,JSON.stringify({provider:'stripe',invoiceId:invoice.id,amountMinor:expected,currency:row.currency,durationMonths:row.duration_months,quantity:row.quantity,periodStart:start,periodEnd:end,billingReason:invoice.billing_reason}),now,now),
   ])
@@ -115,7 +118,7 @@ export async function syncStripePayments(db:D1Database,ownerId?:string,secret=pr
       if(checkout.client_reference_id!==row.id||checkout.metadata?.local_subscription_id!==row.id||checkout.mode!=='subscription')throw new Error('Checkout ownership mismatch')
       const stripeId=providerId(checkout.subscription)
       if(!stripeId)continue
-      const subscription=await stripeApi(`/subscriptions/${encodeURIComponent(stripeId)}`,undefined,undefined,secret)
+      let subscription=await stripeApi(`/subscriptions/${encodeURIComponent(stripeId)}`,undefined,undefined,secret)
       if(subscription.metadata?.local_subscription_id!==row.id||subscription.metadata?.owner_id!==row.owner_id||providerId(subscription.customer)!==providerId(checkout.customer))throw new Error('Subscription ownership mismatch')
       const invoices:Record<string,any>[]=[]
       let after=''
@@ -128,6 +131,7 @@ export async function syncStripePayments(db:D1Database,ownerId?:string,secret=pr
         after=list.data.at(-1).id
       }
       for(const invoice of invoices.sort((a,b)=>a.created-b.created))await applyStripeInvoice(db,invoice,subscription)
+      subscription=await alignNovemberRenewal(db,subscription,secret)
       const item=subscription.items?.data?.[0],ended=['canceled','unpaid','incomplete_expired'].includes(subscription.status),cancelled=subscription.cancel_at_period_end||ended
       await db.prepare(`UPDATE customer_subscriptions SET stripe_subscription_id=?,stripe_customer_id=?,renewal_at=?,renewal_enabled=?,status=CASE WHEN status='refunded' THEN status WHEN ?=1 THEN 'cancelled' ELSE status END,updated_at=? WHERE id=? AND owner_id=?`).bind(stripeId,providerId(subscription.customer),Number(item?.current_period_end??subscription.current_period_end??0)*1000,cancelled?0:1,cancelled?1:0,now,row.id,row.owner_id).run()
       // Completed subscriptions need periodic renewal reconciliation; abandoned checkouts do not.
@@ -153,7 +157,7 @@ export async function stripeWebhook(request:Request){
       await recordStripeCancellationRefund(db,await stripeApi(`/refunds/${encodeURIComponent(object.id)}`))
     }else if(['invoice.paid','invoice.payment_succeeded'].includes(event.type)){
       const invoice=await stripeApi(`/invoices/${encodeURIComponent(object.id)}`),stripeId=providerId(invoice.parent?.subscription_details?.subscription??invoice.subscription)
-      if(stripeId)await applyStripeInvoice(db,invoice,await stripeApi(`/subscriptions/${encodeURIComponent(stripeId)}`))
+      if(stripeId){const subscription=await stripeApi(`/subscriptions/${encodeURIComponent(stripeId)}`);await applyStripeInvoice(db,invoice,subscription);await alignNovemberRenewal(db,subscription)}
     }else if(['checkout.session.completed','checkout.session.async_payment_succeeded'].includes(event.type)){
       const checkout=await stripeApi(`/checkout/sessions/${encodeURIComponent(object.id)}`)
       const stripeId=providerId(checkout.subscription)
@@ -162,7 +166,7 @@ export async function stripeWebhook(request:Request){
         const subscription=await stripeApi(`/subscriptions/${encodeURIComponent(stripeId)}`)
         if(subscription.metadata?.owner_id!==row.owner_id||subscription.metadata?.local_subscription_id!==row.id)throw new Error('Checkout ownership mismatch')
         const invoiceId=providerId(checkout.invoice??subscription.latest_invoice)
-        if(invoiceId)await applyStripeInvoice(db,await stripeApi(`/invoices/${encodeURIComponent(invoiceId)}`),subscription)
+        if(invoiceId){await applyStripeInvoice(db,await stripeApi(`/invoices/${encodeURIComponent(invoiceId)}`),subscription);await alignNovemberRenewal(db,subscription)}
       }
     }else if(event.type.startsWith('customer.subscription.')){
       const subscription=await stripeApi(`/subscriptions/${encodeURIComponent(object.id)}`),id=subscription.metadata?.local_subscription_id

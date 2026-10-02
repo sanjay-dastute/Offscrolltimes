@@ -71,6 +71,22 @@ describe('Stripe automatic subscription billing',()=>{
     await applyStripeInvoice(db,paid,subscription())
     expect(await db.prepare('SELECT entitlement_status,starts_at FROM customer_subscriptions').first()).toMatchObject({entitlement_status:'paid',starts_at:paid.lines.data[0].period.start*1000})
   })
+  it('records the November edition term separately from the October payment date',async()=>{
+    await seed()
+    const start=Date.parse('2026-10-02T12:00:00Z')/1000,end=Date.parse('2027-01-02T12:00:00Z')/1000
+    await applyStripeInvoice(db,invoice('in_launch','subscription_create',start,end),subscription())
+    expect(await db.prepare('SELECT starts_at,paid_through_at,next_dispatch_at FROM customer_subscriptions').first()).toEqual({starts_at:Date.parse('2026-10-31T18:30:00Z'),paid_through_at:Date.parse('2027-01-31T18:30:00Z'),next_dispatch_at:Date.parse('2026-11-25T04:30:00Z')})
+    expect(await db.prepare('SELECT paid_at FROM customer_payments').first()).toEqual({paid_at:start*1000})
+  })
+  it('starts renewed dispatches in February after the November to January term',async()=>{
+    await seed()
+    const initialStart=Date.parse('2026-10-02T12:00:00Z')/1000,initialEnd=Date.parse('2027-01-02T12:00:00Z')/1000
+    await applyStripeInvoice(db,invoice('in_launch','subscription_create',initialStart,initialEnd),subscription())
+    await db.prepare("UPDATE customer_subscriptions SET copies_fulfilled=3,status='completed' WHERE id='stripe_local'").run()
+    const start=Date.parse('2027-01-31T18:30:00Z')/1000,end=Date.parse('2027-04-30T18:30:00Z')/1000
+    await applyStripeInvoice(db,invoice('in_renewal','subscription_cycle',start,end),subscription())
+    expect(await db.prepare('SELECT starts_at,paid_through_at,next_dispatch_at,copies_total FROM customer_subscriptions').first()).toEqual({starts_at:Date.parse('2026-10-31T18:30:00Z'),paid_through_at:end*1000,next_dispatch_at:Date.parse('2027-02-25T04:30:00Z'),copies_total:6})
+  })
   it('reconciles a completed checkout for its owner and keeps payment/entitlement idempotent',async()=>{
     await seed()
     await db.prepare("INSERT INTO stripe_checkouts(id,owner_id,request_hash,checkout_session_id,first_amount_minor,renewal_amount_minor,created_at) VALUES('stripe_local','reader','hash','cs_saved',55500,55500,1)").run()
