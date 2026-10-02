@@ -75,6 +75,20 @@ function AccountPage() {
   }
 
   useEffect(() => { void load() }, [])
+  useEffect(()=>{
+    if(new URLSearchParams(location.search).get('checkout')!=='success')return
+    const controller=new AbortController();let attempts=0
+    const timer=setInterval(()=>{
+      if(++attempts>6){clearInterval(timer);return}
+      void fetch('/api/customer',{headers:{Accept:'application/json'},signal:controller.signal}).then(async response=>{
+        if(!response.ok)return
+        const result=await response.json() as DashboardData
+        setData(result)
+        if(result.subscriptions.some(subscription=>subscription.paymentProvider==='stripe'&&subscription.entitlementStatus==='paid'))clearInterval(timer)
+      }).catch(()=>{})
+    },20000)
+    return()=>{clearInterval(timer);controller.abort()}
+  },[])
 
   async function action(subscriptionId: string, actionName: 'pause' | 'resume' | 'cancel') {
     if (!data || busy) return
@@ -176,7 +190,7 @@ function AccountPage() {
           })}
         </div>}
         <section className="mt-12 border-t border-graphite pt-8"><p className={EYEBROW}>Account activity</p><h2 className="text-2xl font-bold">Your status history</h2><p className="mt-2 max-w-2xl text-sm text-graphite-soft">Payment verification, subscription changes, address confirmations and delivery updates appear here. Private staff notes are never shown.</p><div className="mt-5 grid gap-3">{data.events.length?data.events.map(event=><article className="rounded-xl border border-rule bg-paper p-4" key={event.id}><div className="flex flex-wrap justify-between gap-2"><strong>{event.title}</strong><time className="text-sm text-graphite-soft">{date(event.createdAt)}</time></div><p className="mt-2 text-sm">{event.detail}</p>{event.effectiveAt&&<p className="mt-1 text-xs text-graphite-soft">Effective {date(event.effectiveAt)}</p>}</article>):<p className="text-sm text-graphite-soft">Activity will appear after checkout or an account update.</p>}</div></section>
-        <section className="mt-12 rounded-2xl border border-graphite bg-cream p-6"><p className={EYEBROW}>Business and support</p><h2 className="text-2xl font-bold">Offscroll Times</h2><p className="mt-3 text-sm">{BUSINESS_DETAILS.location}<br/>{BUSINESS_DETAILS.registration}</p><p className="mt-3 text-sm"><a className="underline" href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a><br/>{CONTACT_HOURS.india}<br/>{CONTACT_HOURS.responseTime}</p></section>
+        <section className="mt-12 rounded-2xl border border-graphite bg-cream p-6"><p className={EYEBROW}>Business and support</p><h2 className="text-2xl font-bold">Offscroll Times</h2><p className="mt-3 text-sm">{BUSINESS_DETAILS.location}</p><p className="mt-3 text-sm"><a className="underline" href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a><br/>{CONTACT_HOURS.india}<br/>{CONTACT_HOURS.responseTime}</p></section>
         <section className="mt-12 border-t border-graphite pt-8"><p className={EYEBROW}>Login methods</p><h2 className="text-2xl font-bold">Connected identities</h2><p className="max-w-2xl text-sm text-graphite-soft">Link another provider only while signed in. Offscroll Times never merges separate accounts merely because their email addresses match.</p><div className="mt-4 flex flex-wrap gap-3">{(['google','microsoft'] as const).map(provider=>{const linked=data.identities.find(identity=>identity.provider===provider);return linked?<div key={provider} className="rounded-xl border border-graphite bg-paper p-3"><strong className="capitalize">{provider}</strong>{linked.provider_email&&<span className="ml-2 text-sm text-graphite-soft">{linked.provider_email}</span>}<button disabled={busy||data.identities.length<=1} className="ml-3 text-sm underline" onClick={()=>void unlink(provider)}>Unlink</button></div>:<a key={provider} className={CTA_OUTLINE} href={`/auth/${provider}/start?mode=link&return_to=/account`}>Link {provider}</a>})}</div><button disabled={busy} className={`${CTA_OUTLINE} mt-4`} onClick={()=>void revokeAll()}>Sign out all devices</button></section>
         <section className="mt-12 border-t border-graphite pt-8"><p className={EYEBROW}>Privacy controls</p><h2 className="text-2xl font-bold">Your account data</h2><p className="max-w-2xl text-sm text-graphite-soft">Request a copy of your account data or ask us to delete the profile data we are permitted to remove. Payment, invoice and tax records may need to be retained under applicable law.</p><div className="mt-4 flex flex-wrap gap-3"><button disabled={busy} className={CTA_OUTLINE} onClick={()=>void privacy('privacy.access')}>Request my data</button><button disabled={busy} className={CTA_OUTLINE} onClick={()=>void privacy('privacy.deletion')}>Request account deletion</button></div></section>
       </>}

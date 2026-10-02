@@ -45,7 +45,7 @@ export function AdminCustomers({mutate}:{mutate:(payload:Record<string,unknown>)
           <label>Full name<input name="name" required maxLength={100} defaultValue={customer.display_name||customer.address?.name||''} className={FIELD}/></label>
           <label>Email<input name="email" type="email" required defaultValue={customer.email||''} className={FIELD}/></label>
           <label>Phone<input name="phone" type="tel" defaultValue={customer.phone||''} className={FIELD}/></label>
-          <label>WhatsApp number<input name="whatsapp" type="tel" pattern="\+[1-9][0-9]{7,14}" placeholder="+917373050093" defaultValue={customer.whatsapp_number||''} className={FIELD}/></label>
+          <label>WhatsApp number<input name="whatsapp" type="tel" pattern="\+[1-9][0-9]{7,14}" defaultValue={customer.whatsapp_number||''} className={FIELD}/></label>
           <label className="sm:col-span-2">Reason for correction<input name="reason" required minLength={5} maxLength={500} className={FIELD}/></label>
           <div className="flex flex-wrap gap-3 sm:col-span-2"><button disabled={saving} className={CTA}>{saving?'Saving…':'Save contact'}</button><button disabled={saving} type="button" className={CTA_OUTLINE} onClick={()=>setEditing(null)}>Cancel</button></div>
         </form>}

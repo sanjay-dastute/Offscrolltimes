@@ -36,6 +36,7 @@ const MIGRATION_FILES = [
   '0028_customer_directory.sql',
   '0029_newsletter_signups.sql',
   '0030_stripe_subscriptions.sql',
+  '0031_stripe_reconciliation.sql',
 ]
 
 export function createTestD1(): D1Database {

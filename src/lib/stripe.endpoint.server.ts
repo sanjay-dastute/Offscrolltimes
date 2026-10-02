@@ -67,7 +67,7 @@ export async function applyStripeInvoice(db:D1Database,invoice:Record<string,any
   const stripeId=providerId(invoice.parent?.subscription_details?.subscription??invoice.subscription)
   const item=subscription.items?.data?.[0],price=item?.price,interval=price?.recurring
   if(stripeId!==subscription.id||subscription.collection_method!=='charge_automatically'||interval?.interval!=='month'||interval.interval_count!==row.duration_months||subscription.items.data.length!==1||item.quantity!==1||price.unit_amount!==row.renewal_amount_minor||String(invoice.currency).toUpperCase()!==row.currency)throw new Error('Invoice does not match subscription')
-  if(invoice.status!=='paid'||invoice.paid!==true||!['subscription_create','subscription_cycle'].includes(invoice.billing_reason))return
+  if(invoice.status!=='paid'||invoice.paid===false||!['subscription_create','subscription_cycle'].includes(invoice.billing_reason))return
   const expected=invoice.billing_reason==='subscription_create'?row.amount_minor:row.renewal_amount_minor
   if(invoice.amount_paid!==expected||invoice.amount_due!==expected||invoice.amount_remaining!==0)throw new Error('Paid amount does not match authorised term')
   const line=invoice.lines?.data?.find((line:Record<string,any>)=>line.parent?.subscription_item_details?.subscription_item===item.id||line.subscription_item===item.id)
@@ -92,6 +92,43 @@ export async function applyStripeInvoice(db:D1Database,invoice:Record<string,any
   }
 }
 
+/** Reconcile provider records using IDs saved at checkout; never trust browser payment claims. */
+export async function syncStripePayments(db:D1Database,ownerId?:string,secret=process.env.STRIPE_SECRET_KEY){
+  if(!secret)return
+  const now=Date.now()
+  const rows=await db.prepare(`SELECT s.id,s.owner_id,s.stripe_subscription_id,c.checkout_session_id FROM customer_subscriptions s JOIN stripe_checkouts c ON c.id=s.id WHERE s.payment_provider='stripe' AND c.checkout_session_id IS NOT NULL AND c.last_checked_at<? ${ownerId?'AND s.owner_id=?':''} ORDER BY c.last_checked_at LIMIT 10`).bind(now-15000,...(ownerId?[ownerId]:[])).all<Record<string,any>>()
+  for(const row of rows.results){
+    const claim=await db.prepare('UPDATE stripe_checkouts SET last_checked_at=? WHERE id=? AND last_checked_at<?').bind(now,row.id,now-15000).run()
+    if(!claim.meta.changes)continue
+    try{
+      const checkout=await stripeApi(`/checkout/sessions/${encodeURIComponent(row.checkout_session_id)}`,undefined,undefined,secret)
+      if(checkout.client_reference_id!==row.id||checkout.metadata?.local_subscription_id!==row.id||checkout.mode!=='subscription')throw new Error('Checkout ownership mismatch')
+      const stripeId=providerId(checkout.subscription)
+      if(!stripeId)continue
+      const subscription=await stripeApi(`/subscriptions/${encodeURIComponent(stripeId)}`,undefined,undefined,secret)
+      if(subscription.metadata?.local_subscription_id!==row.id||subscription.metadata?.owner_id!==row.owner_id||providerId(subscription.customer)!==providerId(checkout.customer))throw new Error('Subscription ownership mismatch')
+      const invoices:Record<string,any>[]=[]
+      let after=''
+      for(let page=0;page<10;page++){
+        const params=new URLSearchParams({subscription:stripeId,limit:'100'});if(after)params.set('starting_after',after)
+        const list=await stripeApi(`/invoices?${params}`,undefined,undefined,secret)
+        invoices.push(...list.data)
+        if(!list.has_more)break
+        if(page===9)throw new Error('Invoice history needs further reconciliation')
+        after=list.data.at(-1).id
+      }
+      for(const invoice of invoices.sort((a,b)=>a.created-b.created))await applyStripeInvoice(db,invoice,subscription)
+      const item=subscription.items?.data?.[0],ended=['canceled','unpaid','incomplete_expired'].includes(subscription.status),cancelled=subscription.cancel_at_period_end||ended
+      await db.prepare(`UPDATE customer_subscriptions SET stripe_subscription_id=?,stripe_customer_id=?,renewal_at=?,renewal_enabled=?,status=CASE WHEN ?=1 THEN 'cancelled' ELSE status END,updated_at=? WHERE id=? AND owner_id=?`).bind(stripeId,providerId(subscription.customer),Number(item?.current_period_end??subscription.current_period_end??0)*1000,cancelled?0:1,cancelled?1:0,now,row.id,row.owner_id).run()
+      // Completed subscriptions need periodic renewal reconciliation; abandoned checkouts do not.
+      await db.prepare('UPDATE stripe_checkouts SET last_checked_at=? WHERE id=?').bind(now+(checkout.status==='expired'?86400000:subscription.status==='canceled'?3600000:240000),row.id).run()
+    }catch{
+      console.error('stripe_reconciliation_failed')
+      // Leave the claim timestamp for a short retry rather than hiding the whole dashboard.
+    }
+  }
+}
+
 export async function stripeWebhook(request:Request){
   const raw=await request.text()
   if(!verifyStripeWebhook(raw,request.headers.get('stripe-signature')??''))return json({error:'Invalid signature.'},400)
@@ -102,9 +139,19 @@ export async function stripeWebhook(request:Request){
     if(existing?.processed_at)return json({ok:true})
     await db.prepare('INSERT INTO stripe_webhook_receipts(event_id,event_type,received_at) VALUES(?,?,?) ON CONFLICT(event_id) DO NOTHING').bind(event.id,event.type,Date.now()).run()
     const object=event.data?.object
-    if(event.type==='invoice.paid'){
+    if(['invoice.paid','invoice.payment_succeeded'].includes(event.type)){
       const invoice=await stripeApi(`/invoices/${encodeURIComponent(object.id)}`),stripeId=providerId(invoice.parent?.subscription_details?.subscription??invoice.subscription)
       if(stripeId)await applyStripeInvoice(db,invoice,await stripeApi(`/subscriptions/${encodeURIComponent(stripeId)}`))
+    }else if(['checkout.session.completed','checkout.session.async_payment_succeeded'].includes(event.type)){
+      const checkout=await stripeApi(`/checkout/sessions/${encodeURIComponent(object.id)}`)
+      const stripeId=providerId(checkout.subscription)
+      const row=await db.prepare('SELECT id,owner_id FROM stripe_checkouts WHERE checkout_session_id=?').bind(checkout.id).first<{id:string;owner_id:string}>()
+      if(row&&stripeId&&checkout.client_reference_id===row.id&&checkout.metadata?.local_subscription_id===row.id){
+        const subscription=await stripeApi(`/subscriptions/${encodeURIComponent(stripeId)}`)
+        if(subscription.metadata?.owner_id!==row.owner_id||subscription.metadata?.local_subscription_id!==row.id)throw new Error('Checkout ownership mismatch')
+        const invoiceId=providerId(checkout.invoice??subscription.latest_invoice)
+        if(invoiceId)await applyStripeInvoice(db,await stripeApi(`/invoices/${encodeURIComponent(invoiceId)}`),subscription)
+      }
     }else if(event.type.startsWith('customer.subscription.')){
       const subscription=await stripeApi(`/subscriptions/${encodeURIComponent(object.id)}`),id=subscription.metadata?.local_subscription_id
       if(id){const item=subscription.items?.data?.[0],cancelled=subscription.cancel_at_period_end||subscription.status==='canceled',ended=['canceled','unpaid','incomplete_expired'].includes(subscription.status)

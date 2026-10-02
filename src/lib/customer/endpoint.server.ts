@@ -3,7 +3,7 @@ import { json } from '#/lib/http.server'
 import { lifecycleBindings } from '#/lib/lifecycle/env.server'
 import { isSameOrigin } from '#/lib/security'
 import { recordAddressVersion } from '#/lib/canonical-data.server'
-import {cancelStripeSubscription} from '#/lib/stripe.endpoint.server'
+import {cancelStripeSubscription,syncStripePayments} from '#/lib/stripe.endpoint.server'
 import {
   listCustomerSubscriptions,
   requestCustomerAction,
@@ -56,6 +56,7 @@ export async function getCustomerDashboard(request: Request): Promise<Response> 
   if (!session) return json({ error: 'Sign in to view your account.' }, 401)
   const db = customerDb()
   if (!db) return json({ error: 'Customer accounts are temporarily unavailable.' }, 503)
+  await syncStripePayments(db,session.user.id).catch(()=>console.error('stripe_customer_sync_failed'))
   const data = await listCustomerSubscriptions(db, session.user.id)
   const identities = session.internalUserId
     ? await db.prepare(`SELECT provider,provider_email,created_at FROM auth_identities WHERE user_id=? ORDER BY created_at`).bind(session.internalUserId).all<{provider:string;provider_email:string|null;created_at:number}>()

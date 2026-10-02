@@ -19,7 +19,7 @@ export function AccountContact({profile,csrf,onSaved}:{profile:ContactProfile|nu
     <label>Full name<input name="name" required maxLength={100} autoComplete="name" defaultValue={profile?.display_name||''} className={FIELD}/></label>
     <label>Contact email<input name="email" type="email" required autoComplete="email" defaultValue={profile?.email||''} className={FIELD}/></label>
     <label>Phone number<input name="phone" type="tel" required pattern="\+?[0-9 ()-]{7,30}" autoComplete="tel" defaultValue={profile?.phone||''} className={FIELD}/></label>
-    <label>WhatsApp number (optional)<input name="whatsapp" type="tel" pattern="\+[1-9][0-9]{7,14}" placeholder="+917373050093" defaultValue={profile?.whatsapp_number||''} className={FIELD}/></label>
+    <label>WhatsApp number (optional)<input name="whatsapp" type="tel" pattern="\+[1-9][0-9]{7,14}" defaultValue={profile?.whatsapp_number||''} className={FIELD}/></label>
     <button disabled={busy} className={`${CTA} sm:col-span-2`}>{busy?'Saving…':'Save contact details'}</button>
   </form>{message&&<p className="mt-3" role="status">{message}</p>}{error&&<p className="mt-3 text-red-700" role="alert">{error}</p>}</section>
 }

@@ -4,7 +4,7 @@ import {createTestD1} from './lifecycle/testing'
 import {initRequestLifecycleBindings,resetRequestLifecycleBindings} from './lifecycle/env.server'
 import {sessionCookie} from './auth.server'
 import {registerCustomerCheckout} from './customer/store.server'
-import {stripeCheckout,applyStripeInvoice,cancelStripeSubscription,stripeWebhook} from './stripe.endpoint.server'
+import {stripeCheckout,applyStripeInvoice,cancelStripeSubscription,stripeWebhook,syncStripePayments} from './stripe.endpoint.server'
 import {verifyStripeWebhook} from './stripe.server'
 import {createEdition,generateEditionEligibility} from './admin/store.server'
 let db:D1Database
@@ -36,6 +36,31 @@ describe('Stripe automatic subscription billing',()=>{
     expect(await db.prepare("SELECT COUNT(*) total FROM customer_payments WHERE status='paid'").first()).toEqual({total:2})
     await applyStripeInvoice(db,{...invoice('in_unpaid'),paid:false,status:'open'},subscription())
     expect(await db.prepare('SELECT copies_total FROM customer_subscriptions').first()).toEqual({copies_total:6})
+  })
+  it('accepts current Stripe paid invoices without the legacy paid boolean',async()=>{
+    await seed();const paid=invoice();delete (paid as any).paid
+    await applyStripeInvoice(db,paid,subscription())
+    expect(await db.prepare('SELECT entitlement_status,starts_at FROM customer_subscriptions').first()).toMatchObject({entitlement_status:'paid',starts_at:paid.lines.data[0].period.start*1000})
+  })
+  it('reconciles a completed checkout for its owner and keeps payment/entitlement idempotent',async()=>{
+    await seed()
+    await db.prepare("INSERT INTO stripe_checkouts(id,owner_id,request_hash,checkout_session_id,first_amount_minor,renewal_amount_minor,created_at) VALUES('stripe_local','reader','hash','cs_saved',55500,55500,1)").run()
+    const paid=invoice();delete (paid as any).paid
+    const fetchMock=vi.fn(async(url)=>Response.json(String(url).includes('/checkout/sessions/')?{id:'cs_saved',mode:'subscription',status:'complete',client_reference_id:'stripe_local',metadata:{local_subscription_id:'stripe_local'},customer:'cus_reader',subscription:'sub_provider'}:String(url).includes('/subscriptions/')?subscription():{data:[paid],has_more:false}))
+    vi.stubGlobal('fetch',fetchMock)
+    await syncStripePayments(db,'other');expect(fetchMock).not.toHaveBeenCalled()
+    await syncStripePayments(db,'reader');await syncStripePayments(db,'reader')
+    expect(await db.prepare('SELECT status,entitlement_status,copies_total FROM customer_subscriptions').first()).toMatchObject({status:'active',entitlement_status:'paid',copies_total:3})
+    expect(await db.prepare('SELECT COUNT(*) total FROM customer_payments').first()).toEqual({total:1})
+    expect(fetchMock).toHaveBeenCalledTimes(3)
+  })
+  it('rejects reconciliation when provider checkout belongs to another subscription',async()=>{
+    await seed()
+    await db.prepare("INSERT INTO stripe_checkouts(id,owner_id,request_hash,checkout_session_id,first_amount_minor,renewal_amount_minor,created_at) VALUES('stripe_local','reader','hash','cs_saved',55500,55500,1)").run()
+    vi.stubGlobal('fetch',vi.fn(async()=>Response.json({mode:'subscription',client_reference_id:'other',metadata:{local_subscription_id:'other'}})))
+    await syncStripePayments(db,'reader')
+    expect(await db.prepare('SELECT entitlement_status FROM customer_subscriptions').first()).toEqual({entitlement_status:'pending'})
+    expect(await db.prepare('SELECT COUNT(*) total FROM customer_payments').first()).toEqual({total:0})
   })
   it('rejects amount, owner, duration and collection-method mismatches',async()=>{
     await seed()

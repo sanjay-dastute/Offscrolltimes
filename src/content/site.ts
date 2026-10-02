@@ -15,7 +15,6 @@ export const APPROVED_SOCIAL_LINKS: ReadonlyArray<{ label: string; href: string 
 
 export const BUSINESS_DETAILS = {
   location: "Coimbatore, Tamil Nadu, India",
-  registration: "Legal entity name, registered address and registration numbers will be published after incorporation approval.",
 };
 
 export const ANNOUNCEMENT = "From us to your doorstep, wherever you are.";

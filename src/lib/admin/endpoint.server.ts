@@ -1,5 +1,5 @@
 import { readAdministratorSession } from './auth.server'
-import {cancelStripeSubscription} from '#/lib/stripe.endpoint.server'
+import {cancelStripeSubscription,syncStripePayments} from '#/lib/stripe.endpoint.server'
 import { json } from '#/lib/http.server'
 import { lifecycleBindings } from '#/lib/lifecycle/env.server'
 import { isSameOrigin } from '#/lib/security'
@@ -27,6 +27,7 @@ export async function getAdmin(request: Request) {
   if (!session) return json({ error: 'Administrator access required.' }, 403)
   const database = db()
   if (!database) return json({ error: 'Admin data is temporarily unavailable.' }, 503)
+  await syncStripePayments(database).catch(()=>console.error('stripe_admin_sync_failed'))
   await recordUserRole(database,session.user.id,'admin')
   return json({ user: session.user, csrf: session.csrf, ...(await getAdminDashboard(database)) })
 }
