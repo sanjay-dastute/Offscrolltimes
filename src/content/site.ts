@@ -123,7 +123,7 @@ export const HOW_IT_WORKS = [
   {
     num: "01",
     title: "Choose a plan from your account",
-    body: "Select a 1, 3 or 12-month prepaid term, sign in with Google or Microsoft, and review the complete price before paying.",
+    body: "Select a 1, 3 or 12-month prepaid term, sign in with Google, and review the complete price before paying.",
   },
   {
     num: "02",
@@ -314,7 +314,7 @@ export const FAQ_GROUPS = [
     key: "account",
     title: "Address changes and account",
     items: [
-      { q: "How do I access my account?", a: "Sign in with Google or Microsoft, then open Account to view your subscription, payments, invoices, dispatches and support options." },
+      { q: "How do I access my account?", a: "Sign in with Google, then open Account to view your subscription, payments, invoices, dispatches and support options." },
       { q: "When can I change my delivery address?", a: "Update the address in your account by the 20th for the next month's edition. For example, a change saved on 19 August applies to September; a change on 21 August applies from October." },
       { q: "What happens if I change my address after the deadline?", a: "The upcoming copy may already be allocated to the previous address. Contact support immediately; we will help where possible, but rerouting cannot be guaranteed after the print cut-off." },
       { q: "Can other customers see my details?", a: "No. Authenticated customers can access only their own subscription, payment, address and dispatch records." },

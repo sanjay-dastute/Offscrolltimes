@@ -62,8 +62,7 @@ test('customers can save their WhatsApp contact information',async({page})=>{
     await route.fulfill({json:{user:{id:'reader_test',name:'Test Reader'},csrf:'customer-csrf',profile:{display_name:'Test Reader',email:'reader@example.com',phone:null,whatsapp_number:null},identities:[],subscriptions:[],payments:[],fulfilments:[],events:[]}})
   })
   await page.goto('/account')
-  await page.getByLabel('Phone number',{exact:true}).fill('+919999999999')
-  await page.getByLabel('WhatsApp number (optional)',{exact:true}).fill('+917373050093')
+  await page.getByLabel('WhatsApp number (with country code)',{exact:true}).fill('+917373050093')
   const save=page.waitForRequest(request=>request.url().endsWith('/api/customer')&&request.method()==='PATCH')
   await page.getByRole('button',{name:'Save contact details'}).click()
   expect((await save).postDataJSON()).toMatchObject({action:'profile.contact',whatsapp:'+917373050093',csrf:'customer-csrf'})
@@ -87,10 +86,10 @@ test('profile is reachable from the header and a new user can save a delivery ad
   await form.getByLabel('Postal code').fill('411001')
   const save=page.waitForRequest(request=>request.url().endsWith('/api/customer')&&request.method()==='PATCH')
   await form.getByRole('button',{name:'Save delivery address'}).click()
-  await expect(page.getByRole('heading',{name:'Saved delivery address'})).toBeVisible()
+  await expect(page.getByRole('button',{name:'Change address',exact:true})).toBeVisible()
   await expect(page.locator('address')).toContainText('1 Test Street')
   expect((await save).postDataJSON()).toMatchObject({action:'profile.address',address:{name:'Test Reader',line1:'1 Test Street',country:'IN'}})
-  await expect(page.getByText('Delivery address saved.')).toBeVisible()
+  await expect(page.getByText('Default delivery address saved for your subscriptions.')).toBeVisible()
 })
 
 test('email signup saves to the local database and the management link unsubscribes',async({page})=>{
@@ -103,4 +102,19 @@ test('email signup saves to the local database and the management link unsubscri
   await page.getByRole('link',{name:'Manage email signup'}).click()
   await page.getByRole('button',{name:'Unsubscribe from email updates'}).click()
   await expect(page.getByText('You have been unsubscribed.')).toBeVisible()
+})
+
+test('profile has one default delivery address above account activity even with multiple subscriptions',async({page})=>{
+  const address={name:'Test Reader',line1:'One Default Road',city:'Pune',region:'Maharashtra',postalCode:'411001',country:'IN'}
+  const subscription={planName:'3 month',status:'active',paymentProvider:'stripe',durationMonths:3,quantity:1,amountMinor:55500,currency:'INR',entitlementStatus:'paid',copiesRemaining:3,copiesTotal:3,renewalEnabled:true,deliveryAddress:address}
+  await page.route('**/api/customer',route=>route.fulfill({json:{user:{id:'reader_test',name:'Test Reader'},csrf:'customer-csrf',profile:{display_name:'Test Reader',email:'reader@example.com',whatsapp_number:'+919999999999'},address,identities:[],subscriptions:[{...subscription,id:'sub_one'},{...subscription,id:'sub_two'}],payments:[],fulfilments:[],events:[]}}))
+  await page.goto('/account')
+  await expect(page.locator('address')).toHaveCount(1)
+  await expect(page.getByRole('button',{name:'Change address',exact:true})).toHaveCount(1)
+  const headings=await page.getByRole('heading').allTextContents()
+  expect(headings.indexOf('Personal details and delivery')).toBeLessThan(headings.indexOf('Your status history'))
+  expect(headings.indexOf('3 month subscription')).toBeLessThan(headings.indexOf('Personal details and delivery'))
+  await page.getByRole('button',{name:'Change address',exact:true}).click()
+  await expect(page.getByRole('button',{name:'Save delivery address'})).toHaveCount(1)
+  await expect(page.getByLabel('Address line 1',{exact:true})).toHaveValue('One Default Road')
 })

@@ -185,7 +185,7 @@ const socialProviders = {
 } as const
 
 export function isSocialProvider(value: string): value is SocialProvider {
-  return value === 'google' || value === 'microsoft'
+  return value === 'google'
 }
 
 function socialCallback(origin: string, provider: SocialProvider): string {
@@ -200,6 +200,7 @@ function socialCallback(origin: string, provider: SocialProvider): string {
 }
 
 export async function beginSocialOAuth(request: Request, provider: SocialProvider, returnTo?: string, mode: 'login' | 'link' = 'login'): Promise<Response> {
+  if(provider!=='google')return new Response('Sign in with Google.',{status:404})
   if (!await allowRequest(request, 'oauth_start', 10, 10 * 60 * 1000)) {
     return new Response('Too many sign-in attempts. Try again shortly.', { status: 429, headers: { 'Retry-After': '600' } })
   }
@@ -334,6 +335,7 @@ async function persistSocialIdentity(provider: SocialProvider, subject: string, 
 }
 
 export async function finishSocialOAuth(request: Request, provider: SocialProvider): Promise<Response> {
+  if(provider!=='google')return new Response('Sign in with Google.',{status:404})
   if(!await allowRequest(request,'oauth_callback',20,10*60*1000))return new Response('Too many callback attempts. Try again shortly.',{status:429,headers:{'Retry-After':'600'}})
   const url = new URL(request.url)
   const flow = await open<SocialFlow>(cookies(request)[SOCIAL_FLOW_COOKIE])

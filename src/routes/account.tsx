@@ -34,10 +34,6 @@ export const Route = createFileRoute('/account')({
   component: AccountPage,
 })
 
-const emptyAddress: CustomerAddress = {
-  name: '', line1: '', line2: '', city: '', region: '', postalCode: '', country: '',
-}
-
 function date(value: number | null) {
   return value ? new Intl.DateTimeFormat('en', { dateStyle: 'medium' }).format(new Date(value)) : 'To be confirmed'
 }
@@ -51,11 +47,9 @@ function AccountPage() {
   const [loading, setLoading] = useState(true)
   const [unauthenticated, setUnauthenticated] = useState(false)
   const [error, setError] = useState('')
-  const [editing, setEditing] = useState<string | null>(null)
-  const [address, setAddress] = useState<CustomerAddress>(emptyAddress)
   const [busy, setBusy] = useState(false)
   const [notice,setNotice]=useState('')
-  const afterCutoff=Number(new Intl.DateTimeFormat('en-GB',{timeZone:'Asia/Kolkata',day:'2-digit'}).format(new Date()))>20
+
 
   async function load() {
     setLoading(true)
@@ -106,25 +100,8 @@ function AccountPage() {
     finally { setBusy(false) }
   }
 
-  async function saveAddress(event: React.FormEvent, subscriptionId: string) {
-    event.preventDefault()
-    if (!data || busy) return
-    setBusy(true); setError('')
-    try {
-    const response = await fetch('/api/customer', {
-      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ csrf: data.csrf, subscriptionId, action: 'address', address }),
-    })
-    const result = await response.json() as { error?: string; effectiveAt?:number|null }
-    if (!response.ok) setError(result.error ?? 'The address could not be updated.')
-    else { setEditing(null); setNotice(result.effectiveAt?`Address saved. It applies from the ${new Intl.DateTimeFormat('en',{month:'long',year:'numeric'}).format(result.effectiveAt)} edition.`:'Address saved.'); await load() }
-    } catch { setError('Your address could not be updated. Check your connection and retry.') }
-    finally { setBusy(false) }
-  }
-
   async function privacy(actionName:'privacy.access'|'privacy.deletion') {if(!data||busy)return;if(actionName==='privacy.deletion'&&!window.confirm('Request account deletion? We must retain invoices and transaction records where legally required. Active paid-copy fulfilment will be reviewed before deletion.'))return;setBusy(true);const response=await fetch('/api/customer',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({csrf:data.csrf,action:actionName})});const result=await response.json() as {error?:string;message?:string};setNotice(response.ok?(result.message??'Request received.'):(result.error??'Request failed.'));setBusy(false)}
 
-  async function unlink(provider:'google'|'microsoft'){if(!data||busy||!window.confirm(`Remove ${provider} as a login method?`))return;setBusy(true);const response=await fetch('/api/customer',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({csrf:data.csrf,action:'identity.unlink',provider})});const result=await response.json() as {error?:string};if(response.ok){setNotice(`${provider} was unlinked.`);await load()}else setError(result.error??'The login method could not be removed.');setBusy(false)}
 
   async function revokeAll(){if(!data||busy||!window.confirm('Sign out every device, including this one?'))return;setBusy(true);const response=await fetch('/api/customer',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({csrf:data.csrf,action:'sessions.revoke_all'})});if(response.ok)location.href='/login';else{const result=await response.json() as {error?:string};setError(result.error??'Sessions could not be revoked.');setBusy(false)}}
 
@@ -140,7 +117,7 @@ function AccountPage() {
         <div className="mt-7 flex flex-wrap justify-center gap-3">
           <a className={CTA} href="/login?returnTo=/account">Sign in to my profile</a>
           <a className={CTA_OUTLINE} href="/register?returnTo=/account">Create account</a>
-          <a className="w-full text-sm underline" href="/login">Trouble signing in? Choose Google or Microsoft</a>
+          <a className="w-full text-sm underline" href="/login">Trouble signing in? Choose Google</a>
         </div>
       </section>}
       {data && <>
@@ -179,20 +156,11 @@ function AccountPage() {
             </article>
           })}
         </div>}
+        <section className="mt-12 rounded-3xl border border-graphite bg-paper p-6 md:p-8"><h2 className="text-2xl font-bold">Personal details and delivery</h2><AccountContact profile={data.profile} csrf={data.csrf} onSaved={load} embedded/><AccountDeliveryAddress address={data.address??data.subscriptions.find(subscription=>subscription.deliveryAddress)?.deliveryAddress??null} csrf={data.csrf} onSaved={load} embedded/></section>
         <section className="mt-12 border-t border-graphite pt-8"><p className={EYEBROW}>Account activity</p><h2 className="text-2xl font-bold">Your status history</h2><p className="mt-2 max-w-2xl text-sm text-graphite-soft">Payment verification, subscription changes, address confirmations and delivery updates appear here. Private staff notes are never shown.</p><div className="mt-5 grid gap-3">{data.events.length?data.events.map(event=><article className="rounded-xl border border-rule bg-paper p-4" key={event.id}><div className="flex flex-wrap justify-between gap-2"><strong>{event.title}</strong><time className="text-sm text-graphite-soft">{date(event.createdAt)}</time></div><p className="mt-2 text-sm">{event.detail}</p>{event.effectiveAt&&<p className="mt-1 text-xs text-graphite-soft">Effective {date(event.effectiveAt)}</p>}</article>):<p className="text-sm text-graphite-soft">Activity will appear after checkout or an account update.</p>}</div></section>
         <section className="mt-12 rounded-2xl border border-graphite bg-cream p-6"><p className={EYEBROW}>Business and support</p><h2 className="text-2xl font-bold">Offscroll Times</h2><p className="mt-3 text-sm">{BUSINESS_DETAILS.location}</p><p className="mt-3 text-sm"><a className="underline" href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a><br/>{CONTACT_HOURS.india}<br/>{CONTACT_HOURS.responseTime}</p></section>
-        <section className="mt-12 border-t border-graphite pt-8"><p className={EYEBROW}>Login methods</p><h2 className="text-2xl font-bold">Connected identities</h2><p className="max-w-2xl text-sm text-graphite-soft">Link another provider only while signed in. Offscroll Times never merges separate accounts merely because their email addresses match.</p><div className="mt-4 flex flex-wrap gap-3">{(['google','microsoft'] as const).map(provider=>{const linked=data.identities.find(identity=>identity.provider===provider);return linked?<div key={provider} className="rounded-xl border border-graphite bg-paper p-3"><strong className="capitalize">{provider}</strong>{linked.provider_email&&<span className="ml-2 text-sm text-graphite-soft">{linked.provider_email}</span>}<button disabled={busy||data.identities.length<=1} className="ml-3 text-sm underline" onClick={()=>void unlink(provider)}>Unlink</button></div>:<a key={provider} className={CTA_OUTLINE} href={`/auth/${provider}/start?mode=link&return_to=/account`}>Link {provider}</a>})}</div><button disabled={busy} className={`${CTA_OUTLINE} mt-4`} onClick={()=>void revokeAll()}>Sign out all devices</button></section>
+        <section className="mt-12 border-t border-graphite pt-8"><p className={EYEBROW}>Login methods</p><h2 className="text-2xl font-bold">Connected identities</h2><p className="max-w-2xl text-sm text-graphite-soft">Google is your account sign-in method. Your password stays with Google.</p><div className="mt-4 flex flex-wrap gap-3">{(['google'] as const).map(provider=>{const linked=data.identities.find(identity=>identity.provider===provider);return linked?<div key={provider} className="rounded-xl border border-graphite bg-paper p-3"><strong className="capitalize">{provider}</strong>{linked.provider_email&&<span className="ml-2 text-sm text-graphite-soft">{linked.provider_email}</span>}</div>:<a key={provider} className={CTA_OUTLINE} href={`/auth/${provider}/start?mode=link&return_to=/account`}>Link {provider}</a>})}</div><button disabled={busy} className={`${CTA_OUTLINE} mt-4`} onClick={()=>void revokeAll()}>Sign out all devices</button></section>
         <section className="mt-12 border-t border-graphite pt-8"><p className={EYEBROW}>Privacy controls</p><h2 className="text-2xl font-bold">Your account data</h2><p className="max-w-2xl text-sm text-graphite-soft">Request a copy of your account data or ask us to delete the profile data we are permitted to remove. Payment, invoice and tax records may need to be retained under applicable law.</p><div className="mt-4 flex flex-wrap gap-3"><button disabled={busy} className={CTA_OUTLINE} onClick={()=>void privacy('privacy.access')}>Request my data</button><button disabled={busy} className={CTA_OUTLINE} onClick={()=>void privacy('privacy.deletion')}>Request account deletion</button></div></section>
-        <AccountContact profile={data.profile} csrf={data.csrf} onSaved={load} />
-        {data.subscriptions.length===0?<AccountDeliveryAddress address={data.address} csrf={data.csrf}/>:<section className="mt-6 rounded-2xl border border-graphite bg-paper"><h2 className="px-6 pt-6 text-2xl font-bold">Your delivery addresses</h2>{data.subscriptions.map(subscription=><div key={subscription.id}>              <div className="border-t border-rule p-6">
-                <h3 className="font-mono text-xs font-bold uppercase tracking-wider">Delivery address</h3>
-                <p className={`mt-2 text-sm ${afterCutoff?'text-founder-deep':'text-graphite-soft'}`}>{afterCutoff?'The 20th-day cut-off has passed. A new address can apply only to a later edition; contact support for the upcoming copy.':'Address changes saved by the 20th apply to the next monthly edition.'}</p>
-                {editing === subscription.id ? <form onSubmit={(event) => void saveAddress(event, subscription.id)} className="mt-4 grid gap-3 sm:grid-cols-2">
-                  {([['name','Full name'],['line1','Address line 1'],['line2','Address line 2'],['city','City'],['region','State / region'],['postalCode','Postal code'],['country','Country code (IN, GB, DE…)']] as const).map(([key,label]) => <label key={key} className={key === 'line1' ? 'sm:col-span-2' : ''}><span className="mb-1 block text-sm">{label}</span><input required={key!=='line2'} maxLength={key === 'country' ? 2 : 160} value={address[key] ?? ''} onChange={event => setAddress(current => ({ ...current, [key]: event.target.value }))} className="w-full rounded-xl border border-graphite bg-white px-3 py-2" /></label>)}
-                  <div className="flex gap-3 sm:col-span-2"><button disabled={busy} className={CTA} type="submit">Save address</button><button className={CTA_OUTLINE} type="button" onClick={() => setEditing(null)}>Cancel</button></div>
-                </form> : <div className="mt-3 flex flex-wrap items-end justify-between gap-4"><address className="not-italic text-sm leading-6">{subscription.deliveryAddress ? <>{subscription.deliveryAddress.name}<br />{subscription.deliveryAddress.line1}{subscription.deliveryAddress.line2 && <><br />{subscription.deliveryAddress.line2}</>}<br />{subscription.deliveryAddress.city}, {subscription.deliveryAddress.region} {subscription.deliveryAddress.postalCode}<br />{subscription.deliveryAddress.country}</> : 'Address will be added at checkout.'}</address><button className={CTA_OUTLINE} onClick={() => { setAddress(subscription.deliveryAddress ?? emptyAddress); setEditing(subscription.id) }}>Change address</button></div>}
-              </div>
-</div>)}</section>}
       </>}
     </main>
     <SiteFooter />

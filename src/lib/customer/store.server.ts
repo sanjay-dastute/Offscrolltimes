@@ -252,7 +252,7 @@ export async function updateCustomerAddress(
 ) {
   const result = await db.prepare(
     `UPDATE customer_subscriptions SET delivery_address_json = ?, updated_at = ?
-     WHERE id = ? AND owner_id = ? AND status IN ('upcoming', 'active', 'paused', 'cancelled')`,
+     WHERE id = ? AND owner_id = ? AND status IN ('upcoming', 'active', 'paused', 'cancelled', 'completed', 'payment_failed')`,
   ).bind(JSON.stringify(address), now, subscriptionId, userId).run()
   if((result.meta.changes??0)!==1)return false
   const effectiveAt=firstEditionTimestamp(now,process.env.BUSINESS_TIME_ZONE||'Asia/Kolkata',Number(process.env.BUSINESS_CUTOFF_DAY||20))

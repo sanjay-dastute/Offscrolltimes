@@ -34,7 +34,7 @@ afterEach(() => {
 describe('social authentication and role boundaries', () => {
   it('accepts only the configured social providers', () => {
     expect(isSocialProvider('google')).toBe(true)
-    expect(isSocialProvider('microsoft')).toBe(true)
+    expect(isSocialProvider('microsoft')).toBe(false)
     expect(isSocialProvider('legacy')).toBe(false)
     expect(isSocialProvider('../google')).toBe(false)
   })

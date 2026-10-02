@@ -78,6 +78,18 @@ describe('customer role and ownership endpoints', () => {
     const response=await getCustomerDashboard(await requestFor('owner_1','/api/customer'))
     expect(await response.json()).toMatchObject({profile:{display_name:'Reader',whatsapp_number:'+917373050093'}})
   })
+  it('saves one profile address for all owned subscriptions without changing another customer',async()=>{
+    await db.prepare("INSERT INTO users(id,owner_id,role,account_state,created_at,updated_at) VALUES('user_shared','shared_owner','customer','active',1,1)").run()
+    for(const [id,owner] of [['shared_one','shared_owner'],['shared_two','shared_owner'],['other_one','other_owner']])await registerCustomerCheckout(db,{id,userId:owner,planId:'plan',planName:'Plan',durationMonths:3,quantity:1,currency:'INR',amountMinor:55500,now:1})
+    const address={name:'Reader',line1:'One Default Road',city:'Pune',region:'Maharashtra',postalCode:'411001',country:'IN'}
+    const response=await patchCustomerDashboard(await requestFor('shared_owner','/api/customer',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'profile.address',csrf:'csrf-shared_owner',address})}))
+    expect(response.status).toBe(200)
+    const rows=await db.prepare("SELECT delivery_address_json FROM customer_subscriptions WHERE owner_id='shared_owner'").all<{delivery_address_json:string}>()
+    expect(rows.results).toHaveLength(2)
+    for(const row of rows.results)expect(JSON.parse(row.delivery_address_json)).toMatchObject(address)
+    expect(await db.prepare("SELECT delivery_address_json FROM customer_subscriptions WHERE owner_id='other_owner'").first()).toMatchObject({delivery_address_json:null})
+    expect(await (await getCustomerDashboard(await requestFor('shared_owner','/api/customer'))).json()).toMatchObject({address})
+  })
   it('uses the India business timezone at the exact address cut-off boundary', () => {
     expect(isAddressChangeBeforeCutoff(Date.parse('2026-08-20T18:29:59.999Z'))).toBe(true)
     expect(isAddressChangeBeforeCutoff(Date.parse('2026-08-20T18:30:00.000Z'))).toBe(false)

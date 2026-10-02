@@ -78,13 +78,13 @@ export async function patchCustomerDashboard(request: Request): Promise<Response
   if(body.action==='profile.address') {
     const address=validAddress(body.address)
     if(!address)return json({error:'Enter a complete delivery address.'},422)
-    const subscription=await db.prepare('SELECT id FROM customer_subscriptions WHERE owner_id=? LIMIT 1').bind(session.user.id).first()
-    if(subscription)return json({error:'Update the delivery address within your subscription below.'},409)
     const user=await db.prepare('SELECT id FROM users WHERE owner_id=?').bind(session.user.id).first<{id:string}>()
     if(!user)return json({error:'Account not found.'},404)
     const now=Date.now()
     await db.prepare(`INSERT INTO customers(id,user_id,created_at,updated_at) VALUES(?,?,?,?) ON CONFLICT(user_id) DO NOTHING`).bind(`customer_${user.id}`,user.id,now,now).run()
     await recordAddressVersion(db,{ownerId:session.user.id,address,reason:'Customer profile address update',now})
+    const subscriptions=await db.prepare("SELECT id FROM customer_subscriptions WHERE owner_id=? AND status!='refunded'").bind(session.user.id).all<{id:string}>()
+    for(const subscription of subscriptions.results)await updateCustomerAddress(db,session.user.id,subscription.id,address,now)
     return json({ok:true})
   }
   if(body.action==='profile.contact') {
@@ -99,6 +99,7 @@ export async function patchCustomerDashboard(request: Request): Promise<Response
   if(body.action==='identity.unlink'){
     if(!session.internalUserId)return json({error:'Account linking is unavailable for this session.'},409)
     const provider=cleanText(body.provider,20)
+    if(provider==='google')return json({error:'Google is the required sign-in method and cannot be removed.'},409)
     if(provider!=='google'&&provider!=='microsoft')return json({error:'Invalid identity provider.'},400)
     const identities=await db.prepare(`SELECT id,provider_subject FROM auth_identities WHERE user_id=?`).bind(session.internalUserId).all<{id:string;provider_subject:string}>()
     const target=await db.prepare(`SELECT id,provider_subject FROM auth_identities WHERE user_id=? AND provider=?`).bind(session.internalUserId,provider).first<{id:string;provider_subject:string}>()
