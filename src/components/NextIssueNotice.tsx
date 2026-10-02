@@ -1,15 +1,17 @@
 import { useEffect, useState } from 'react';
-import { nextIssueSchedule } from '#/lib/dates';
 import { SUBSCRIBE_HREF } from '#/content/site';
-
-
-
+// Registration stays open throughout November 20 in India time.
+const schedule = {
+  issue: 'December 2026',
+  issueMonth: 'December',
+  cutoff: 'November 20, 2026',
+  deadline: Date.parse('2026-11-21T00:00:00+05:30'),
+};
 export function NextIssueNotice() {
-  const [schedule, setSchedule] = useState(() => nextIssueSchedule());
   const [remaining, setRemaining] = useState<number | null>(null);
 
   useEffect(() => {
-    const update = () => { const now = Date.now(); const next = nextIssueSchedule(now); setSchedule(next); setRemaining(Math.max(0, Math.ceil((next.deadline - now) / 1000))); };
+    const update = () => setRemaining(Math.max(0, Math.ceil((schedule.deadline - Date.now()) / 1000)));
     update();
     const interval = window.setInterval(update, 1000);
     return () => window.clearInterval(interval);
