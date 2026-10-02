@@ -1,6 +1,6 @@
 import {test,expect} from '@playwright/test'
 test('Stripe checkout shows recurring authorisation and sends the selected three-month package',async({page})=>{
-  await page.addInitScript(()=>sessionStorage.setItem('offscroll-times-envelope-seen-v1','1'))
+  await page.addInitScript(()=>{sessionStorage.setItem('offscroll-times-envelope-seen-v1','1');localStorage.setItem('offscroll_analytics_choice','declined')})
   await page.route('**/api/session',route=>route.fulfill({json:{csrf:'stripe-csrf'}}))
   await page.goto('/checkout/stripe?duration=3&quantity=1&country=IN')
   await expect(page.getByText(/Next charge:.*every 3 months until you cancel/)).toBeVisible()
@@ -22,7 +22,7 @@ test('Stripe checkout shows recurring authorisation and sends the selected three
 })
 
 test('saved profile address is reused and only one WhatsApp contact number is requested',async({page})=>{
-  await page.addInitScript(()=>sessionStorage.setItem('offscroll-times-envelope-seen-v1','1'))
+  await page.addInitScript(()=>{sessionStorage.setItem('offscroll-times-envelope-seen-v1','1');localStorage.setItem('offscroll_analytics_choice','declined')})
   await page.route('**/api/session',route=>route.fulfill({json:{csrf:'stripe-csrf'}}))
   await page.route('**/api/customer',route=>route.fulfill({json:{profile:{display_name:'Saved Reader',email:'reader@example.com',whatsapp_number:'+919999999999'},address:{name:'Saved Reader',line1:'1 Saved Road',city:'Pune',region:'Maharashtra',postalCode:'411001',country:'IN'}}}))
   await page.goto('/checkout/stripe?duration=3&quantity=2&country=IN')
@@ -37,7 +37,7 @@ test('saved profile address is reused and only one WhatsApp contact number is re
   expect((await submitted).postDataJSON()).toMatchObject({quantity:2,useProfileAddress:true,whatsapp:'+919999999999'})
 })
 test('copies can be increased, typed above the old limit and priced at checkout',async({page})=>{
-  await page.addInitScript(()=>sessionStorage.setItem('offscroll-times-envelope-seen-v1','1'))
+  await page.addInitScript(()=>{sessionStorage.setItem('offscroll-times-envelope-seen-v1','1');localStorage.setItem('offscroll_analytics_choice','declined')})
   await page.goto('/subscription')
   const copies=page.getByRole('spinbutton',{name:'Copies per edition'})
   await page.getByRole('button',{name:'Increase copies',exact:true}).click()
@@ -45,4 +45,14 @@ test('copies can be increased, typed above the old limit and priced at checkout'
   await copies.fill('25')
   await expect(page.getByRole('link',{name:'Continue to checkout'})).toHaveAttribute('href',/quantity=25/)
   await expect(page.getByText('75 printed copies')).toBeVisible()
+})
+
+test('subscription completion only confirms the paid checkout belonging to this customer',async({page})=>{
+  await page.addInitScript(()=>{sessionStorage.setItem('offscroll-times-envelope-seen-v1','1');localStorage.setItem('offscroll_analytics_choice','declined')})
+  await page.route('**/api/customer',route=>route.fulfill({json:{subscriptions:[{id:'stripe_paid',entitlementStatus:'paid'}]}}))
+  await page.goto('/order-complete?checkout_id=stripe_other')
+  await expect(page.getByText('Subscription confirmed',{exact:true})).toHaveCount(0)
+  await page.goto('/order-complete?checkout_id=stripe_paid')
+  await expect(page.getByText('Subscription confirmed',{exact:true})).toBeVisible()
+  await expect(page.getByText('Stripe verified your payment', {exact:false})).toBeVisible()
 })

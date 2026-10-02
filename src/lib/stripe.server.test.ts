@@ -50,6 +50,17 @@ describe('Stripe automatic subscription billing',()=>{
     expect(row.quantity).toBe(25);expect(JSON.parse(row.delivery_address_json).line1).toBe('Saved Road')
     expect(await db.prepare('SELECT whatsapp_number FROM customers').first()).toMatchObject({whatsapp_number:'+919999999999'})
   })
+  it('does not list an unpaid checkout as a customer subscription or admin subscriber',async()=>{
+    await seed()
+    const {listCustomerSubscriptions}=await import('./customer/store.server')
+    const {customerDirectory}=await import('./admin/directory.server')
+    await db.prepare("INSERT INTO users(id,owner_id,role,account_state,created_at,updated_at) VALUES('user_pending','reader','customer','active',1,1)").run()
+    expect((await listCustomerSubscriptions(db,'reader')).subscriptions).toHaveLength(0)
+    expect((await customerDirectory(db,new URL('https://example.com/api/admin/customers?status=subscribers'))).total).toBe(0)
+    await applyStripeInvoice(db,invoice(),subscription())
+    expect((await listCustomerSubscriptions(db,'reader')).subscriptions).toHaveLength(1)
+    expect((await customerDirectory(db,new URL('https://example.com/api/admin/customers?status=subscribers'))).total).toBe(1)
+  })
   it('accepts current Stripe paid invoices without the legacy paid boolean',async()=>{
     await seed();const paid=invoice();delete (paid as any).paid
     await applyStripeInvoice(db,paid,subscription())

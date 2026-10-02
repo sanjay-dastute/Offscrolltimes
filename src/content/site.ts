@@ -168,7 +168,7 @@ export const PLANS = [
     monthlyEquivalent: null,
     best: false,
     renewsEvery: "Automatic renewal",
-    blurb: "Enjoy the flexibility of a monthly subscription that renews automatically. Cancel anytime before your renewal date.",
+    blurb: "Enjoy the flexibility of a monthly subscription that renews automatically. Self-service cancellation and an automatic refund are available within 48 hours of payment.",
   },
   {
     key: "quarterly",
@@ -227,8 +227,8 @@ export const FAQ_PREVIEW = [
     a: "We currently provide free delivery across India. For international subscription enquiries, contact us at hello@offscrolltimes.com or on WhatsApp.",
   },
   {
-    q: "Can I cancel anytime?",
-    a: "Yes. Request cancellation from your Offscroll Times account. Cancel before the renewal date to prevent the next automatic charge; already-paid eligible issues remain scheduled.",
+    q: "When can I cancel and receive a refund?",
+    a: "Cancel from your profile within 48 hours of a successful payment. Automatic renewal stops and Stripe refunds that payment to its original payment method. After 48 hours the button is disabled; contact support for help.",
   },
   {
     q: "Is it suitable for kids?",
@@ -322,7 +322,7 @@ export const FAQ_GROUPS = [
   },
   { key: "returns", title: "Returns, refunds and damaged copies", items: [
     { q: "What if my issue is damaged, missing or delayed?", a: "Contact support with your order details and, for damage, a photo. Report a missing issue within 7 days of the expected delivery date. We will investigate and, where eligible, arrange a replacement or refund for that issue." },
-    { q: "When can I receive a refund?", a: "Request cancellation within seven days of purchase before preparation or dispatch for a full refund under the published policy. A damaged or missing eligible issue may be replaced or refunded. Copies delivered in good condition are generally not refundable." },
+    { q: "When can I receive a refund?", a: "Cancel within 48 hours of your verified Stripe payment for an automatic refund to the original payment method. A damaged or missing eligible issue may be replaced or refunded. Copies delivered in good condition are generally not refundable." },
   ] },
   { key: "gift", title: "Gift subscriptions", items: [
     { q: "Can I send it as a gift?", a: "Yes. Enter the recipient's India delivery address at checkout. Request support if you need an international delivery or a gift message." },
@@ -519,8 +519,8 @@ export const SHIPPING_INFO = {
 };
 
 export const CANCELLATION_INFO = {
-  cancel: "Request cancellation from your Offscroll Times account. Cancel before the renewal date to prevent the next automatic charge.",
-  pause: "Where the published policy permits it, request a pause from your account before the monthly cut-off.",
+  cancel: "Cancel from your profile within 48 hours of payment for an automatic Stripe refund. After 48 hours the button is disabled; contact support for help.",
+  pause: "Pausing is not available.",
 };
 
 export const GIFT_INFO = {
@@ -534,8 +534,8 @@ export const SUBSCRIPTION_FAQ = [
     a: "Your subscription renews automatically for the same duration and quantity. Cancel before the renewal date to stop the next charge.",
   },
   {
-    q: "How do I cancel or pause?",
-    a: "Use your Offscroll Times account. The confirmation explains how the request affects paid copies and future editions.",
+    q: "How do I cancel and receive a refund?",
+    a: "Use Cancel subscription and refund in your profile within 48 hours of payment. The button is disabled after the deadline. Pausing is not available.",
   },
   {
     q: "Is shipping really included?",

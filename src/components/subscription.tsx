@@ -236,9 +236,9 @@ export function ShippingCancellationGift() {
           <p className="m-0 mt-3 leading-relaxed text-graphite-soft">{SHIPPING_INFO.estimate}</p>
         </div>
         <div>
-          <p className={`${EYEBROW} text-graphite-mute`}>Pause or cancel</p>
+          <p className={`${EYEBROW} text-graphite-mute`}>Cancellation and refunds</p>
           <p className="m-0 leading-relaxed text-graphite-soft">{CANCELLATION_INFO.cancel}</p>
-          <p className="m-0 mt-3 leading-relaxed text-graphite-soft">{CANCELLATION_INFO.pause}</p>
+          
         </div>
         <div>
           <p className={`${EYEBROW} text-graphite-mute`}>Buying as a gift</p>

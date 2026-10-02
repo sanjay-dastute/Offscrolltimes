@@ -64,6 +64,7 @@ type SubscriptionRow = {
 }
 
 export type CustomerPayment = {
+  refundStatus?:string|null
   id: string
   subscriptionId: string
   status: string
@@ -121,7 +122,7 @@ function subscriptionFromRow(row: SubscriptionRow): CustomerSubscription {
     nextDispatchAt: row.next_dispatch_at,
     copiesTotal: row.copies_total,
     copiesFulfilled: row.copies_fulfilled,
-    copiesRemaining: Math.max(0, row.copies_total - row.copies_fulfilled),
+    copiesRemaining: row.entitlement_status==='refunded'?0:Math.max(0, row.copies_total - row.copies_fulfilled),
     cancellationRequestedAt: row.cancellation_requested_at,
     pausedAt: row.paused_at,
     entitlementStatus: row.entitlement_status,
@@ -140,13 +141,13 @@ export async function listCustomerSubscriptions(db: D1Database, userId: string) 
             next_dispatch_at, copies_total, copies_fulfilled,
             cancellation_requested_at, paused_at, entitlement_status, paid_through_at,
             payment_provider,renewal_enabled,renewal_at,renewal_amount_minor
-       FROM customer_subscriptions WHERE owner_id = ? ORDER BY created_at DESC`,
+       FROM customer_subscriptions WHERE owner_id = ? AND (payment_provider!='stripe' OR EXISTS(SELECT 1 FROM customer_payments p WHERE p.subscription_id=customer_subscriptions.id AND p.status IN ('paid','refunded'))) ORDER BY created_at DESC`,
   ).bind(userId).all<SubscriptionRow>()
   const payments = await db.prepare(
-    `SELECT id, subscription_id, status, amount_minor, currency, invoice_url, paid_at, created_at
+    `SELECT id, subscription_id, status, amount_minor, currency, invoice_url, paid_at, created_at, (SELECT provider_status FROM refunds WHERE payment_id=customer_payments.id ORDER BY created_at DESC LIMIT 1) refund_status
        FROM customer_payments WHERE owner_id = ? ORDER BY created_at DESC`,
   ).bind(userId).all<{
-    id: string; subscription_id: string; status: string; amount_minor: number; currency: string
+    refund_status:string|null;id: string; subscription_id: string; status: string; amount_minor: number; currency: string
     invoice_url: string | null; paid_at: number | null; created_at: number
   }>()
   const fulfilments = await db.prepare(
@@ -163,7 +164,7 @@ export async function listCustomerSubscriptions(db: D1Database, userId: string) 
     payments: payments.results.map((row): CustomerPayment => ({
       id: row.id, subscriptionId: row.subscription_id, status: row.status,
       amountMinor: row.amount_minor, currency: row.currency, invoiceUrl: row.invoice_url,
-      paidAt: row.paid_at, createdAt: row.created_at,
+      paidAt: row.paid_at, createdAt: row.created_at,refundStatus:row.refund_status,
     })),
     fulfilments: fulfilments.results.map((row): CustomerFulfilment => ({
       id: row.id, subscriptionId: row.subscription_id, editionLabel: row.edition_label,

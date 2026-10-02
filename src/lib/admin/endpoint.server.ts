@@ -1,3 +1,4 @@
+import { deleteRequestedCustomer } from './deletion.server'
 import { readAdministratorSession } from './auth.server'
 import {cancelStripeSubscription,syncStripePayments} from '#/lib/stripe.endpoint.server'
 import { json } from '#/lib/http.server'
@@ -44,6 +45,11 @@ export async function mutateAdmin(request: Request) {
   if (body.csrf !== session.csrf) return json({ error: 'Your session changed. Refresh and retry.' }, 403)
   const action = text(body.action, 80)
   try {
+    if(action==='customer.delete'){
+      const userId=text(body.userId),requestId=text(body.requestId)
+      if(!SAFE_ID.test(userId)||!SAFE_ID.test(requestId)||body.confirm!==true)return json({error:'Confirm the requested account deletion.'},422)
+      try{await deleteRequestedCustomer(database,session.user.id,userId,requestId);return json({ok:true})}catch{return json({error:'Deletion could not be completed. Access is restricted if deletion started. Check Stripe and retry; data is kept until renewals are confirmed stopped.'},503)}
+    }
     if(action==='newsletter.unsubscribe') {
       const subscriberId=text(body.subscriberId)
       if(!SAFE_ID.test(subscriberId))return json({error:'Invalid email signup.'},422)

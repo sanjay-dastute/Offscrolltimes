@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { CTA, CTA_OUTLINE, FIELD, H2 } from '#/lib/uiKit'
 
-type Customer = {user_id:string;display_name:string|null;email:string|null;phone:string|null;whatsapp_number:string|null;account_state:string;subscription_count:number;subscription_status:string|null;payment_status:string|null;address:{name:string;line1:string;line2?:string;city:string;region?:string;postalCode:string;country:string}|null}
+type Customer = {deletion_request_id?:string|null;user_id:string;display_name:string|null;email:string|null;phone:string|null;whatsapp_number:string|null;account_state:string;subscription_count:number;subscription_status:string|null;payment_status:string|null;address:{name:string;line1:string;line2?:string;city:string;region?:string;postalCode:string;country:string}|null}
 type Directory = {customers:Customer[];page:number;pages:number;total:number}
 
 export function AdminCustomers({mutate}:{mutate:(payload:Record<string,unknown>)=>Promise<boolean>}) {
@@ -24,12 +24,18 @@ export function AdminCustomers({mutate}:{mutate:(payload:Record<string,unknown>)
     const fields=Object.fromEntries(new FormData(event.currentTarget));setSaving(true)
     try{if(await mutate({action:'customer.contact',userId:editing.user_id,...fields})){setEditing(null);setRevision(value=>value+1)}}finally{setSaving(false)}
   }
+  async function remove(customer:Customer){
+    if(!customer.deletion_request_id||saving)return
+    if(!window.confirm('Delete this requested account? This removes all account access, stops automatic renewal and erases profile/contact/address data. Protected order, payment and audit history is retained. This cannot be undone.'))return
+    setSaving(true)
+    try{if(await mutate({action:'customer.delete',userId:customer.user_id,requestId:customer.deletion_request_id,confirm:true})){setEditing(null);setRevision(value=>value+1)}}finally{setSaving(false)}
+  }
   return <section>
     <h2 className={H2}>Customer directory</h2>
     <p className="mt-3 text-sm">All registered users, including people who have not subscribed. Payment status refers to the latest recorded payment.</p>
     <div className="my-6 grid gap-4 sm:grid-cols-2">
       <label>Name, email, phone or WhatsApp<input className={`${FIELD} mt-2`} type="search" value={query} onChange={event=>{setQuery(event.target.value);setPage(1)}}/></label>
-      <label>Customer group<select className={`${FIELD} mt-2`} value={status} onChange={event=>{setStatus(event.target.value);setPage(1)}}><option value="all">All registered users</option><option value="subscribers">Has a subscription</option><option value="registered">No subscription yet</option></select></label>
+      <label>Customer group<select className={`${FIELD} mt-2`} value={status} onChange={event=>{setStatus(event.target.value);setPage(1)}}><option value="all">All registered users</option><option value="subscribers">Has a subscription</option><option value="registered">No subscription yet</option><option value="deletion">Deletion requested</option></select></label>
     </div>
     {error&&<div role="alert" className="my-4"><p>{error}</p><button className={CTA_OUTLINE} onClick={()=>setRevision(value=>value+1)}>Retry</button></div>}
     {loading&&<p role="status">Loading customers…</p>}
@@ -41,6 +47,7 @@ export function AdminCustomers({mutate}:{mutate:(payload:Record<string,unknown>)
         <dl className="mt-4 grid gap-3 sm:grid-cols-2"><div><dt className="font-bold">Email</dt><dd>{customer.email?<a href={`mailto:${customer.email}`}>{customer.email}</a>:'Not provided'}</dd></div><div><dt className="font-bold">Phone</dt><dd>{customer.phone||'Not provided'}</dd></div><div><dt className="font-bold">WhatsApp</dt><dd>{customer.whatsapp_number?<a className="underline" href={`https://wa.me/${customer.whatsapp_number.replace(/\D/g,'')}`} target="_blank" rel="noopener noreferrer">{customer.whatsapp_number}</a>:'Not provided'}</dd></div><div><dt className="font-bold">Account</dt><dd>{customer.account_state}</dd></div><div><dt className="font-bold">Subscriptions</dt><dd>{customer.subscription_count} · {customer.subscription_status||'Not subscribed'}</dd></div><div><dt className="font-bold">Latest payment</dt><dd>{customer.payment_status||'No payment recorded'}</dd></div></dl>
         <div className="mt-4"><strong>Delivery address</strong><address className="mt-1 not-italic">{customer.address?<>{customer.address.name}<br/>{customer.address.line1}{customer.address.line2&&<><br/>{customer.address.line2}</>}<br/>{customer.address.city}, {customer.address.region} {customer.address.postalCode}<br/>{customer.address.country}</>:'Not provided'}</address></div>
         <button className={`${CTA_OUTLINE} mt-4`} onClick={()=>setEditing(customer)}>Edit contact details</button>
+        {customer.deletion_request_id&&<div className="mt-4 rounded-xl border border-red-600 bg-red-50 p-4"><p className="font-bold text-red-800">Account deletion requested</p><p className="mt-1 text-sm">Delete access and personal profile data. Protected transaction history remains.</p><button disabled={saving} className="mt-3 rounded-full bg-red-700 px-5 py-3 font-bold text-white disabled:opacity-50" onClick={()=>void remove(customer)}>{saving?'Deleting...':'Delete account'}</button></div>}
         {editing?.user_id===customer.user_id&&<form className="mt-5 grid gap-3 sm:grid-cols-2" onSubmit={save}>
           <label>Full name<input name="name" required maxLength={100} defaultValue={customer.display_name||customer.address?.name||''} className={FIELD}/></label>
           <label>Email<input name="email" type="email" required defaultValue={customer.email||''} className={FIELD}/></label>

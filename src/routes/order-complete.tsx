@@ -12,6 +12,7 @@ export const Route = createFileRoute('/order-complete')({
     ],
   }),
   validateSearch: (search: Record<string, unknown>) => ({
+    checkout_id: typeof search.checkout_id==='string'?search.checkout_id:undefined,
     status: typeof search.status === 'string' ? search.status : undefined,
     payment_id: typeof search.payment_id === 'string' ? search.payment_id : undefined,
   }),
@@ -19,10 +20,19 @@ export const Route = createFileRoute('/order-complete')({
 })
 
 function OrderComplete() {
-  const { status, payment_id } = useSearch({ from: '/order-complete' })
+  const { status, payment_id,checkout_id } = useSearch({ from: '/order-complete' })
   const [verified,setVerified]=useState(false)
   const failed=status==='failed'||status==='canceled'
-  useEffect(()=>{if(!payment_id||failed)return;void fetch(`/api/customer/invoice/${encodeURIComponent(payment_id)}`,{headers:{Accept:'text/html'}}).then(response=>setVerified(response.ok))},[payment_id,failed])
+  useEffect(()=>{
+    if(failed)return
+    let stopped=false,attempts=0
+    async function verify(){try{
+      if(checkout_id){const response=await fetch('/api/customer');if(!response.ok)return;const data=await response.json() as {subscriptions:Array<{id:string;entitlementStatus:string}>};if(!stopped&&data.subscriptions.some(subscription=>subscription.id===checkout_id&&subscription.entitlementStatus==='paid')){setVerified(true);clearInterval(timer)}}
+      else if(payment_id){const response=await fetch(`/api/customer/invoice/${encodeURIComponent(payment_id)}`);if(!stopped)setVerified(response.ok)}
+    }catch{}if(++attempts>=12)clearInterval(timer)}
+    const timer=setInterval(()=>void verify(),15000);void verify()
+    return()=>{stopped=true;clearInterval(timer)}
+  },[checkout_id,payment_id,failed])
 
   return (
     <>
@@ -34,7 +44,7 @@ function OrderComplete() {
               Subscription confirmed
             </p>
             <h1 className="m-0 font-display text-[clamp(2rem,5.4vw,3rem)] leading-[1.02] font-bold tracking-[-0.03em]">
-              Your first issue is on its way.
+              You're subscribed. Let the fun begin.
             </h1>
             <p className="m-0 max-w-[50ch] leading-relaxed text-graphite-soft">
               Stripe verified your payment and your subscription is active. Your receipt and

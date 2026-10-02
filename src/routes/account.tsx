@@ -84,18 +84,20 @@ function AccountPage() {
     return()=>{clearInterval(timer);controller.abort()}
   },[])
 
-  async function action(subscriptionId: string, actionName: 'pause' | 'resume' | 'cancel') {
+  const [now,setNow]=useState(Date.now())
+  useEffect(()=>{const timer=setInterval(()=>setNow(Date.now()),30000);return()=>clearInterval(timer)},[])
+  async function action(subscriptionId: string, actionName: 'cancel') {
     if (!data || busy) return
-    if (actionName === 'cancel' && !window.confirm('Cancel future service? Copies already paid for remain available under the cancellation policy.')) return
+    if (actionName === 'cancel' && !window.confirm('Cancel this subscription and request a full refund of your latest payment to the original payment method? Automatic renewal will stop.')) return
     setBusy(true); setError('')
     try {
     const response = await fetch('/api/customer', {
       method: 'PATCH', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ csrf: data.csrf, subscriptionId, action: actionName }),
     })
-    const result = await response.json() as { error?: string }
+    const result = await response.json() as { error?: string;message?:string }
     if (!response.ok) setError(result.error ?? 'The subscription could not be updated.')
-    else await load()
+    else {setNotice(result.message??'Subscription updated.');await load()}
     } catch { setError('Your subscription could not be updated. Check your connection and retry.') }
     finally { setBusy(false) }
   }
@@ -133,6 +135,9 @@ function AccountPage() {
           {data.subscriptions.map((subscription) => {
             const payments = data.payments.filter((item) => item.subscriptionId === subscription.id)
             const fulfilments = data.fulfilments.filter((item) => item.subscriptionId === subscription.id)
+            const latestPayment=[...payments].filter(payment=>payment.paidAt).sort((a,b)=>(b.paidAt??0)-(a.paidAt??0))[0]
+            const cancelDeadline=latestPayment?.paidAt?latestPayment.paidAt+48*60*60*1000:null
+            const canCancel=subscription.paymentProvider==='stripe'&&latestPayment?.status==='paid'&&cancelDeadline!==null&&now<cancelDeadline&&subscription.status!=='refunded'
             const daysRemaining=subscription.paidThroughAt?Math.ceil((subscription.paidThroughAt-Date.now())/86400000):null
             return <article key={subscription.id} className="overflow-hidden rounded-3xl border border-graphite bg-paper shadow-[5px_5px_0_#26231f]">
               <div className="flex flex-wrap justify-between gap-5 border-b border-graphite bg-cream p-6">
@@ -141,14 +146,13 @@ function AccountPage() {
               </div>
               <div className="grid gap-7 p-6 md:grid-cols-3">
                 <section><h3 className="font-mono text-xs font-bold uppercase tracking-wider">Subscription</h3><dl className="mt-3 grid gap-2 text-sm"><div><dt className="text-graphite-soft">Starts</dt><dd>{date(subscription.startsAt)}</dd></div><div><dt className="text-graphite-soft">Ends / paid through</dt><dd>{date(subscription.paidThroughAt??subscription.endsAt)}</dd></div><div><dt className="text-graphite-soft">Next expected edition</dt><dd>{subscription.nextDispatchAt?new Intl.DateTimeFormat('en',{month:'long',year:'numeric'}).format(subscription.nextDispatchAt):'To be confirmed'} · {date(subscription.nextDispatchAt)}</dd></div><div><dt className="text-graphite-soft">Copies remaining</dt><dd>{subscription.copiesRemaining} of {subscription.copiesTotal}</dd></div><div><dt className="text-graphite-soft">Paid entitlement</dt><dd className="capitalize">{subscription.entitlementStatus}</dd></div></dl></section>
-                <section><h3 className="font-mono text-xs font-bold uppercase tracking-wider">Payment & invoices</h3>{payments.length ? <ul className="mt-3 grid gap-2 text-sm">{payments.map(payment => <li key={payment.id}><span className="capitalize">{payment.status}</span> · {money(payment.amountMinor, payment.currency)} · {date(payment.paidAt ?? payment.createdAt)}{payment.invoiceUrl && <> · <a href={payment.invoiceUrl}>Invoice</a></>}</li>)}</ul> : <p className="mt-3 text-sm text-graphite-soft">No payments recorded.</p>}</section>
+                <section><h3 className="font-mono text-xs font-bold uppercase tracking-wider">Payment & invoices</h3>{payments.length ? <ul className="mt-3 grid gap-2 text-sm">{payments.map(payment => <li key={payment.id}><span className="capitalize">{payment.status}</span> · {money(payment.amountMinor, payment.currency)} · {date(payment.paidAt ?? payment.createdAt)}{payment.refundStatus&&<span className="block font-semibold">Refund: {payment.refundStatus}</span>}{payment.invoiceUrl && <> · <a href={payment.invoiceUrl}>Invoice</a></>}</li>)}</ul> : <p className="mt-3 text-sm text-graphite-soft">No payments recorded.</p>}</section>
                 <section><h3 className="font-mono text-xs font-bold uppercase tracking-wider">Dispatch history</h3>{fulfilments.length ? <ul className="mt-3 grid gap-2 text-sm">{fulfilments.map(item => <li key={item.id}>{item.editionLabel} · <span className="capitalize">{item.status}</span>{item.courier&&<> · {item.courier}</>}{item.trackingUrl && <> · <a href={item.trackingUrl} target="_blank" rel="noopener noreferrer">Track</a></>}</li>)}</ul> : <p className="mt-3 text-sm text-graphite-soft">Your first dispatch will appear here.</p>}</section>
               </div>
               <div className="flex flex-wrap gap-3 border-t border-graphite bg-cream p-6">
                 {daysRemaining!==null&&daysRemaining>=0&&daysRemaining<=30&&<p className="w-full rounded-xl border border-graphite bg-sun p-3 text-sm"><strong>Your prepaid term ends in {daysRemaining} days.</strong> {subscription.paymentProvider==='stripe'?(subscription.renewalEnabled?'Your subscription renews automatically for the same duration. Cancel before the renewal date to prevent the next charge.':'Automatic renewal is cancelled. Your paid editions remain available.'):'This legacy term has no recurring payment mandate.'}</p>}
                 {subscription.paymentProvider==='stripe'&&<p className="w-full text-sm">Automatic renewal: {subscription.renewalEnabled?'Enabled':'Cancelled'} | Next renewal: {subscription.renewalEnabled?date(subscription.renewalAt):'No further charge'}{subscription.renewalEnabled&&subscription.renewalAmountMinor!=null?` | ${money(subscription.renewalAmountMinor,subscription.currency)} every ${subscription.durationMonths} months`:''}</p>}
-                {subscription.paymentProvider!=='stripe' && subscription.status !== 'paused' && <button disabled={busy || !['active','upcoming'].includes(subscription.status)} className={CTA_OUTLINE} onClick={() => void action(subscription.id, 'pause')}>Pause</button>}
-                <button disabled={busy || (subscription.paymentProvider==='stripe'?!subscription.renewalEnabled:['cancelled','completed','refunded'].includes(subscription.status))} className={CTA_OUTLINE} onClick={() => void action(subscription.id, 'cancel')}>{subscription.paymentProvider==='stripe'?'Cancel automatic renewal':'Cancel'}</button>
+                <div className="w-full"><button disabled={busy||!canCancel} className={`${CTA_OUTLINE} disabled:cursor-not-allowed disabled:opacity-40`} onClick={()=>void action(subscription.id,'cancel')}>Cancel subscription and refund</button><p className="mt-2 text-sm">{canCancel&&cancelDeadline?`Available until ${new Intl.DateTimeFormat('en-GB',{dateStyle:'medium',timeStyle:'short',timeZone:'Asia/Kolkata'}).format(cancelDeadline)} IST (48 hours after payment).`:latestPayment?.status==='refunded'?'This payment has been refunded.':'The 48-hour cancellation window is closed. Contact support for help.'}</p></div>
                 <a className={CTA_OUTLINE} href="/contact?type=subscription">Contact support</a>
                 <DamageEvidenceUpload subscriptionId={subscription.id} csrf={data.csrf}/>
                 <a className={CTA_OUTLINE} href={WHATSAPP_URL} target="_blank" rel="noopener noreferrer">WhatsApp support</a>

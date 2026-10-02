@@ -4,7 +4,7 @@ const reports={financialByCurrency:[],customers:1,activePaidEntitlements:0,entit
 const customer={user_id:'user_test',display_name:'Test Reader',email:'reader@example.com',phone:'+919999999999',whatsapp_number:'+918888888888',account_state:'active',subscription_count:0,subscription_status:null,payment_status:null,address:{name:'Test Reader',line1:'1 Test Street',city:'Pune',postalCode:'411001',country:'IN'}}
 
 test.beforeEach(async({page})=>{
-  await page.addInitScript(()=>{sessionStorage.setItem('offscroll-times-envelope-seen-v1','1')})
+  await page.addInitScript(()=>{sessionStorage.setItem('offscroll-times-envelope-seen-v1','1');localStorage.setItem('offscroll_analytics_choice','declined')})
   await page.route('**/api/admin',async route=>{
     if(route.request().method()==='POST')return route.fulfill({json:{ok:true}})
     await route.fulfill({json:{user:{id:'admin_test',name:'Test Admin'},csrf:'test-csrf',subscriptions:[],payments:[],fulfilments:[],editions:[],eligibility:[],products:[],options:[],discounts:[{id:'offer_test',code:'SAVE10',kind:'percentage',value:1000,active:1}],zones:[],content:[],enquiries:[],audits:[],promotionReports:[],reports}})
@@ -117,4 +117,39 @@ test('profile has one default delivery address above account activity even with 
   await page.getByRole('button',{name:'Change address',exact:true}).click()
   await expect(page.getByRole('button',{name:'Save delivery address'})).toHaveCount(1)
   await expect(page.getByLabel('Address line 1',{exact:true})).toHaveValue('One Default Road')
+})
+
+test('deletion requests have a customer filter and a confirmed red delete action',async({page})=>{
+  await page.route('**/api/admin/customers?*',route=>route.fulfill({json:{customers:[{...customer,deletion_request_id:'request_delete'}],page:1,pages:1,total:1}}))
+  await openAdmin(page)
+  await page.getByRole('button',{name:'customers',exact:true}).click()
+  const filtered=page.waitForResponse(response=>response.url().includes('/api/admin/customers?')&&response.url().includes('status=deletion'))
+  await page.getByLabel('Customer group').selectOption('deletion')
+  await filtered
+  await expect(page.getByText(/Loading customers/)).toHaveCount(0)
+  await expect(page.getByText('Account deletion requested',{exact:true})).toBeVisible()
+  const button=page.getByRole('button',{name:'Delete account',exact:true})
+  await expect(button).toHaveClass(/bg-red-700/)
+  page.once('dialog',dialog=>dialog.accept())
+  const submitted=page.waitForRequest(request=>request.url().endsWith('/api/admin')&&request.method()==='POST')
+  await button.click()
+  expect((await submitted).postDataJSON()).toMatchObject({action:'customer.delete',userId:'user_test',requestId:'request_delete',confirm:true,csrf:'test-csrf'})
+})
+
+test('profile offers refund cancellation only during the 48-hour payment window and has no pause button',async({page})=>{
+  const now=Date.now()
+  const subscription={planName:'3 month',status:'active',paymentProvider:'stripe',durationMonths:3,quantity:1,amountMinor:55500,currency:'INR',entitlementStatus:'paid',copiesRemaining:3,copiesTotal:3,renewalEnabled:true}
+  await page.route('**/api/customer',route=>route.fulfill({json:{user:{id:'reader_test',name:'Test Reader'},csrf:'customer-csrf',profile:null,address:null,identities:[],subscriptions:[{...subscription,id:'recent'},{...subscription,id:'expired'}],payments:[{id:'pay_recent',subscriptionId:'recent',status:'paid',amountMinor:55500,currency:'INR',paidAt:now-3600000,createdAt:now},{id:'pay_expired',subscriptionId:'expired',status:'paid',amountMinor:55500,currency:'INR',paidAt:now-49*3600000,createdAt:now}],fulfilments:[],events:[]}}))
+  await page.goto('/account')
+  const buttons=page.getByRole('button',{name:'Cancel subscription and refund',exact:true})
+  await expect(buttons).toHaveCount(2)
+  await expect(buttons.nth(0)).toBeEnabled()
+  await expect(buttons.nth(1)).toBeDisabled()
+  await expect(page.getByRole('button',{name:'Pause',exact:true})).toHaveCount(0)
+  await page.route('**/api/customer',async route=>{if(route.request().method()==='PATCH')return route.fulfill({json:{ok:true,message:'Subscription cancelled. Stripe has issued your refund to the original payment method.'}});await route.fallback()})
+  page.once('dialog',dialog=>dialog.accept())
+  const submitted=page.waitForRequest(request=>request.url().endsWith('/api/customer')&&request.method()==='PATCH')
+  await buttons.nth(0).click()
+  expect((await submitted).postDataJSON()).toMatchObject({subscriptionId:'recent',action:'cancel',csrf:'customer-csrf'})
+  await expect(page.getByText('Subscription cancelled. Stripe has issued your refund to the original payment method.')).toBeVisible()
 })

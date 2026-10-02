@@ -98,7 +98,10 @@ async function readDatabaseSession(value: string | undefined): Promise<SessionDa
 
 export async function readSession(request: Request): Promise<SessionData | null> {
   const values = cookies(request)
-  return await readDatabaseSession(values[APP_SESSION_COOKIE]) ?? open<SessionData>(values[SEALED_SESSION_COOKIE])
+  const session=await readDatabaseSession(values[APP_SESSION_COOKIE]) ?? await open<SessionData>(values[SEALED_SESSION_COOKIE])
+  if(!session)return null
+  try{const user=await lifecycleBindings().db.prepare('SELECT account_state FROM users WHERE owner_id=?').bind(session.user.id).first<{account_state:string}>();if(user&&['deleted','restricted'].includes(user.account_state))return null}catch{return null}
+  return session
 }
 
 export async function sessionCookie(session: SessionData): Promise<string> {
@@ -307,6 +310,8 @@ async function persistSocialIdentity(provider: SocialProvider, subject: string, 
   if (linkUserId && existing && existing.user_id !== linkUserId) throw new Error('identity_already_linked')
   const userId = linkUserId ?? existing?.user_id ?? await stableUserId(providerOwnerId)
   const now = Date.now()
+  const prior=await db.prepare('SELECT account_state FROM users WHERE id=?').bind(userId).first<{account_state:string}>()
+  if(prior&&['deleted','restricted'].includes(prior.account_state))throw new Error('account_unavailable')
   if (!existing && !linkUserId) {
     await db.prepare(`INSERT INTO users(id,owner_id,role,account_state,primary_email,created_at,updated_at)
       VALUES(?,?,'customer','active',?,?,?) ON CONFLICT(owner_id) DO UPDATE SET primary_email=COALESCE(excluded.primary_email,users.primary_email),updated_at=excluded.updated_at`)

@@ -1,3 +1,4 @@
+import {recordStripeCancellationRefund} from './stripe-refund.server'
 import { createHash } from 'node:crypto'
 import { readSession } from './auth.server'
 import { lifecycleBindings } from './lifecycle/env.server'
@@ -43,9 +44,12 @@ export async function stripeCheckout(request:Request){
     await db.prepare("UPDATE customer_subscriptions SET payment_provider='stripe',contact_phone=?,renewal_amount_minor=?,renewal_enabled=1 WHERE id=?").bind(phone,renewal.totalMinor,id).run()
     await db.prepare('INSERT INTO stripe_checkouts(id,owner_id,request_hash,first_amount_minor,renewal_amount_minor,created_at) VALUES(?,?,?,?,?,?) ON CONFLICT(id) DO NOTHING').bind(id,session.user.id,requestHash,quote.totalMinor,renewal.totalMinor,now).run()
     const origin=new URL(request.url).origin
-    const params:Record<string,string>={mode:'subscription',success_url:`${origin}/account?checkout=success`,cancel_url:`${origin}/checkout/stripe?duration=${months}&quantity=${quantity}&country=IN`,customer_email:email,client_reference_id:id,'metadata[local_subscription_id]':id,'subscription_data[metadata][local_subscription_id]':id,'subscription_data[metadata][owner_id]':session.user.id,'payment_method_types[0]':'card','line_items[0][price_data][currency]':'inr','line_items[0][price_data][unit_amount]':String(renewal.totalMinor),'line_items[0][price_data][recurring][interval]':'month','line_items[0][price_data][recurring][interval_count]':String(months),'line_items[0][price_data][product_data][name]':`Offscroll Times: ${months} month subscription (${quantity} ${quantity===1?'copy':'copies'} per edition)`,'line_items[0][quantity]':'1','consent_collection[terms_of_service]':'required','custom_text[terms_of_service_acceptance][message]':`I agree to the [Subscription Terms](${origin}/policies/subscription). Renews every ${months} ${months===1?'month':'months'} at INR ${(renewal.totalMinor/100).toFixed(2)} until cancelled.`}
+    const params:Record<string,string>={mode:'subscription',success_url:`${origin}/order-complete?checkout_id=${id}`,cancel_url:`${origin}/checkout/stripe?duration=${months}&quantity=${quantity}&country=IN`,customer_email:email,client_reference_id:id,'metadata[local_subscription_id]':id,'subscription_data[metadata][local_subscription_id]':id,'subscription_data[metadata][owner_id]':session.user.id,'payment_method_types[0]':'card','line_items[0][price_data][currency]':'inr','line_items[0][price_data][unit_amount]':String(renewal.totalMinor),'line_items[0][price_data][recurring][interval]':'month','line_items[0][price_data][recurring][interval_count]':String(months),'line_items[0][price_data][product_data][name]':`Offscroll Times: ${months} month subscription (${quantity} ${quantity===1?'copy':'copies'} per edition)`,'line_items[0][quantity]':'1','consent_collection[terms_of_service]':'required','custom_text[terms_of_service_acceptance][message]':`I agree to the [Subscription Terms](${origin}/policies/subscription). Renews every ${months} ${months===1?'month':'months'} at INR ${(renewal.totalMinor/100).toFixed(2)} until cancelled.`}
     if(quote.totalMinor<renewal.totalMinor){const coupon=await stripeApi('/coupons',{duration:'once',amount_off:String(renewal.totalMinor-quote.totalMinor),currency:'inr',name:'First-term promotion'},`coupon-${id}`);params['discounts[0][coupon]']=coupon.id}
+    const unavailable=()=>db.prepare("SELECT id FROM users WHERE owner_id=? AND account_state IN ('restricted','deleted')").bind(session.user.id).first()
+    if(await unavailable())return json({error:'This account is no longer available.'},403)
     const checkout=await stripeApi('/checkout/sessions',params,`checkout-${id}`)
+    if(await unavailable()){if(checkout.status!=='expired')await stripeApi(`/checkout/sessions/${encodeURIComponent(checkout.id)}/expire`,{},`account-closed-${id}`);return json({error:'This account is no longer available.'},403)}
     if(typeof checkout.url!=='string'||!checkout.url.startsWith('https://checkout.stripe.com/'))throw new Error('Invalid checkout URL')
     await db.prepare('UPDATE stripe_checkouts SET checkout_session_id=?,checkout_url=?,expires_at=? WHERE id=?').bind(checkout.id,checkout.url,Number(checkout.expires_at)*1000,id).run()
     if(!await db.prepare('SELECT id FROM orders WHERE subscription_id=?').bind(id).first())await recordCustomerOrder(db,{userId:session.user.id,email,phone,subscriptionId:id,providerOrderId:checkout.id,currency:quote.currency,amountMinor:quote.totalMinor,pricingSnapshot:quote,address,termsAcceptedAt:now})
@@ -68,6 +72,8 @@ export async function applyStripeInvoice(db:D1Database,invoice:Record<string,any
   const id=subscription.metadata?.local_subscription_id
   const row=await db.prepare("SELECT * FROM customer_subscriptions WHERE id=? AND payment_provider='stripe'").bind(id??'').first<Record<string,any>>()
   if(!row||subscription.metadata?.owner_id!==row.owner_id)return
+  if(await db.prepare("SELECT id FROM users WHERE owner_id=? AND account_state='deleted'").bind(row.owner_id).first())return
+  if(await db.prepare("SELECT id FROM customer_payments WHERE provider_payment_id=? AND status='refunded'").bind(invoice.id).first())return
   const stripeId=providerId(invoice.parent?.subscription_details?.subscription??invoice.subscription)
   const item=subscription.items?.data?.[0],price=item?.price,interval=price?.recurring
   if(stripeId!==subscription.id||subscription.collection_method!=='charge_automatically'||interval?.interval!=='month'||interval.interval_count!==row.duration_months||subscription.items.data.length!==1||item.quantity!==1||price.unit_amount!==row.renewal_amount_minor||String(invoice.currency).toUpperCase()!==row.currency)throw new Error('Invoice does not match subscription')
@@ -123,7 +129,7 @@ export async function syncStripePayments(db:D1Database,ownerId?:string,secret=pr
       }
       for(const invoice of invoices.sort((a,b)=>a.created-b.created))await applyStripeInvoice(db,invoice,subscription)
       const item=subscription.items?.data?.[0],ended=['canceled','unpaid','incomplete_expired'].includes(subscription.status),cancelled=subscription.cancel_at_period_end||ended
-      await db.prepare(`UPDATE customer_subscriptions SET stripe_subscription_id=?,stripe_customer_id=?,renewal_at=?,renewal_enabled=?,status=CASE WHEN ?=1 THEN 'cancelled' ELSE status END,updated_at=? WHERE id=? AND owner_id=?`).bind(stripeId,providerId(subscription.customer),Number(item?.current_period_end??subscription.current_period_end??0)*1000,cancelled?0:1,cancelled?1:0,now,row.id,row.owner_id).run()
+      await db.prepare(`UPDATE customer_subscriptions SET stripe_subscription_id=?,stripe_customer_id=?,renewal_at=?,renewal_enabled=?,status=CASE WHEN status='refunded' THEN status WHEN ?=1 THEN 'cancelled' ELSE status END,updated_at=? WHERE id=? AND owner_id=?`).bind(stripeId,providerId(subscription.customer),Number(item?.current_period_end??subscription.current_period_end??0)*1000,cancelled?0:1,cancelled?1:0,now,row.id,row.owner_id).run()
       // Completed subscriptions need periodic renewal reconciliation; abandoned checkouts do not.
       await db.prepare('UPDATE stripe_checkouts SET last_checked_at=? WHERE id=?').bind(now+(checkout.status==='expired'?86400000:subscription.status==='canceled'?3600000:240000),row.id).run()
     }catch{
@@ -143,7 +149,9 @@ export async function stripeWebhook(request:Request){
     if(existing?.processed_at)return json({ok:true})
     await db.prepare('INSERT INTO stripe_webhook_receipts(event_id,event_type,received_at) VALUES(?,?,?) ON CONFLICT(event_id) DO NOTHING').bind(event.id,event.type,Date.now()).run()
     const object=event.data?.object
-    if(['invoice.paid','invoice.payment_succeeded'].includes(event.type)){
+    if(['refund.created','refund.updated','refund.failed'].includes(event.type)){
+      await recordStripeCancellationRefund(db,await stripeApi(`/refunds/${encodeURIComponent(object.id)}`))
+    }else if(['invoice.paid','invoice.payment_succeeded'].includes(event.type)){
       const invoice=await stripeApi(`/invoices/${encodeURIComponent(object.id)}`),stripeId=providerId(invoice.parent?.subscription_details?.subscription??invoice.subscription)
       if(stripeId)await applyStripeInvoice(db,invoice,await stripeApi(`/subscriptions/${encodeURIComponent(stripeId)}`))
     }else if(['checkout.session.completed','checkout.session.async_payment_succeeded'].includes(event.type)){
@@ -159,7 +167,7 @@ export async function stripeWebhook(request:Request){
     }else if(event.type.startsWith('customer.subscription.')){
       const subscription=await stripeApi(`/subscriptions/${encodeURIComponent(object.id)}`),id=subscription.metadata?.local_subscription_id
       if(id){const item=subscription.items?.data?.[0],cancelled=subscription.cancel_at_period_end||subscription.status==='canceled',ended=['canceled','unpaid','incomplete_expired'].includes(subscription.status)
-        await db.prepare(`UPDATE customer_subscriptions SET stripe_subscription_id=?,stripe_customer_id=?,renewal_at=?,renewal_enabled=?,status=CASE WHEN ?=1 THEN 'cancelled' ELSE status END,updated_at=? WHERE id=? AND owner_id=? AND payment_provider='stripe'`).bind(subscription.id,providerId(subscription.customer),Number(item?.current_period_end??subscription.current_period_end??0)*1000,(cancelled||ended)?0:1,(cancelled||ended)?1:0,Date.now(),id,subscription.metadata.owner_id).run()
+        await db.prepare(`UPDATE customer_subscriptions SET stripe_subscription_id=?,stripe_customer_id=?,renewal_at=?,renewal_enabled=?,status=CASE WHEN status='refunded' THEN status WHEN ?=1 THEN 'cancelled' ELSE status END,updated_at=? WHERE id=? AND owner_id=? AND payment_provider='stripe'`).bind(subscription.id,providerId(subscription.customer),Number(item?.current_period_end??subscription.current_period_end??0)*1000,(cancelled||ended)?0:1,(cancelled||ended)?1:0,Date.now(),id,subscription.metadata.owner_id).run()
       }
     }else if(['invoice.payment_failed','invoice.payment_action_required'].includes(event.type)){
       const invoice=await stripeApi(`/invoices/${encodeURIComponent(object.id)}`),stripeId=providerId(invoice.parent?.subscription_details?.subscription??invoice.subscription)
