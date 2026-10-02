@@ -1,11 +1,16 @@
 import {test,expect} from '@playwright/test'
-test('Stripe checkout shows recurring authorisation and sends the selected three-month package',async({page})=>{
+test('Stripe checkout shows recurring authorisation and sends the selected three-month package',async({page},testInfo)=>{
   await page.clock.setFixedTime(new Date('2026-10-02T12:00:00Z'))
   await page.addInitScript(()=>{sessionStorage.setItem('offscroll-times-envelope-seen-v1','1');localStorage.setItem('offscroll_analytics_choice','declined')})
   await page.route('**/api/session',route=>route.fulfill({json:{csrf:'stripe-csrf'}}))
   await page.goto('/checkout/stripe?duration=3&quantity=1&country=IN')
   await expect(page.getByText(/Next charge:.*1 Feb 2027.*every 3 months until you cancel/)).toBeVisible()
   await expect(page.getByText('Subscription starts on 1 Nov 2026.')).toBeVisible()
+  await expect(page.locator('.checkout-plan-price')).toContainText('185/month')
+  await expect(page.locator('.checkout-payable')).toContainText('555')
+  await expect(page.locator('.checkout-plan-price')).not.toContainText('?')
+  await page.addStyleTag({content:'header { position: static !important; }'})
+  await page.locator('.checkout-review').screenshot({path:`.wrangler/checkout-review-${testInfo.project.name}.png`})
   await page.getByPlaceholder('Full name',{exact:true}).fill('Test Reader')
   await page.getByPlaceholder('Email',{exact:true}).fill('reader@example.com')
   await page.getByPlaceholder('WhatsApp number',{exact:true}).fill('+919999999999')

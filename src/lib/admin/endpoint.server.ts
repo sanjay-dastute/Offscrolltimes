@@ -123,7 +123,7 @@ export async function mutateAdmin(request: Request) {
     if (action === 'catalog.upsert') {
       const kind = text(body.kind, 30)
       const safe = kind === 'product' ? { id:text(body.id), name:text(body.name), description:text(body.description,1000), baseMonthlyMinor:Number(body.baseMonthlyMinor ?? 999), active:body.active!==false } : kind === 'option' ? {
-        id: text(body.id), name: text(body.name), durationMonths: Number(body.durationMonths), amountMinor: Number(body.amountMinor), discountBasisPoints:Number(body.discountBasisPoints ?? 0), currency: text(body.currency, 3).toUpperCase(), active: body.active !== false,
+        id: text(body.id), name: text(body.name), durationMonths: Number(body.durationMonths), amountMinor: Number(body.amountMinor), monthlyPriceMinor: optionalNumber(body.monthlyPriceMinor), discountBasisPoints:Number(body.discountBasisPoints ?? 0), currency: text(body.currency, 3).toUpperCase(), active: body.active !== false,
       } : kind === 'discount' ? {
         id: text(body.id), code: text(body.code, 50).toUpperCase(), kind: text(body.discountKind, 30), value: Number(body.value),
         startsAt: body.startsAt ? Date.parse(String(body.startsAt)) : null, endsAt: body.endsAt ? Date.parse(String(body.endsAt)) : null,
@@ -136,6 +136,7 @@ export async function mutateAdmin(request: Request) {
       } : {
         countryCode: text(body.countryCode, 2).toUpperCase(), countryName: text(body.countryName), currency: text(body.currency, 3).toUpperCase(), shippingMinor: Number(body.shippingMinor), additionalCopyMinor:Number(body.additionalCopyMinor ?? 0), taxRateBasisPoints: Number(body.taxRateBasisPoints), active: body.active !== false,
       }
+      if(kind==='option'&&safe.monthlyPriceMinor!==null&&(!Number.isSafeInteger(safe.monthlyPriceMinor)||Number(safe.monthlyPriceMinor)<=0))return json({error:'Enter a positive monthly price in minor units.'},422)
       if(kind==='discount') {
         const durations=text(body.eligibleDurations,200), countries=text(body.eligibleCountries,200)
         if((durations&&!durations.split(',').every(value=>/^\d+$/.test(value.trim())&&Number(value)>0&&Number.isSafeInteger(Number(value))))||(countries&&!countries.split(',').every(value=>/^[A-Za-z]{2}$/.test(value.trim()))))return json({error:'Enter positive whole months and two-letter country codes, separated by commas.'},422)

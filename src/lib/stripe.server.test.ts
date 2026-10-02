@@ -129,8 +129,8 @@ describe('Stripe automatic subscription billing',()=>{
     const cookie=await sessionCookie({user:{id:'reader'},csrf:'csrf',accessToken:'',refreshToken:'',expiresAt:Date.now()+60000})
     const response=await stripeCheckout(new Request('https://example.com/api/stripe/checkout',{method:'POST',headers:{Origin:'https://example.com',Cookie:cookie,'Content-Type':'application/json'},body:JSON.stringify({csrf:'csrf',idempotencyKey:'launch_idempotency_key',durationMonths:12,quantity:1,discountCode:'LAUNCH159',email:'reader@example.com',phone:'+919999999999',address:{name:'Reader',line1:'1 Street',city:'Pune',region:'Maharashtra',postalCode:'411001',country:'IN'},acceptTerms:true})}))
     expect(response.status).toBe(200)
-    expect(calls[0].body.get('duration')).toBe('once');expect(calls[0].body.get('amount_off')).toBe('19201')
-    expect(calls[1].body.get('line_items[0][price_data][unit_amount]')).toBe('210001');expect(calls[1].body.get('discounts[0][coupon]')).toBe('coupon_first')
+    expect(calls[0].body.get('duration')).toBe('once');expect(calls[0].body.get('amount_off')).toBe('19200')
+    expect(calls[1].body.get('line_items[0][price_data][unit_amount]')).toBe('210000');expect(calls[1].body.get('discounts[0][coupon]')).toBe('coupon_first')
   })
   it('cancels future Stripe charges while preserving paid entitlement; failure never reports success',async()=>{
     await seed();await applyStripeInvoice(db,invoice(),subscription())

@@ -24,7 +24,7 @@ function includesJsonString(value: string | null, expected: string) { if (!value
 
 export async function calculatePricing(db: D1Database, input: { durationMonths: number; quantity: number; countryCode: string; discountCode?: string; userId?: string; includeInactiveDiscount?: boolean; now: number }): Promise<PricingQuote | null> {
   if (!Number.isSafeInteger(input.quantity) || input.quantity < 1) return null
-  const option = await db.prepare(`SELECT o.id, o.duration_months, o.discount_basis_points, o.currency, p.base_monthly_minor
+  const option = await db.prepare(`SELECT o.id, o.duration_months, o.discount_basis_points, o.currency, COALESCE(o.monthly_price_minor,p.base_monthly_minor) base_monthly_minor
     FROM admin_subscription_options o JOIN admin_products p ON p.id=o.product_id
     WHERE o.duration_months=? AND o.active=1 AND p.active=1 LIMIT 1`).bind(input.durationMonths).first<OptionRow>()
   const zone = await db.prepare(`SELECT country_code, currency, shipping_minor, additional_copy_minor, tax_rate_basis_points

@@ -1,5 +1,4 @@
 import { ANNOUNCEMENT, BRAND_NAME, NAV_LINKS, SUBSCRIBE_HREF } from '#/content/site';
-import { InstagramFloat } from '#/components/InstagramFloat';
 import { WhatsAppFloat } from '#/components/WhatsAppFloat';
 
 export function Mark() {
@@ -83,7 +82,6 @@ export function SiteHeader() {
         </div>
       </header>
 
-      <InstagramFloat />
       <WhatsAppFloat />
     </>
   );

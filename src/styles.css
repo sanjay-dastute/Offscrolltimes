@@ -784,3 +784,25 @@ body:has(.checkout-page) :is(.whatsapp-float, .instagram-float) { display: none;
 
 .instagram-glow { background: linear-gradient(135deg, #833ab4, #e1306c, #fd9d36); box-shadow: 0 0 14px #e1306c88; }
 .instagram-glow:hover, .instagram-glow:focus-visible { box-shadow: 0 0 22px #e1306cbb; }
+
+body:has(.checkout-page) { background: #fff; }
+.checkout-page { color: #111; background: #fff; font-family: var(--font-sans, sans-serif); }
+.checkout-eyebrow { margin: 0 0 12px; font-size: 13px; font-weight: 800; letter-spacing: .28em; text-transform: uppercase; }
+.checkout-title { margin: 0; font: 900 clamp(30px, 4vw, 44px)/1.1 var(--font-sans, sans-serif); text-transform: uppercase; letter-spacing: -.025em; }
+.checkout-review { min-width: 0; }
+.checkout-plan-card { border: 3px solid #111; border-radius: 24px; padding: 25px 23px; background: #fff9e6; }
+.checkout-plan-title { margin: 0; font-size: 22px; font-weight: 900; text-transform: uppercase; }
+.checkout-plan-price { margin-top: 20px; padding: 12px 16px; border-radius: 30px; background: #fff; color: #326f64; font-size: 15px; line-height: 1.5; font-weight: 850; text-transform: uppercase; }
+.checkout-renew-badge { display: inline-block; margin: 12px 0 0; padding: 9px 16px; border-radius: 30px; background: white; font-size: 15px; font-weight: 900; }
+.checkout-totals { display: grid; gap: 15px; margin: 25px 0 0; font-size: 18px; font-weight: 650; }
+.checkout-green { color: #326f64; font-weight: 850; }
+.checkout-payable { display: flex; justify-content: space-between; align-items: baseline; gap: 15px; padding-top: 17px; border-top: 3px solid #111; font-size: 20px; font-weight: 900; }
+.checkout-payable dd { font-size: 29px; }
+.checkout-charge-notice { margin-top: 25px; padding: 17px 18px; border-radius: 18px; background: #fff9e6; font-size: 17px; line-height: 1.45; font-weight: 800; }
+.checkout-consent { display: flex; align-items: flex-start; gap: 12px; margin: 28px 0 20px; font-size: 16px; line-height: 1.5; font-weight: 650; }
+.checkout-consent input { width: 22px; height: 22px; flex-shrink: 0; accent-color: #326f64; }
+.checkout-start-button { display: block; width: 100%; padding: 17px 20px; border: 4px solid #111; border-radius: 40px; color: #fff; background: #e82c18; font-size: 19px; line-height: 1.25; font-weight: 900; text-transform: uppercase; cursor: pointer; }
+.checkout-start-button:hover { background: #c92313; }
+.checkout-start-button:disabled { opacity: .55; cursor: wait; }
+.checkout-start-button:focus-visible { outline: 3px solid #326f64; outline-offset: 4px; }
+@media (max-width: 639px) { .checkout-page { padding-inline: 20px; } .checkout-plan-card { padding: 22px; } }

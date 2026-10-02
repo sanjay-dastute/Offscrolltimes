@@ -294,10 +294,10 @@ export async function upsertCatalog(db: D1Database, actor: string, kind: string,
       active=excluded.active, base_monthly_minor=excluded.base_monthly_minor, updated_at=excluded.updated_at`)
       .bind(body.id, body.name, body.description, body.active ? 1 : 0, body.baseMonthlyMinor, now, now).run()
   } else if (kind === 'option') {
-    await db.prepare(`INSERT INTO admin_subscription_options (id, product_id, name, duration_months, amount_minor, currency, active, discount_basis_points, created_at, updated_at)
-      VALUES (?, 'puzzle-post', ?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET name=excluded.name, duration_months=excluded.duration_months,
-      amount_minor=excluded.amount_minor, currency=excluded.currency, active=excluded.active, discount_basis_points=excluded.discount_basis_points, updated_at=excluded.updated_at`)
-      .bind(body.id, body.name, body.durationMonths, body.amountMinor, body.currency, body.active ? 1 : 0, body.discountBasisPoints, now, now).run()
+    await db.prepare(`INSERT INTO admin_subscription_options (id, product_id, name, duration_months, amount_minor, currency, active, discount_basis_points, monthly_price_minor, created_at, updated_at)
+      VALUES (?, 'puzzle-post', ?, ?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET name=excluded.name, duration_months=excluded.duration_months,
+      amount_minor=excluded.amount_minor, currency=excluded.currency, active=excluded.active, discount_basis_points=excluded.discount_basis_points, monthly_price_minor=COALESCE(excluded.monthly_price_minor,admin_subscription_options.monthly_price_minor), updated_at=excluded.updated_at`)
+      .bind(body.id, body.name, body.durationMonths, body.amountMinor, body.currency, body.active ? 1 : 0, body.discountBasisPoints, body.monthlyPriceMinor??null, now, now).run()
   } else if (kind === 'discount') {
     await db.prepare(`INSERT INTO admin_discounts (id, code, kind, value, starts_at, ends_at, usage_limit, active,
       eligible_durations_json, eligible_countries_json, per_customer_limit, minimum_duration_months, minimum_order_minor,
