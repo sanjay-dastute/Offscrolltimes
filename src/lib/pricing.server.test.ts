@@ -7,7 +7,7 @@ describe('server-owned pricing', () => {
     const db = createTestD1()
     const durations = [1, 3, 12]
     const countries = ['IN']
-    for (const durationMonths of durations) for (const countryCode of countries) for (const quantity of Array.from({length:10},(_,index)=>index+1)) {
+    for (const durationMonths of durations) for (const countryCode of countries) for (const quantity of [1,2,10,25,100]) {
       const quote = await calculatePricing(db, { durationMonths, quantity, countryCode, now: Date.now() })
       expect(quote, `${durationMonths}m/${countryCode}/q${quantity}`).not.toBeNull()
       expect(quote?.subtotalMinor).toBe(19900 * durationMonths * quantity)

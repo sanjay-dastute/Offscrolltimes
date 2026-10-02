@@ -60,7 +60,7 @@ export function SubscriptionPlans() {
   }, []);
 
   function setQuantity(key: string, value: number) {
-    const clamped = Math.min(10, Math.max(1, Math.floor(value) || 1));
+    const clamped = Math.max(1, Math.floor(value) || 1);
     setQuantities((prev) => ({ ...prev, [key]: clamped }));
   }
 

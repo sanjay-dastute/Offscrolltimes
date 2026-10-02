@@ -23,9 +23,12 @@ export async function stripeCheckout(request:Request){
     if(!await allowRequest(request,'stripe_checkout',10,600000,session.user.id))return json({error:'Too many attempts. Please retry later.'},429)
     const body=await request.json() as Record<string,any>
     if(body.csrf!==session.csrf)return json({error:'Refresh your session and retry.'},403)
-    const months=Number(body.durationMonths),quantity=Number(body.quantity),email=text(body.email,254).toLowerCase(),phone=text(body.phone,30),input=body.address??{}
+    const months=Number(body.durationMonths),quantity=Number(body.quantity),email=text(body.email,254).toLowerCase(),phone=text(body.whatsapp??body.phone,30)
+    const saved=body.useProfileAddress===true?await db.prepare(`SELECT a.name,a.line1,a.line2,a.city,a.region,a.postal_code postalCode,a.country FROM addresses a JOIN customers c ON c.id=a.customer_id JOIN users u ON u.id=c.user_id WHERE u.owner_id=? AND a.address_type='delivery' AND a.active_to IS NULL ORDER BY a.version DESC LIMIT 1`).bind(session.user.id).first<Record<string,any>>():null
+    if(body.useProfileAddress===true&&!saved)return json({error:'Save a delivery address in your profile first.'},422)
+    const input=saved??body.address??{}
     const address={name:text(input.name,100),line1:text(input.line1),line2:text(input.line2),city:text(input.city,100),region:text(input.region,100),postalCode:text(input.postalCode,24),country:text(input.country,2).toUpperCase()}
-    if(![1,3,12].includes(months)||!Number.isInteger(quantity)||quantity<1||quantity>20||!address.name||!address.line1||!address.city||!address.region||!address.postalCode||address.country!=='IN'||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)||!/^\+?[0-9 ()-]{7,30}$/.test(phone)||body.acceptTerms!==true||!/^[A-Za-z0-9_-]{16,100}$/.test(body.idempotencyKey??''))return json({error:'Complete your contact details, address and automatic renewal consent.'},422)
+    if(![1,3,12].includes(months)||!Number.isSafeInteger(quantity)||quantity<1||!address.name||!address.line1||!address.city||!address.region||!address.postalCode||address.country!=='IN'||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)||!/^\+?[0-9 ()-]{7,30}$/.test(phone)||body.acceptTerms!==true||!/^[A-Za-z0-9_-]{16,100}$/.test(body.idempotencyKey??''))return json({error:'Complete your contact details, address and automatic renewal consent.'},422)
     const now=Date.now(),id=`stripe_${hash(`${session.user.id}:${body.idempotencyKey}`).slice(0,32)}`,requestHash=hash(JSON.stringify({months,quantity,email,phone,address,code:text(body.discountCode,50)}))
     const existing=await db.prepare('SELECT * FROM stripe_checkouts WHERE id=? AND owner_id=?').bind(id,session.user.id).first<Record<string,any>>()
     if(existing&&existing.request_hash!==requestHash)return json({error:'Your order changed. Refresh checkout to start a new order.'},409)
@@ -46,6 +49,7 @@ export async function stripeCheckout(request:Request){
     if(typeof checkout.url!=='string'||!checkout.url.startsWith('https://checkout.stripe.com/'))throw new Error('Invalid checkout URL')
     await db.prepare('UPDATE stripe_checkouts SET checkout_session_id=?,checkout_url=?,expires_at=? WHERE id=?').bind(checkout.id,checkout.url,Number(checkout.expires_at)*1000,id).run()
     if(!await db.prepare('SELECT id FROM orders WHERE subscription_id=?').bind(id).first())await recordCustomerOrder(db,{userId:session.user.id,email,phone,subscriptionId:id,providerOrderId:checkout.id,currency:quote.currency,amountMinor:quote.totalMinor,pricingSnapshot:quote,address,termsAcceptedAt:now})
+    await db.prepare('UPDATE customers SET whatsapp_number=?,phone=?,updated_at=? WHERE user_id IN (SELECT id FROM users WHERE owner_id=?)').bind(phone,phone,now,session.user.id).run()
     return json({url:checkout.url})
   }catch{return json({error:'Stripe checkout could not be started. Please retry.'},503)}
 }

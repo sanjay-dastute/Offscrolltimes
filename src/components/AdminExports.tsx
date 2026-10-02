@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { ADMIN_EXPORTS } from '#/content/admin-exports'
 import { CTA_OUTLINE,H2 } from '#/lib/uiKit'
 export function AdminExports({csrf}:{csrf:string}){
-  const [busy,setBusy]=useState(''),[error,setError]=useState('')
+  const [busy,setBusy]=useState(''),[error,setError]=useState(''),[dataset,setDataset]=useState('customers')
   async function download(dataset:string,format:'csv'|'json'){
     setBusy(`${dataset}-${format}`);setError('')
     try{
@@ -13,5 +13,6 @@ export function AdminExports({csrf}:{csrf:string}){
       document.body.appendChild(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),60000)
     }catch(error){setError(error instanceof Error?error.message:'Download failed. Please retry.')}finally{setBusy('')}
   }
-  return <section><h2 className={H2}>Export data</h2><p className="mt-3 text-graphite-soft">Download each category separately. CSV opens in Excel or Google Sheets; JSON preserves the stored values. Each download includes all records in that category.</p>{error&&<p role="alert" className="mt-4 text-red-800">{error}</p>}<div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3">{ADMIN_EXPORTS.map(([key,title,description])=><article key={key} className="rounded-2xl border border-graphite bg-paper p-5"><h3 className="text-xl font-bold">{title}</h3><p className="mt-2 text-sm">{description}</p><div className="mt-4 flex flex-wrap gap-3">{(['csv','json'] as const).map(format=><button key={format} disabled={Boolean(busy)} onClick={()=>void download(key,format)} className={CTA_OUTLINE} aria-label={`Download ${title} ${format.toUpperCase()}`}>{busy===`${key}-${format}`?'Downloading…':format.toUpperCase()}</button>)}</div></article>)}</div></section>
+  const categories=ADMIN_EXPORTS.filter(([key])=>['customers','orders','subscriptions','payments','newsletter','fulfilments','discounts'].includes(key))
+  return <section><h2 className={H2}>Export data</h2><p className="mt-3 text-graphite-soft">Choose the data you need and download a CSV for Excel or Google Sheets. Downloads include all records.</p><div className="mt-6 flex max-w-xl flex-wrap items-end gap-4 rounded-2xl border border-graphite bg-paper p-6"><label className="grid flex-1 gap-2"><span className="font-semibold">Data to download</span><select value={dataset} onChange={event=>setDataset(event.target.value)} className="rounded-xl border border-graphite bg-paper px-4 py-3">{categories.map(([key,title])=><option key={key} value={key}>{title}</option>)}</select></label><button disabled={Boolean(busy)} onClick={()=>void download(dataset,'csv')} className={CTA_OUTLINE}>{busy?'Downloading...':'Download CSV'}</button></div>{error&&<p role="alert" className="mt-4 text-red-800">{error}</p>}</section>
 }

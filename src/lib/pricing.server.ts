@@ -23,7 +23,7 @@ function includesJsonNumber(value: string | null, expected: number) { if (!value
 function includesJsonString(value: string | null, expected: string) { if (!value) return true; try { return (JSON.parse(value) as unknown[]).map(String).includes(expected) } catch { return false } }
 
 export async function calculatePricing(db: D1Database, input: { durationMonths: number; quantity: number; countryCode: string; discountCode?: string; userId?: string; includeInactiveDiscount?: boolean; now: number }): Promise<PricingQuote | null> {
-  if (!Number.isInteger(input.quantity) || input.quantity < 1 || input.quantity > 20) return null
+  if (!Number.isSafeInteger(input.quantity) || input.quantity < 1) return null
   const option = await db.prepare(`SELECT o.id, o.duration_months, o.discount_basis_points, o.currency, p.base_monthly_minor
     FROM admin_subscription_options o JOIN admin_products p ON p.id=o.product_id
     WHERE o.duration_months=? AND o.active=1 AND p.active=1 LIMIT 1`).bind(input.durationMonths).first<OptionRow>()
@@ -32,6 +32,7 @@ export async function calculatePricing(db: D1Database, input: { durationMonths: 
   if (!option || !zone || option.currency !== zone.currency) return null
 
   const subtotalMinor = option.base_monthly_minor * option.duration_months * input.quantity
+  if (!Number.isSafeInteger(subtotalMinor)) return null
   let durationDiscountMinor = Math.round(subtotalMinor * option.discount_basis_points / 10000)
   let shippingMinor = zone.shipping_minor + zone.additional_copy_minor * Math.max(0, input.quantity - 1)
   let offerDiscountMinor = 0

@@ -37,6 +37,19 @@ describe('Stripe automatic subscription billing',()=>{
     await applyStripeInvoice(db,{...invoice('in_unpaid'),paid:false,status:'open'},subscription())
     expect(await db.prepare('SELECT copies_total FROM customer_subscriptions').first()).toEqual({copies_total:6})
   })
+  it('uses only the signed-in profile default address even when the browser sends another address',async()=>{
+    await db.prepare("INSERT INTO users(id,owner_id,role,account_state,created_at,updated_at) VALUES('user_saved','reader','customer','active',1,1)").run()
+    await db.prepare("INSERT INTO customers(id,user_id,created_at,updated_at) VALUES('customer_saved','user_saved',1,1)").run()
+    const {recordAddressVersion}=await import('./canonical-data.server')
+    await recordAddressVersion(db,{ownerId:'reader',address:{name:'Saved Reader',line1:'Saved Road',city:'Pune',region:'Maharashtra',postalCode:'411001',country:'IN'},reason:'Test',now:Date.now()})
+    vi.stubGlobal('fetch',vi.fn(async()=>Response.json({id:'cs_saved_profile',url:'https://checkout.stripe.com/c/test',expires_at:Date.now()/1000+3600})))
+    const cookie=await sessionCookie({user:{id:'reader'},csrf:'csrf',accessToken:'',refreshToken:'',expiresAt:Date.now()+60000})
+    const response=await stripeCheckout(new Request('https://example.com/api/stripe/checkout',{method:'POST',headers:{Origin:'https://example.com',Cookie:cookie,'Content-Type':'application/json'},body:JSON.stringify({csrf:'csrf',idempotencyKey:'saved_address_checkout_123',durationMonths:3,quantity:25,email:'reader@example.com',whatsapp:'+919999999999',useProfileAddress:true,address:{line1:'Browser supplied'},acceptTerms:true})}))
+    expect(response.status).toBe(200)
+    const row=await db.prepare('SELECT quantity,delivery_address_json,contact_phone FROM customer_subscriptions').first<any>()
+    expect(row.quantity).toBe(25);expect(JSON.parse(row.delivery_address_json).line1).toBe('Saved Road')
+    expect(await db.prepare('SELECT whatsapp_number FROM customers').first()).toMatchObject({whatsapp_number:'+919999999999'})
+  })
   it('accepts current Stripe paid invoices without the legacy paid boolean',async()=>{
     await seed();const paid=invoice();delete (paid as any).paid
     await applyStripeInvoice(db,paid,subscription())
