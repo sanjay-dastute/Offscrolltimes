@@ -124,3 +124,19 @@ describe('customer role and ownership endpoints', () => {
     expect((await listCustomerSubscriptions(db, 'user_b')).subscriptions[0]?.status).toBe('upcoming')
   })
 })
+
+
+describe('required customer onboarding',()=>{
+  it('rejects every missing primary field before storing contact data and collects the complete profile',async()=>{
+    await db.prepare("INSERT INTO users(id,owner_id,role,account_state,created_at,updated_at) VALUES('user_new','new_owner','customer','active',1,1)").run()
+    const body={action:'profile.complete',csrf:'csrf-new_owner',name:'New Reader',email:'new@example.com',whatsapp:'+919999999999',address:{name:'New Reader',line1:'1 Test Street',city:'Pune',region:'Maharashtra',postalCode:'411001',country:'IN'}}
+    const submit=(value:unknown)=>requestFor('new_owner','/api/customer',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify(value)}).then(patchCustomerDashboard)
+    for(const key of ['name','email','whatsapp'])expect((await submit({...body,[key]:''})).status).toBe(422)
+    for(const key of Object.keys(body.address))expect((await submit({...body,address:{...body.address,[key]:''}})).status).toBe(422)
+    expect(await db.prepare("SELECT id FROM customers WHERE user_id='user_new'").first()).toBeNull()
+    expect((await submit(body)).status).toBe(200)
+    const response=await getCustomerDashboard(await requestFor('new_owner','/api/customer'))
+    expect(await response.json()).toMatchObject({profileComplete:true,profile:{display_name:'New Reader',email:'new@example.com',whatsapp_number:'+919999999999'},address:body.address})
+    expect((await customerDirectory(db,new URL('https://example.com/api/admin/customers'))).customers[0]).toMatchObject({display_name:'New Reader',address:body.address})
+  })
+})

@@ -10,6 +10,7 @@ import { AccountContact, type ContactProfile } from '#/components/AccountContact
 import { AccountDeliveryAddress } from '#/components/AccountDeliveryAddress'
 
 type DashboardData = {
+  profileComplete?: boolean
   user: { id: string; name?: string; username?: string; provider?: 'google'|'microsoft' }
   csrf: string
   profile: ContactProfile | null
@@ -63,6 +64,7 @@ function AccountPage() {
     }
     const result = await response.json() as DashboardData & { error?: string }
     if (!response.ok) setError(result.error ?? 'Your account could not be loaded.')
+    else if(result.profileComplete===false) { window.location.assign('/complete-profile?returnTo=%2Faccount') }
     else { setData(result); setUnauthenticated(false) }
     } catch { setError('Your profile could not be loaded. Check your connection and retry.') }
     finally { setLoading(false) }

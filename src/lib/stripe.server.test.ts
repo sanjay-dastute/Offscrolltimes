@@ -60,6 +60,11 @@ describe('Stripe automatic subscription billing',()=>{
     await applyStripeInvoice(db,invoice(),subscription())
     expect((await listCustomerSubscriptions(db,'reader')).subscriptions).toHaveLength(1)
     expect((await customerDirectory(db,new URL('https://example.com/api/admin/customers?status=subscribers'))).total).toBe(1)
+    await db.prepare("UPDATE customer_subscriptions SET status='cancelled' WHERE id='stripe_local'").run()
+    expect((await customerDirectory(db,new URL('https://example.com/api/admin/customers?status=subscribers'))).total).toBe(0)
+    await db.prepare("UPDATE customer_subscriptions SET status='active' WHERE id='stripe_local'").run()
+    await db.prepare("UPDATE customer_payments SET status='refunded'").run()
+    expect((await customerDirectory(db,new URL('https://example.com/api/admin/customers?status=subscribers'))).total).toBe(0)
   })
   it('accepts current Stripe paid invoices without the legacy paid boolean',async()=>{
     await seed();const paid=invoice();delete (paid as any).paid

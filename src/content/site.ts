@@ -9,9 +9,8 @@ export const WHATSAPP_URL = `https://wa.me/917373050093?text=${encodeURIComponen
   "Hi, I'm interested in an Offscroll Times subscription. Please share the available plans and delivery details for my country.",
 )}`;
 
-// Add profiles only after the client confirms ownership. An empty list keeps
-// unapproved or placeholder social accounts out of the public footer.
-export const APPROVED_SOCIAL_LINKS: ReadonlyArray<{ label: string; href: string }> = [];
+export const INSTAGRAM_URL = "https://www.instagram.com/offscrolltimes?stkn=bjRuaXh0c2U1eThp&utm_source=qr";
+export const APPROVED_SOCIAL_LINKS: ReadonlyArray<{ label: string; href: string }> = [{ label: "Instagram", href: INSTAGRAM_URL }];
 
 export const BUSINESS_DETAILS = {
   location: "Coimbatore, Tamil Nadu, India",

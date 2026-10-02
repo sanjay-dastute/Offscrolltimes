@@ -1,3 +1,4 @@
+import { isCustomerProfileComplete } from '#/lib/customer/profile.server'
 import { base64url, fromBase64url } from './codec'
 import { allowRequest } from '#/lib/rate-limit.server'
 import { lifecycleBindings } from '#/lib/lifecycle/env.server'
@@ -371,7 +372,8 @@ export async function finishSocialOAuth(request: Request, provider: SocialProvid
       internalUserId: identity.userId,
     }
     if (flow.mode === 'link') await revokeSession(previous)
-    const headers = new Headers({ Location: flow.returnTo, 'Cache-Control': 'no-store' })
+    const destination = await isCustomerProfileComplete(db,identity.ownerId) ? flow.returnTo : `/complete-profile?returnTo=${encodeURIComponent(flow.returnTo)}`
+    const headers = new Headers({ Location: destination, 'Cache-Control': 'no-store' })
     headers.append('Set-Cookie', await databaseSessionCookie(session, identity.userId))
     headers.append('Set-Cookie', cookie(SEALED_SESSION_COOKIE, '', 0))
     headers.append('Set-Cookie', cookie(SOCIAL_FLOW_COOKIE, '', 0))

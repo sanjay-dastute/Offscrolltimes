@@ -1,3 +1,4 @@
+import { isCustomerProfileComplete } from './profile.server'
 import {cancelAndRefundStripe,RefundWindowError,syncStripeRefunds} from '#/lib/stripe-refund.server'
 import { readSession } from '#/lib/auth.server'
 import { json } from '#/lib/http.server'
@@ -65,7 +66,7 @@ export async function getCustomerDashboard(request: Request): Promise<Response> 
     : { results: [] }
   const profile=await db.prepare(`SELECT c.display_name,COALESCE(c.email,u.primary_email) email,c.phone,c.whatsapp_number FROM customers c JOIN users u ON u.id=c.user_id WHERE u.owner_id=?`).bind(session.user.id).first()
   const address=await db.prepare(`SELECT a.name,a.line1,a.line2,a.city,a.region,a.postal_code postalCode,a.country FROM addresses a JOIN customers c ON c.id=a.customer_id JOIN users u ON u.id=c.user_id WHERE u.owner_id=? AND a.address_type='delivery' AND a.active_to IS NULL ORDER BY a.version DESC LIMIT 1`).bind(session.user.id).first()
-  return json({ user: session.user, csrf: session.csrf, identities: identities.results, profile, address, ...data })
+  return json({ profileComplete: await isCustomerProfileComplete(db,session.user.id), user: session.user, csrf: session.csrf, identities: identities.results, profile, address, ...data })
 }
 
 export async function patchCustomerDashboard(request: Request): Promise<Response> {
@@ -89,13 +90,16 @@ export async function patchCustomerDashboard(request: Request): Promise<Response
     for(const subscription of subscriptions.results)await updateCustomerAddress(db,session.user.id,subscription.id,address,now)
     return json({ok:true})
   }
-  if(body.action==='profile.contact') {
+  if(body.action==='profile.contact'||body.action==='profile.complete') {
+    const completeAddress=body.action==='profile.complete'?validAddress(body.address):null
+    if(body.action==='profile.complete'&&!completeAddress)return json({error:'Enter every required delivery address field.'},422)
     const name=cleanText(body.name,100), email=cleanText(body.email,200).toLowerCase(), whatsapp=cleanText(body.whatsapp??body.phone,30), phone=whatsapp
     if(!name||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)||(!/^\+?[0-9 ()-]{7,30}$/.test(phone))||(!/^\+[1-9][0-9]{7,14}$/.test(whatsapp)))return json({error:'Enter a full name, valid email and WhatsApp number.'},422)
     const now=Date.now()
     const user=await db.prepare('SELECT id FROM users WHERE owner_id=?').bind(session.user.id).first<{id:string}>()
     if(!user)return json({error:'Account not found.'},404)
     await db.prepare(`INSERT INTO customers(id,user_id,email,phone,display_name,whatsapp_number,transactional_contact_basis,marketing_consent,privacy_request_state,created_at,updated_at) VALUES(?,?,?,?,?,?,'contract',0,'none',?,?) ON CONFLICT(user_id) DO UPDATE SET email=excluded.email,phone=excluded.phone,display_name=excluded.display_name,whatsapp_number=excluded.whatsapp_number,updated_at=excluded.updated_at`).bind(`customer_${user.id}`,user.id,email,phone||null,name,whatsapp||null,now,now).run()
+    if(completeAddress)await recordAddressVersion(db,{ownerId:session.user.id,address:completeAddress,reason:'Required profile completion',now})
     return json({ok:true})
   }
   if(body.action==='identity.unlink'){

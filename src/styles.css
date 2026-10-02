@@ -720,8 +720,8 @@ a:hover .nav-arrow {
 .comparison-card dd { margin: 0; font-size: 13px; line-height: 1.35; overflow-wrap: anywhere; }
 .paper-playground { background-color: #ead6c6; background-image: radial-gradient(circle at 14% 20%, #ffedba 0, transparent 28%), radial-gradient(circle at 86% 80%, #d1b5b5 0, transparent 30%), repeating-linear-gradient(115deg, #583f3212 0, #583f3212 1px, transparent 1px, transparent 26px); padding: clamp(48px, 7vw, 96px) 20px; color: #171512; border-block: 2px solid #171512; }
 @media (max-width: 767px) { .comparison-stamp { display: none; } }
-@media (max-width: 1023px) { body:has(.subscription-mobile-summary) .whatsapp-float { display: none; } }
-body:has(.checkout-page) .whatsapp-float { display: none; }
+@media (max-width: 1023px) { body:has(.subscription-mobile-summary) :is(.whatsapp-float, .instagram-float) { display: none; } }
+body:has(.checkout-page) :is(.whatsapp-float, .instagram-float) { display: none; }
 .subscription-mobile-summary { padding-bottom: calc(.75rem + env(safe-area-inset-bottom, 0px)); }
 .subscription-mobile-summary > div { flex-wrap: wrap; }
 .paper-playground-shell { max-width: 760px; margin: auto; text-align: center; }
@@ -781,3 +781,6 @@ body:has(.checkout-page) .whatsapp-float { display: none; }
   @keyframes paper-dice-roll { 0%,100% { transform: rotate(0); } 25% { transform: rotate(-18deg) translateY(-10px); } 65% { transform: rotate(20deg) translateY(-5px); } }
   @keyframes paper-question-in { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
 }
+
+.instagram-glow { background: linear-gradient(135deg, #833ab4, #e1306c, #fd9d36); box-shadow: 0 0 14px #e1306c88; }
+.instagram-glow:hover, .instagram-glow:focus-visible { box-shadow: 0 0 22px #e1306cbb; }
