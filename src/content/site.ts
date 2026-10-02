@@ -427,7 +427,7 @@ export const PRODUCTION_PROCESS = [
   {
     num: "01",
     title: "Idea generation",
-    body: "Every issue starts as a messy list: themes, local trivia angles, and puzzle formats we haven't tried yet.",
+    body: "Every issue starts as a messy list: themes, local trivia angles, and puzzle formats.",
   },
   {
     num: "02",
