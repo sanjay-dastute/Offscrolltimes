@@ -31,9 +31,17 @@ export type CustomerSubscription = {
   pausedAt: number | null
   entitlementStatus: string
   paidThroughAt: number | null
+  paymentProvider: string
+  renewalEnabled: boolean
+  renewalAt: number | null
+  renewalAmountMinor: number | null
 }
 
 type SubscriptionRow = {
+  payment_provider: string
+  renewal_enabled: number
+  renewal_at: number | null
+  renewal_amount_minor: number | null
   id: string
   plan_id: string
   plan_name: string
@@ -118,6 +126,10 @@ function subscriptionFromRow(row: SubscriptionRow): CustomerSubscription {
     pausedAt: row.paused_at,
     entitlementStatus: row.entitlement_status,
     paidThroughAt: row.paid_through_at,
+    paymentProvider: row.payment_provider,
+    renewalEnabled: row.renewal_enabled===1,
+    renewalAt: row.renewal_at,
+    renewalAmountMinor: row.renewal_amount_minor,
   }
 }
 
@@ -126,7 +138,8 @@ export async function listCustomerSubscriptions(db: D1Database, userId: string) 
     `SELECT id, plan_id, plan_name, duration_months, quantity, status, currency,
             amount_minor, contact_email, delivery_address_json, starts_at, ends_at,
             next_dispatch_at, copies_total, copies_fulfilled,
-            cancellation_requested_at, paused_at, entitlement_status, paid_through_at
+            cancellation_requested_at, paused_at, entitlement_status, paid_through_at,
+            payment_provider,renewal_enabled,renewal_at,renewal_amount_minor
        FROM customer_subscriptions WHERE owner_id = ? ORDER BY created_at DESC`,
   ).bind(userId).all<SubscriptionRow>()
   const payments = await db.prepare(
@@ -170,7 +183,7 @@ export async function createPrivacyRequest(db:D1Database,userId:string,requestTy
 
 export async function registerCustomerCheckout(db: D1Database, input: {
   id: string; userId: string; planId: string; planName: string; durationMonths: number
-  quantity: number; currency: string; amountMinor: number; now: number; pricingSnapshot?: unknown
+  quantity: number; currency: string; amountMinor: number; now: number; pricingSnapshot?: unknown; createPendingPayment?: boolean
 }) {
   await db.prepare(
     `INSERT INTO customer_subscriptions
@@ -184,6 +197,7 @@ export async function registerCustomerCheckout(db: D1Database, input: {
     input.pricingSnapshot ? JSON.stringify(input.pricingSnapshot) : null,
     input.now, input.now,
   ).run()
+  if(input.createPendingPayment===false)return
   await db.prepare(
     `INSERT INTO customer_payments
       (id, subscription_id, owner_id, status, amount_minor, currency, pricing_snapshot_json, created_at, updated_at)

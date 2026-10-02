@@ -99,8 +99,8 @@ export function SubscriptionPlans() {
             const total = plan.priceUsd * quantity;
             const checkoutHref =
               quantity > 1
-                ? `/checkout/razorpay?duration=${plan.planId}&quantity=${quantity}&country=IN${plan.promotion ? `&code=${plan.promotion}` : ""}`
-                : `/checkout/razorpay?duration=${plan.planId}&quantity=1&country=IN${plan.promotion ? `&code=${plan.promotion}` : ""}`;
+                ? `/checkout/stripe?duration=${plan.planId}&quantity=${quantity}&country=IN${plan.promotion ? `&code=${plan.promotion}` : ""}`
+                : `/checkout/stripe?duration=${plan.planId}&quantity=1&country=IN${plan.promotion ? `&code=${plan.promotion}` : ""}`;
 
             return (
               <article
@@ -142,7 +142,7 @@ export function SubscriptionPlans() {
                   </div>
                   <div className="flex justify-between gap-3">
                     <dt>Cancel</dt>
-                    <dd className="m-0 text-right text-graphite">Manual renewal from your account</dd>
+                    <dd className="m-0 text-right text-graphite">Automatic renewal for the same duration</dd>
                   </div>
                 </dl>
 

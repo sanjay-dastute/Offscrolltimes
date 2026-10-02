@@ -132,7 +132,7 @@ export function SiteFooter() {
           className={`${SHELL} flex flex-wrap items-center justify-center gap-x-6 gap-y-2 py-6 text-center font-mono text-[11px] tracking-[0.08em] text-graphite-soft uppercase`}
         >
           <span>&copy; 2026 {BRAND_NAME}</span>
-          <span>Google/Microsoft authentication · Secure Razorpay payments</span>
+          <span>Google/Microsoft authentication · Secure Stripe payments</span>
         </div>
       </div>
     </footer>

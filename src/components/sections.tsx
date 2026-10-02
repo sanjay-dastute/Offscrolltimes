@@ -308,7 +308,7 @@ export function Plans() {
               )}
               <p className="m-0 mt-4 flex-1 leading-relaxed text-graphite-soft">{plan.blurb}</p>
               <a
-                href={`/checkout/razorpay?duration=${plan.planId}&quantity=1&country=IN${plan.promotion ? `&code=${plan.promotion}` : ""}`}
+                href={`/checkout/stripe?duration=${plan.planId}&quantity=1&country=IN${plan.promotion ? `&code=${plan.promotion}` : ""}`}
                 className={`mt-6 text-center ${plan.best ? CTA : CTA_OUTLINE}`}
               >
                 Choose {plan.name}
@@ -318,7 +318,7 @@ export function Plans() {
         </div>
 
         <p className="mt-6 text-center font-mono text-[11px] tracking-[0.08em] text-graphite-mute uppercase">
-          Prices shown in INR. Free delivery across India. Renewal is manual.
+          Prices shown in INR. Free delivery across India. Subscriptions renew automatically for the same selected duration unless cancelled before the renewal date.
         </p>
         <p className="mt-3 text-center">
           <a
@@ -414,7 +414,7 @@ export function FinalCta() {
           Put something worth opening through your letterbox.
         </h2>
         <p className="m-0 max-w-[48ch] leading-relaxed text-graphite-soft">
-          Choose a prepaid term and receive a fresh puzzle newspaper each month. Renewal is manual.
+          Choose a prepaid term and receive a fresh puzzle newspaper each month. Subscriptions renew automatically for the same selected duration unless cancelled before the renewal date.
         </p>
         <a href={SUBSCRIBE_HREF} className={`${CTA} mt-2`}>
           Choose your subscription

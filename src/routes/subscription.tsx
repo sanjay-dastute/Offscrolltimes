@@ -13,7 +13,7 @@ export const Route = createFileRoute('/subscription')({
       {
         name: 'description',
         content:
-          'Offscroll Times plans from INR 159 per month, with free delivery across India and manual renewal.',
+          'Offscroll Times plans from INR 159 per month, with free delivery across India and automatic renewal.',
       },
     ],
     links: [{ rel: 'canonical', href: 'https://offscrolltimes.com/subscription' }],

@@ -8,7 +8,7 @@ export async function healthResponse(readiness = false) {
     newsletterSignups: false,
     googleAuth: Boolean(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET),
     microsoftAuth: Boolean(process.env.MICROSOFT_CLIENT_ID && process.env.MICROSOFT_CLIENT_SECRET),
-    razorpay: Boolean(process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET && process.env.RAZORPAY_WEBHOOK_SECRET),
+    stripe: Boolean(process.env.STRIPE_SECRET_KEY && process.env.STRIPE_WEBHOOK_SECRET),
     sessionSecurity: Boolean(process.env.SESSION_SECRET && process.env.AUDIT_CHAIN_SECRET && process.env.EXPORT_SIGNING_SECRET),
   }
   try {

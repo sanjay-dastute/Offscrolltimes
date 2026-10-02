@@ -155,7 +155,7 @@ export const PLANS = [
     period: "/ month for 1 year",
     monthlyEquivalent: "INR 1,908 prepaid for 12 months",
     best: false,
-    renewsEvery: "Manual renewal",
+    renewsEvery: "Automatic renewal",
     blurb: "Available exclusively during the first month of launch. Limited-period introductory offer.",
   },
   {
@@ -168,8 +168,8 @@ export const PLANS = [
     period: "/ month",
     monthlyEquivalent: null,
     best: false,
-    renewsEvery: "Manual renewal",
-    blurb: "A flexible one-month subscription with manual renewal.",
+    renewsEvery: "Automatic renewal",
+    blurb: "Enjoy the flexibility of a monthly subscription that renews automatically. Cancel anytime before your renewal date.",
   },
   {
     key: "quarterly",
@@ -181,8 +181,8 @@ export const PLANS = [
     period: "/ month",
     monthlyEquivalent: "INR 555 prepaid for 3 months",
     best: false,
-    renewsEvery: "Manual renewal",
-    blurb: "Subscribe for three months at a special monthly rate. INR 555 prepaid.",
+    renewsEvery: "Automatic renewal",
+    blurb: "Three monthly editions, renewing automatically every three months. Cancel before your renewal date.",
   },
   {
     key: "annual",
@@ -194,8 +194,8 @@ export const PLANS = [
     period: "/ month",
     monthlyEquivalent: "INR 2,100 prepaid for 12 months",
     best: true,
-    renewsEvery: "Manual renewal",
-    blurb: "Subscribe for twelve months at a special monthly rate. INR 2,100 prepaid.",
+    renewsEvery: "Automatic renewal",
+    blurb: "Twelve monthly editions, renewing automatically every twelve months. Cancel before your renewal date.",
   },
 ] as const;
 
@@ -229,7 +229,7 @@ export const FAQ_PREVIEW = [
   },
   {
     q: "Can I cancel anytime?",
-    a: "Yes. Request cancellation from your Offscroll Times account. Manual renewal means no future payment is taken automatically; already-paid eligible issues remain scheduled.",
+    a: "Yes. Request cancellation from your Offscroll Times account. Cancel before the renewal date to prevent the next automatic charge; already-paid eligible issues remain scheduled.",
   },
   {
     q: "Is it suitable for kids?",
@@ -237,7 +237,7 @@ export const FAQ_PREVIEW = [
   },
   {
     q: "How am I billed?",
-    a: "Your selected prepaid term is charged through Razorpay. The available payment methods and final currency are shown in the secure payment window.",
+    a: "Your selected prepaid term is charged through Stripe. The available payment methods and final currency are shown in the secure payment window.",
   },
 ] as const;
 
@@ -289,7 +289,7 @@ export const FAQ_GROUPS = [
     title: "Payments and currencies",
     items: [
       { q: "What does the payment cover?", a: "One payment covers all copies, delivery, and applicable taxes for your selected subscription term." },
-      { q: "Which currencies and payment methods are supported?", a: "Online checkout currently supports INR for India delivery. Available payment methods appear in Razorpay Checkout. For international orders, contact us before ordering." },
+      { q: "Which currencies and payment methods are supported?", a: "Online checkout currently supports INR for India delivery. Available payment methods appear in Stripe Checkout. For international orders, contact us before ordering." },
     ],
   },
   {
@@ -307,7 +307,7 @@ export const FAQ_GROUPS = [
     key: "cancellation",
     title: "Pause or cancellation",
     items: [
-      { q: "Can I pause my subscription?", a: "You can request a pause before the monthly cut-off on the 10th. A request after the cut-off applies from the following edition because the next copy may already be in production." },
+      { q: "Can I pause my subscription?", a: "Contact support to discuss delivery changes. Automatic billing cannot be paused from your account; cancel renewal before the displayed renewal date to prevent the next charge." },
       { q: "Does my subscription renew automatically?", a: "Yes, the subscription will renew automatically at the end of each term and will continue until you decide to cancel it. You will not need to manually renew your subscription each time." },
     ],
   },
@@ -336,7 +336,7 @@ export const FAQ_GROUPS = [
 export const FOOTER_DELIVERY_REGIONS = ["India (free)", "International — get in touch"] as const;
 
 export const FOOTER_PAYMENT_METHODS = [
-  "Razorpay secure checkout",
+  "Stripe secure subscription checkout",
   "Available methods shown before payment",
 ] as const;
 
@@ -520,7 +520,7 @@ export const SHIPPING_INFO = {
 };
 
 export const CANCELLATION_INFO = {
-  cancel: "Request cancellation from your Offscroll Times account. Manual renewal means no future term is charged without your approval.",
+  cancel: "Request cancellation from your Offscroll Times account. Cancel before the renewal date to prevent the next automatic charge.",
   pause: "Where the published policy permits it, request a pause from your account before the monthly cut-off.",
 };
 
@@ -532,7 +532,7 @@ export const GIFT_INFO = {
 export const SUBSCRIPTION_FAQ = [
   {
     q: "When am I charged again?",
-    a: "Renewal is manual. Near the end of the prepaid term, choose a new duration and authorise a new payment yourself.",
+    a: "Your subscription renews automatically for the same duration and quantity. Cancel before the renewal date to stop the next charge.",
   },
   {
     q: "How do I cancel or pause?",
@@ -548,11 +548,11 @@ export const SUBSCRIPTION_FAQ = [
   },
   {
     q: "Can I switch plans later?",
-    a: "Yes. Select a new prepaid duration when renewing; the current server price is shown before payment.",
+    a: "Contact support before your renewal date to discuss changing duration or quantity. Your existing automatic renewal continues unchanged until a change is confirmed.",
   },
   {
     q: "What currency will I actually be charged in?",
-    a: "The pricing calculator displays the supported currency for your destination. The exact server-calculated total is confirmed before Razorpay payment authorisation.",
+    a: "The pricing calculator displays the supported currency for your destination. The exact server-calculated total is confirmed before Stripe payment authorisation.",
   },
 ] as const;
 

@@ -1,4 +1,5 @@
 import { readAdministratorSession } from './auth.server'
+import {cancelStripeSubscription} from '#/lib/stripe.endpoint.server'
 import { json } from '#/lib/http.server'
 import { lifecycleBindings } from '#/lib/lifecycle/env.server'
 import { isSameOrigin } from '#/lib/security'
@@ -87,6 +88,13 @@ export async function mutateAdmin(request: Request) {
     if (action === 'subscription.status') {
       const subscriptionId = text(body.subscriptionId), status = text(body.status, 30), reason = text(body.reason, 500)
       if (!SAFE_ID.test(subscriptionId) || !STATUSES.has(status) || reason.length < 5) return json({ error: 'Choose a valid status and provide a reason.' }, 422)
+      const provider=await database.prepare('SELECT payment_provider,owner_id FROM customer_subscriptions WHERE id=?').bind(subscriptionId).first<{payment_provider:string;owner_id:string}>()
+      if(provider?.payment_provider==='stripe'){
+        if(status!=='cancelled')return json({error:'Stripe billing status is managed by verified Stripe events. Use cancellation to stop renewal.'},422)
+        await cancelStripeSubscription(database,provider.owner_id,subscriptionId)
+        await audit(database,session.user.id,'subscription.renewal_cancelled','subscription',subscriptionId,{reason,provider:'stripe'})
+        return json({ok:true})
+      }
       return await updateSubscriptionStatus(database, session.user.id, subscriptionId, status, reason) ? json({ ok: true }) : json({ error: 'This status transition is not permitted.' }, 409)
     }
     if (action === 'subscription.address') {

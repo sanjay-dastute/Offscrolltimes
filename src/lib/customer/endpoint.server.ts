@@ -3,6 +3,7 @@ import { json } from '#/lib/http.server'
 import { lifecycleBindings } from '#/lib/lifecycle/env.server'
 import { isSameOrigin } from '#/lib/security'
 import { recordAddressVersion } from '#/lib/canonical-data.server'
+import {cancelStripeSubscription} from '#/lib/stripe.endpoint.server'
 import {
   listCustomerSubscriptions,
   requestCustomerAction,
@@ -138,6 +139,11 @@ export async function patchCustomerDashboard(request: Request): Promise<Response
     return json({ok:true,effectiveAt:event?.effective_at??null})
   }
   if (body.action === 'pause' || body.action === 'resume' || body.action === 'cancel') {
+    const provider=await db.prepare('SELECT payment_provider FROM customer_subscriptions WHERE id=? AND owner_id=?').bind(subscriptionId,session.user.id).first<{payment_provider:string}>()
+    if(provider?.payment_provider==='stripe'){
+      if(body.action!=='cancel')return json({error:'Automatic subscription billing cannot be paused here. Contact support or cancel renewal.'},422)
+      try{const cancelled=await cancelStripeSubscription(db,session.user.id,subscriptionId);return cancelled?json({ok:true}):json({error:'Subscription not found.'},404)}catch{return json({error:'Stripe could not confirm cancellation. Renewal has not been stopped; please retry or contact support.'},503)}
+    }
     const updated = await requestCustomerAction(db, session.user.id, subscriptionId, body.action, Date.now())
     return updated ? json({ ok: true }) : json({ error: 'Subscription not found.' }, 404)
   }

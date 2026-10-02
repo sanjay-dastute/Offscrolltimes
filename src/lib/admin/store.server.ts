@@ -23,7 +23,7 @@ export async function getAdminDashboard(db: D1Database) {
   const [subscriptions, payments, fulfilments, editions, eligibility, products, options, discounts, zones, content, enquiries, audits, promotionReports, analyticsEvents] = await Promise.all([
     db.prepare(`SELECT id, owner_id customer_id, plan_name, duration_months, quantity, status, currency,
       amount_minor, contact_email, contact_phone, delivery_address_json, starts_at, ends_at, paid_through_at,
-      next_dispatch_at, copies_total, copies_fulfilled, entitlement_status, pricing_snapshot_json, created_at
+      next_dispatch_at, copies_total, copies_fulfilled, entitlement_status, pricing_snapshot_json, created_at, payment_provider, renewal_enabled, renewal_at, renewal_amount_minor
       FROM customer_subscriptions ORDER BY created_at DESC,id DESC`).all(),
     db.prepare(`SELECT id, subscription_id, owner_id customer_id, provider_payment_id, status,
       amount_minor, currency, paid_at, created_at FROM customer_payments ORDER BY created_at DESC,id DESC`).all(),
@@ -166,12 +166,12 @@ export async function createEdition(db: D1Database, actor: string, input: { labe
 }
 
 export async function generateEditionEligibility(db: D1Database, actor: string, editionId: string) {
-  const edition = await db.prepare(`SELECT id, label, eligibility_cutoff_at, status FROM editions WHERE id = ?`).bind(editionId).first<{ id: string; label: string; eligibility_cutoff_at: number; status: string }>()
+  const edition = await db.prepare(`SELECT id, label, eligibility_cutoff_at, dispatch_at, status FROM editions WHERE id = ?`).bind(editionId).first<{ id: string; label: string; eligibility_cutoff_at: number; dispatch_at:number; status: string }>()
   // This is a frozen point-in-time business record. Corrections happen through
   // documented overrides; regenerating it would destroy the original decision.
   if (!edition || edition.status !== 'draft') return null
   const subscriptions = await db.prepare(`SELECT id, owner_id, status, entitlement_status, copies_total, copies_fulfilled,
-    starts_at, ends_at, paid_through_at, delivery_address_json FROM customer_subscriptions ORDER BY created_at`).all<Record<string, unknown>>()
+    starts_at, ends_at, paid_through_at, payment_provider, next_dispatch_at, delivery_address_json FROM customer_subscriptions ORDER BY created_at`).all<Record<string, unknown>>()
   const now = Date.now()
   let included = 0, excluded = 0
   for (const row of subscriptions.results) {
@@ -182,11 +182,12 @@ export async function generateEditionEligibility(db: D1Database, actor: string, 
     if (row.status === 'paused') reason = 'Subscription is paused'
     else if (row.status === 'refunded') reason = 'Subscription is refunded'
     else if (row.status === 'completed' || Number(row.copies_fulfilled) >= Number(row.copies_total)) reason = 'Paid copy entitlement is exhausted'
-    else if (row.status === 'cancelled' && process.env.FULFIL_PAID_AFTER_CANCELLATION !== 'true') reason = 'Post-cancellation paid fulfilment is disabled by policy'
+    else if (row.status === 'cancelled' && row.payment_provider!=='stripe' && process.env.FULFIL_PAID_AFTER_CANCELLATION !== 'true') reason = 'Post-cancellation paid fulfilment is disabled by policy'
     else if (!['active','cancelled'].includes(String(row.status))) reason = `Subscription status is ${row.status}`
     else if (row.entitlement_status !== 'paid' || !paid) reason = 'No confirmed paid entitlement'
     else if (Number(row.starts_at ?? 0) > edition.eligibility_cutoff_at) reason = 'Subscription starts after the edition cut-off'
-    else if (row.paid_through_at && Number(row.paid_through_at) < edition.eligibility_cutoff_at) reason = 'Paid term expired before the edition cut-off'
+    else if (row.payment_provider==='stripe' && row.next_dispatch_at && Number(row.next_dispatch_at)>edition.dispatch_at) reason = 'First eligible edition dispatches later'
+    else if (row.payment_provider!=='stripe' && row.paid_through_at && Number(row.paid_through_at) < edition.eligibility_cutoff_at) reason = 'Paid term expired before the edition cut-off'
     else if (!address?.name || !address.line1 || !address.city || !address.postalCode || !address.country) reason = 'Delivery address is incomplete'
     else if (alreadyAssigned) reason = 'Edition already assigned to this subscription'
     const decision = reason === 'Eligible paid entitlement' ? 'included' : 'excluded'
@@ -252,7 +253,7 @@ export async function updateFulfilment(db: D1Database, actor: string, fulfilment
   if(['prepared','dispatched','delivered','delayed','returned','replacement'].includes(status))await db.prepare(`INSERT INTO shipments(id,fulfilment_id,subscription_id,courier,tracking_url,status,event_at,created_at) VALUES(?,?,?,?,?,?,?,?)`).bind(crypto.randomUUID(),fulfilmentId,context.subscription_id,courierName||null,trackingUrl||null,status,now,now).run()
   await audit(db, actor, 'edition.fulfilment_status_changed', 'edition', context.edition_id, { fulfilmentId, from:context.previous_status, to:status, trackingUrl:Boolean(trackingUrl) })
   await recordAccountEvent(db,{userId:context.owner_id,subscriptionId:context.subscription_id,eventType:`fulfilment_${status}`,title:`${context.edition_label}: ${status}`,detail:`Edition status changed to ${status}.${courierName?` Courier: ${courierName}.`:''}${trackingUrl?' Tracking is available in your account.':''}`,now})
-  if(status==='dispatched'){const completed=await db.prepare(`SELECT status FROM customer_subscriptions WHERE id=?`).bind(context.subscription_id).first<{status:string}>();if(completed?.status==='completed')await recordAccountEvent(db,{userId:context.owner_id,subscriptionId:context.subscription_id,eventType:'subscription_completed',title:'Subscription completed',detail:'All copies in this prepaid term have been fulfilled. Renewal is manual.',now})}
+  if(status==='dispatched'){const completed=await db.prepare(`SELECT status FROM customer_subscriptions WHERE id=?`).bind(context.subscription_id).first<{status:string}>();if(completed?.status==='completed')await recordAccountEvent(db,{userId:context.owner_id,subscriptionId:context.subscription_id,eventType:'subscription_completed',title:'Subscription completed',detail:'All paid copies have been fulfilled. Automatic renewal follows the billing settings shown in your account.',now})}
   return true
 }
 
