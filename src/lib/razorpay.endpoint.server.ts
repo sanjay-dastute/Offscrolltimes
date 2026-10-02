@@ -12,7 +12,7 @@ import { recordOperationalAnalytics } from '#/lib/analytics.server'
 import { storeObject } from '#/lib/object-storage.server'
 
 const safe=(v:unknown,n=160)=>typeof v==='string'?v.trim().slice(0,n):''
-const address=(v:unknown):CustomerAddress|null=>{if(!v||typeof v!=='object')return null;const x=v as Record<string,unknown>;const a={name:safe(x.name,100),line1:safe(x.line1),line2:safe(x.line2)||undefined,city:safe(x.city,100),region:safe(x.region,100)||undefined,postalCode:safe(x.postalCode,24),country:safe(x.country,2).toUpperCase()};return a.name&&a.line1&&a.city&&a.postalCode&&/^[A-Z]{2}$/.test(a.country)?a:null}
+const address=(v:unknown):CustomerAddress|null=>{if(!v||typeof v!=='object')return null;const x=v as Record<string,unknown>;const a={name:safe(x.name,100),line1:safe(x.line1),line2:safe(x.line2)||undefined,city:safe(x.city,100),region:safe(x.region,100)||undefined,postalCode:safe(x.postalCode,24),country:safe(x.country,2).toUpperCase()};return a.name&&a.line1&&a.city&&a.region&&a.postalCode&&/^[A-Z]{2}$/.test(a.country)?a:null}
 const database=()=>{try{return lifecycleBindings().db}catch{return null}}
 
 async function archiveReceipt(db:D1Database,input:{subscriptionId:string;userId:string;paymentId:string;paidAt:number}){
@@ -48,7 +48,7 @@ export async function razorpayCheckout(request:Request){
   if(action==='create'){
     const durationMonths=Number(body.durationMonths),quantity=Number(body.quantity),delivery=address(body.address),email=safe(body.email,200).toLowerCase(),phone=safe(body.phone,30)
     const idempotencyKey=safe(body.idempotencyKey,100)
-    if(!delivery||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)||body.acceptTerms!==true||!/^[A-Za-z0-9_-]{16,100}$/.test(idempotencyKey))return json({error:'Complete contact, address and accept the terms.'},422)
+    if(!/^\+?[0-9 ()-]{7,30}$/.test(phone)||!delivery||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)||body.acceptTerms!==true||!/^[A-Za-z0-9_-]{16,100}$/.test(idempotencyKey))return json({error:'Complete contact, address and accept the terms.'},422)
     const discountCode=safe(body.discountCode,50)
     if(discountCode&&!await allowRequest(request,'coupon_apply',20,60*60*1000,session.user.id))return json({error:'Too many promotional-code attempts. Try again later.'},429)
     const quote=await calculatePricing(db,{durationMonths,quantity,countryCode:delivery.country,discountCode,userId:session.user.id,now:Date.now()})

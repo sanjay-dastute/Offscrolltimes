@@ -1,7 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useEffect, useState } from 'react'
 import { SiteHeader } from '#/components/SiteHeader'
-import { SiteFooter } from '#/components/Faq'
 import { CTA, CTA_OUTLINE, EYEBROW, H2 } from '#/lib/uiKit'
 import { AdminFileLibrary } from '#/components/AdminFileLibrary'
 import { AdminCustomers } from '#/components/AdminCustomers'
@@ -83,7 +82,7 @@ function AdminPage() {
       {tab === 'exports' && <AdminExports csrf={data.csrf} />}
       {tab === 'audit' && <Audit rows={data.audits} />}
     </>}
-  </main><SiteFooter /></>
+  </main></>
 }
 
 function Enquiries({ rows, busy, mutate }: { rows: Row[]; busy: boolean; mutate: (p: Record<string,unknown>) => Promise<boolean> }) {

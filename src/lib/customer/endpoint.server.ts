@@ -38,7 +38,7 @@ function validAddress(value: unknown): CustomerAddress | null {
     postalCode: cleanText(raw.postalCode, 24),
     country: cleanText(raw.country, 2).toUpperCase(),
   }
-  if (!address.name || !address.line1 || !address.city || !address.postalCode || !COUNTRY.test(address.country)) {
+  if (!address.name || !address.line1 || !address.city || !address.region || !address.postalCode || !COUNTRY.test(address.country)) {
     return null
   }
   return address
@@ -87,7 +87,7 @@ export async function patchCustomerDashboard(request: Request): Promise<Response
   }
   if(body.action==='profile.contact') {
     const name=cleanText(body.name,100), email=cleanText(body.email,200).toLowerCase(), phone=cleanText(body.phone,30), whatsapp=cleanText(body.whatsapp,30)
-    if(!name||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)||(phone&&!/^\+?[0-9 ()-]{7,30}$/.test(phone))||(whatsapp&&!/^\+[1-9][0-9]{7,14}$/.test(whatsapp)))return json({error:'Enter a full name, valid email and WhatsApp number including country code.'},422)
+    if(!name||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)||(!/^\+?[0-9 ()-]{7,30}$/.test(phone))||(whatsapp&&!/^\+[1-9][0-9]{7,14}$/.test(whatsapp)))return json({error:'Enter a full name, valid email, phone number and a valid WhatsApp number if provided.'},422)
     const now=Date.now()
     const user=await db.prepare('SELECT id FROM users WHERE owner_id=?').bind(session.user.id).first<{id:string}>()
     if(!user)return json({error:'Account not found.'},404)

@@ -39,9 +39,11 @@ afterEach(() => resetRequestLifecycleBindings())
 describe('customer role and ownership endpoints', () => {
   it('lets a registered customer save a profile address without a subscription',async()=>{
     await db.prepare(`INSERT INTO users(id,owner_id,role,account_state,created_at,updated_at) VALUES('user_profile','profile_owner','customer','active',1,1)`).run()
-    const address={name:'Reader',line1:'1 Test Road',city:'Pune',postalCode:'411001',country:'IN'}
+    const address={name:'Reader',line1:'1 Test Road',city:'Pune',region:'Maharashtra',postalCode:'411001',country:'IN'}
     const response=await patchCustomerDashboard(await requestFor('profile_owner','/api/customer',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'profile.address',csrf:'csrf-profile_owner',address})}))
     expect(response.status).toBe(200)
+    const missingRegion=await patchCustomerDashboard(await requestFor('profile_owner','/api/customer',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'profile.address',csrf:'csrf-profile_owner',address:{...address,region:''}})}))
+    expect(missingRegion.status).toBe(422)
     const dashboard=await getCustomerDashboard(await requestFor('profile_owner','/api/customer'))
     expect(await dashboard.json()).toMatchObject({address,subscriptions:[]})
     const other=await getCustomerDashboard(await requestFor('other_owner','/api/customer'))
@@ -49,11 +51,12 @@ describe('customer role and ownership endpoints', () => {
   })
   it('updates only the signed-in customer contact profile and validates WhatsApp and CSRF',async()=>{
     for(const index of [1,2])await db.prepare(`INSERT INTO users(id,owner_id,role,account_state,created_at,updated_at) VALUES(?,?,'customer','active',1,1)`).bind(`user_${index}`,`owner_${index}`).run()
-    const change=(body:Record<string,unknown>)=>requestFor('owner_1','/api/customer',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'profile.contact',csrf:'csrf-owner_1',name:'Reader',email:'reader@example.com',phone:'',whatsapp:'+917373050093',...body})}).then(patchCustomerDashboard)
+    const change=(body:Record<string,unknown>)=>requestFor('owner_1','/api/customer',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'profile.contact',csrf:'csrf-owner_1',name:'Reader',email:'reader@example.com',phone:'+919999999999',whatsapp:'+917373050093',...body})}).then(patchCustomerDashboard)
     expect((await change({userId:'user_2'})).status).toBe(200)
     expect(await db.prepare('SELECT user_id,whatsapp_number FROM customers').first()).toMatchObject({user_id:'user_1',whatsapp_number:'+917373050093'})
     expect((await change({csrf:'wrong'})).status).toBe(403)
     expect((await change({whatsapp:'7373050093'})).status).toBe(422)
+    expect((await change({phone:''})).status).toBe(422)
     const response=await getCustomerDashboard(await requestFor('owner_1','/api/customer'))
     expect(await response.json()).toMatchObject({profile:{display_name:'Reader',whatsapp_number:'+917373050093'}})
   })

@@ -7,9 +7,9 @@ export function Mark() {
       aria-hidden="true"
       alt=""
       src="/offscroll-times-logo.jpeg"
-      className="h-16 w-16 shrink-0 rounded-lg object-contain sm:h-11 sm:w-11"
-      width="64"
-      height="64"
+      className="h-20 w-20 shrink-0 rounded-lg object-contain sm:h-11 sm:w-11"
+      width="80"
+      height="80"
     />
   );
 }
@@ -45,7 +45,7 @@ export function SiteHeader() {
             className="col-start-1 row-start-1 flex w-fit items-center gap-2.5 rounded-sm no-underline outline-none focus-visible:ring-2 focus-visible:ring-founder-deep focus-visible:ring-offset-2 focus-visible:ring-offset-paper"
           >
             <Mark />
-            <span className="font-display text-[17px] font-bold leading-tight tracking-[-0.02em] sm:whitespace-nowrap sm:text-[19px]">
+            <span className="font-display text-[22px] font-bold leading-tight tracking-[-0.02em] sm:whitespace-nowrap sm:text-[19px]">
               {BRAND_NAME}
             </span>
           </a>
