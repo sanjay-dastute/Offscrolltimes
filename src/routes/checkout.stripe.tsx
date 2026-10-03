@@ -67,9 +67,7 @@ function StripePage(){
         <p className="mt-2">Next charge: {money(renewalQuote.totalMinor,renewalQuote.currency)}{nextCharge?` on ${dateLabel(nextCharge)}`:''}, then every {search.duration} {term} until you cancel.</p>
       </div>}
       <label className="checkout-consent"><input form="subscription-payment-form" required name="terms" type="checkbox" className="mt-1 h-5 w-5 shrink-0 accent-graphite"/><span>I authorise automatic renewal every {search.duration} {search.duration===1?'month':'months'} until cancelled, and accept the <a className="underline underline-offset-2" href="/policies/subscription">subscription terms</a>, <a className="underline underline-offset-2" href="/policies/refund">cancellation policy</a> and <a className="underline underline-offset-2" href="/policies/privacy">privacy policy</a>.</span></label><button form="subscription-payment-form" type="submit" disabled={state==='creating'||!quote||!renewalQuote} className="checkout-start-button">{state==='creating'?'Creating subscription...':'Start subscription'}</button>{error&&<p role="alert" className="text-red-700 md:col-span-2">{error}</p>}{state==='failed'&&<button type="button" onClick={()=>setState('form')} className="underline md:col-span-2">Return and retry safely</button>}
-      <p className="mt-4 text-sm">The full {search.duration}-month term is paid upfront. The monthly amount is a price breakdown; you are charged once every {search.duration} {term}. Cancel before renewal to stop the next charge.</p>
       {quote&&renewalQuote&&quote.totalMinor!==renewalQuote.totalMinor&&<p className="mt-3 text-sm">Your first-term offer applies today only. Renewals use the regular amount shown above.</p>}
-      <p className="mt-3 text-xs text-graphite-soft">Your payment is collected today. October launch subscriptions start on 1 November 2026 and renew after the selected term. Stripe confirms your next charge date.</p>
     </aside>
   </div></main><SiteFooter/></>
 }

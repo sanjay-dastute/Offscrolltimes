@@ -1,6 +1,5 @@
 import {
   BRAND_NAME,
-  APPROVED_SOCIAL_LINKS,
   BUSINESS_DETAILS,
   CONTACT_EMAIL,
   FAQ_PREVIEW,
@@ -11,7 +10,6 @@ import {
   WHATSAPP_NUMBER,
   WHATSAPP_URL,
 } from '#/content/site';
-import { InstagramIcon } from '#/components/InstagramFloat';
 import { Reveal } from '#/components/Reveal';
 import { BlogSubscription } from '#/components/BlogSubscription';
 
@@ -102,7 +100,6 @@ export function SiteFooter() {
             WhatsApp: {WHATSAPP_NUMBER}
           </a>
           <a href={`mailto:${CONTACT_EMAIL}`} className="text-graphite no-underline hover:text-founder-deep">{CONTACT_EMAIL}</a>
-          {APPROVED_SOCIAL_LINKS.map(link => <a key={link.href} href={link.href} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 text-graphite no-underline hover:text-founder-deep"><span className="instagram-glow flex h-9 w-9 items-center justify-center rounded-full text-white"><InstagramIcon /></span>{link.label}</a>)}
           {FOOTER_POLICY_LINKS.map((link) => (
             <a key={link.href} href={link.href} className="text-graphite no-underline hover:text-founder-deep">
               {link.label}

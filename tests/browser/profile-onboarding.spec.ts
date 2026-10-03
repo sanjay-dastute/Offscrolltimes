@@ -25,11 +25,9 @@ test('new customers enter every required field and save their default delivery a
   expect(submitted).toMatchObject({action:'profile.complete',name:'New Reader',email:'reader@example.com',whatsapp:'+919999999999',address:{name:'New Reader',line1:'1 Test Street',city:'Pune',region:'Maharashtra',postalCode:'411001',country:'IN'}})
 })
 
-test('Instagram remains in the footer with no floating button',async({page})=>{
+test('Instagram floats above WhatsApp and is absent from the footer',async({page})=>{
   await page.goto('/about')
-  await expect(page.getByRole('link',{name:'Follow Offscroll Times on Instagram'})).toHaveCount(0)
-  const footer=page.locator('footer').getByRole('link',{name:'Instagram',exact:true})
-  await expect(footer).toHaveAttribute('href',/instagram\.com\/offscrolltimes\?stkn=/)
-  expect(await footer.locator('svg').count()).toBe(1)
+  await expect(page.getByRole('link',{name:'Follow Offscroll Times on Instagram'})).toBeVisible()
+  await expect(page.locator('footer').getByRole('link',{name:'Instagram',exact:true})).toHaveCount(0)
   await expect(page.getByRole('link',{name:'Message us on WhatsApp'})).toBeVisible()
 })
