@@ -10,7 +10,7 @@ describe('server-owned pricing', () => {
     for (const durationMonths of durations) for (const countryCode of countries) for (const quantity of [1,2,10,25,100]) {
       const quote = await calculatePricing(db, { durationMonths, quantity, countryCode, now: Date.now() })
       expect(quote, `${durationMonths}m/${countryCode}/q${quantity}`).not.toBeNull()
-      expect(quote?.subtotalMinor).toBe(({1:19900,3:18500,12:17500}[durationMonths]! * durationMonths * quantity))
+      expect(quote?.subtotalMinor).toBe(19900 * durationMonths * quantity)
       expect(quote?.totalMinor).toBe((quote?.subtotalMinor ?? 0) - (quote?.durationDiscountMinor ?? 0) + (quote?.shippingMinor ?? 0) + (quote?.taxMinor ?? 0))
       expect(quote?.countryCode).toBe(countryCode)
     }
@@ -21,7 +21,7 @@ describe('server-owned pricing', () => {
     const db = createTestD1()
     await db.prepare(`UPDATE admin_shipping_zones SET shipping_minor=200, additional_copy_minor=50, tax_rate_basis_points=1800 WHERE country_code='IN'`).run()
     const quote = await calculatePricing(db, { durationMonths: 3, quantity: 2, countryCode: 'IN', now: Date.now() })
-    expect(quote).toMatchObject({ subtotalMinor: 111000, durationDiscountMinor: 0, shippingMinor: 250, taxBasisPoints: 1800 })
+    expect(quote).toMatchObject({ subtotalMinor: 119400, durationDiscountMinor: 8400, shippingMinor: 250, taxBasisPoints: 1800 })
     expect(quote?.taxMinor).toBe(20025)
     expect(quote?.totalMinor).toBe(131275)
   })

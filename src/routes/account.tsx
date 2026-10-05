@@ -86,9 +86,9 @@ function AccountPage() {
     return()=>{clearInterval(timer);controller.abort()}
   },[])
 
-  async function action(subscriptionId: string, actionName: 'cancel') {
+  async function action(subscriptionId: string, actionName: 'refund') {
     if (!data || busy) return
-    if (actionName === 'cancel' && !window.confirm('Cancel this subscription and request a full refund of your latest payment to the original payment method? Automatic renewal will stop.')) return
+    if (!window.confirm('Request a full refund to the original payment method? This is available only within 48 hours of payment.')) return
     setBusy(true); setError('')
     try {
     const response = await fetch('/api/customer', {
@@ -136,7 +136,7 @@ function AccountPage() {
             const payments = data.payments.filter((item) => item.subscriptionId === subscription.id)
             const fulfilments = data.fulfilments.filter((item) => item.subscriptionId === subscription.id)
             const latestPayment=[...payments].filter(payment=>payment.paidAt).sort((a,b)=>(b.paidAt??0)-(a.paidAt??0))[0]
-            const canCancel=latestPayment?.status==='paid'&&subscription.status!=='refunded'
+            const canRefund=latestPayment?.status==='paid'&&subscription.status!=='refunded'&&Boolean(latestPayment.paidAt&&Date.now()-latestPayment.paidAt<=48*60*60*1000)
             const daysRemaining=subscription.paidThroughAt?Math.ceil((subscription.paidThroughAt-Date.now())/86400000):null
             return <article key={subscription.id} className="overflow-hidden rounded-3xl border border-graphite bg-paper shadow-[5px_5px_0_#26231f]">
               <div className="flex flex-wrap justify-between gap-5 border-b border-graphite bg-cream p-6">
@@ -150,7 +150,7 @@ function AccountPage() {
               </div>
               <div className="flex flex-wrap gap-3 border-t border-graphite bg-cream p-6">
                 {daysRemaining!==null&&daysRemaining>=0&&daysRemaining<=30&&<p className="w-full rounded-xl border border-graphite bg-sun p-3 text-sm"><strong>Your prepaid term ends in {daysRemaining} days.</strong> Choose a new term before the final paid edition if you would like to continue.</p>}
-                <div className="w-full"><button disabled={busy||!canCancel} className={`${CTA_OUTLINE} disabled:cursor-not-allowed disabled:opacity-40`} onClick={()=>void action(subscription.id,'cancel')}>Request cancellation</button><p className="mt-2 text-sm">{latestPayment?.status==='refunded'?'This payment has been refunded.':'Cancellation and refund eligibility are assessed under the published policy.'}</p></div>
+                <div className="w-full"><button disabled={busy||!canRefund} className={`${CTA_OUTLINE} disabled:cursor-not-allowed disabled:opacity-40`} onClick={()=>void action(subscription.id,'refund')}>Request full refund</button><p className="mt-2 text-sm">{latestPayment?.status==='refunded'?'This payment has been refunded.':canRefund?'Full refunds are available for 48 hours after payment.':'The 48-hour full-refund window has closed.'}</p></div>
                 <a className={CTA_OUTLINE} href="/contact?type=subscription">Contact support</a>
                 <DamageEvidenceUpload subscriptionId={subscription.id} csrf={data.csrf}/>
                 <a className={CTA_OUTLINE} href={WHATSAPP_URL} target="_blank" rel="noopener noreferrer">WhatsApp support</a>

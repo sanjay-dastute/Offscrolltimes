@@ -15,7 +15,7 @@ export type PricingQuote = {
   countryCode: string
 }
 
-type OptionRow = { id: string; duration_months: number; discount_basis_points: number; currency: string; base_monthly_minor: number }
+type OptionRow = { id: string; duration_months: number; discount_basis_points: number; currency: string; base_monthly_minor: number; plan_monthly_minor: number }
 type ZoneRow = { country_code: string; currency: string; shipping_minor: number; additional_copy_minor: number; tax_rate_basis_points: number }
 type DiscountRow = { id: string; code: string; kind: 'percentage'|'fixed'|'free_shipping'; value: number; usage_limit: number|null; redemptions: number; customer_redemptions: number; eligible_durations_json: string|null; eligible_countries_json: string|null; per_customer_limit: number|null; minimum_duration_months: number|null; minimum_order_minor: number|null; combinable_with_duration_discount: number }
 
@@ -24,16 +24,21 @@ function includesJsonString(value: string | null, expected: string) { if (!value
 
 export async function calculatePricing(db: D1Database, input: { durationMonths: number; quantity: number; countryCode: string; discountCode?: string; userId?: string; includeInactiveDiscount?: boolean; now: number }): Promise<PricingQuote | null> {
   if (!Number.isSafeInteger(input.quantity) || input.quantity < 1) return null
-  const option = await db.prepare(`SELECT o.id, o.duration_months, o.discount_basis_points, o.currency, COALESCE(o.monthly_price_minor,p.base_monthly_minor) base_monthly_minor
+  const option = await db.prepare(`SELECT o.id, o.duration_months, o.discount_basis_points, o.currency, p.base_monthly_minor,
+      COALESCE(o.monthly_price_minor,p.base_monthly_minor) plan_monthly_minor
     FROM admin_subscription_options o JOIN admin_products p ON p.id=o.product_id
     WHERE o.duration_months=? AND o.active=1 AND p.active=1 LIMIT 1`).bind(input.durationMonths).first<OptionRow>()
   const zone = await db.prepare(`SELECT country_code, currency, shipping_minor, additional_copy_minor, tax_rate_basis_points
     FROM admin_shipping_zones WHERE country_code=? AND active=1`).bind(input.countryCode).first<ZoneRow>()
   if (!option || !zone || option.currency !== zone.currency) return null
 
+  // The standard monthly rate is the comparison price. The configured plan
+  // rate is authoritative for the actual charge and creates the term saving.
   const subtotalMinor = option.base_monthly_minor * option.duration_months * input.quantity
   if (!Number.isSafeInteger(subtotalMinor)) return null
-  let durationDiscountMinor = Math.round(subtotalMinor * option.discount_basis_points / 10000)
+  const configuredPlanMinor = option.plan_monthly_minor * option.duration_months * input.quantity
+  let durationDiscountMinor = Math.max(0, subtotalMinor - configuredPlanMinor)
+  if (durationDiscountMinor === 0 && option.discount_basis_points > 0) durationDiscountMinor = Math.round(subtotalMinor * option.discount_basis_points / 10000)
   let shippingMinor = zone.shipping_minor + zone.additional_copy_minor * Math.max(0, input.quantity - 1)
   let offerDiscountMinor = 0
   let discountId: string | null = null

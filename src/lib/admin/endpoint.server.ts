@@ -7,7 +7,9 @@ import { calculatePricing } from '#/lib/pricing.server'
 import { recordUserRole } from '#/lib/canonical-data.server'
 import { base64url, fromBase64url } from '#/lib/codec'
 import { storeObject } from '#/lib/object-storage.server'
+import { deliveryPrintPdf } from './dispatch-pdf.server'
 import { updateCustomerContact } from './directory.server'
+import { RefundRequestError, requestFullRazorpayRefund } from '#/lib/refund.server'
 import {
   audit, createEdition, dispatchRows, generateEditionEligibility, getAdminDashboard, lockEdition, overrideEditionEligibility,
   updateAdminAddress, updateEnquiry, updateFulfilment, updateSubscriptionStatus, upsertCatalog, upsertContent,
@@ -103,8 +105,18 @@ export async function mutateAdmin(request: Request) {
       if (!SAFE_ID.test(subscriptionId) || !address || !address.name || !address.line1 || !address.city || !address.postalCode || !/^[A-Z]{2}$/.test(address.country) || reason.length < 5) return json({ error: 'Enter a complete address and correction reason.' }, 422)
       return await updateAdminAddress(database, session.user.id, subscriptionId, address, reason) ? json({ ok:true }) : json({ error:'Subscription not found.' },404)
     }
-    if (action === 'payment.status') {
-      return json({error:'Refund status is recorded only from a verified Razorpay webhook.'},409)
+    if (action === 'payment.refund') {
+      const subscriptionId=text(body.subscriptionId)
+      if(!SAFE_ID.test(subscriptionId))return json({error:'Invalid subscription.'},422)
+      try {
+        const result=await requestFullRazorpayRefund(database,{subscriptionId,actorId:session.user.id,source:'administrator'})
+        await audit(database,session.user.id,'payment.refund_requested','subscription',subscriptionId,{status:result.status,refundId:result.refundId})
+        return json({ok:true,message:result.status==='processed'?'Full refund processed.':'Full refund requested from Razorpay.'})
+      } catch(error) {
+        if(error instanceof RefundRequestError)return json({error:error.message},error.status)
+        console.error('admin_refund_failed')
+        return json({error:'Razorpay refund could not be requested.'},502)
+      }
     }
     if (action === 'fulfilment.status') {
       const fulfilmentId = text(body.fulfilmentId), status = text(body.status, 30), trackingUrl = text(body.trackingUrl, 500), courier = text(body.courier, 100)
@@ -178,7 +190,12 @@ export async function getDispatchCsv(request: Request) {
   if(!await validExportGrant(request,session.user.id,editionId)){const grant=await issueExportGrant(session.user.id,editionId);if(!grant)return new Response('Export signing is unavailable.',{status:503});return new Response(null,{status:303,headers:{Location:new URL(request.url).toString(),'Set-Cookie':`${EXPORT_COOKIE}=${encodeURIComponent(grant)}; Path=/; Max-Age=120; HttpOnly; Secure; SameSite=Strict`,'Cache-Control':'no-store'}})}
   const rows = await dispatchRows(database, editionId)
   if (!rows) return new Response('Edition not found.', { status: 404 })
+  const format=new URL(request.url).searchParams.get('format')==='pdf'?'pdf':'csv'
   await audit(database,session.user.id,'edition.dispatch_exported','edition',editionId,{rowCount:rows.length,expiresWithinSeconds:120})
+  if(format==='pdf'){
+    const pdf=deliveryPrintPdf(rows.map(row=>({edition:row.edition_label,name:row.address?.name??'',address:[row.address?.line1,row.address?.line2,row.address?.city,row.address?.region,row.address?.postalCode,row.address?.country].filter(Boolean).join(', '),phone:row.contact_phone??'',status:row.subscription_status,endsAt:row.ends_at?new Date(row.ends_at).toLocaleDateString('en-GB'):'—'})),`Edition ${editionId}`)
+    return new Response(pdf,{headers:{'Content-Type':'application/pdf','Content-Disposition':`attachment; filename="delivery-print-${editionId}.pdf"`,'Cache-Control':'private, no-store, max-age=0','X-Content-Type-Options':'nosniff'}})
+  }
   const header = ['fulfilment_id','edition','quantity','name','address_line_1','address_line_2','city','region','postal_code','country','contact_email']
   const lines = rows.map(row => [row.fulfilment_id,row.edition_label,row.quantity,row.address?.name,row.address?.line1,row.address?.line2,row.address?.city,row.address?.region,row.address?.postalCode,row.address?.country,row.contact_email].map(csvCell).join(','))
   const content=[header.map(csvCell).join(','), ...lines].join('\r\n')

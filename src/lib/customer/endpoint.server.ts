@@ -11,6 +11,7 @@ import {
   createPrivacyRequest,
   type CustomerAddress,
 } from './store.server'
+import { RefundRequestError, requestFullRazorpayRefund } from '#/lib/refund.server'
 
 const SUBSCRIPTION_ID = /^[A-Za-z0-9_-]{6,160}$/
 const COUNTRY = /^[A-Z]{2}$/
@@ -146,6 +147,16 @@ export async function patchCustomerDashboard(request: Request): Promise<Response
   if (body.action === 'cancel') {
     const updated = await requestCustomerAction(db, session.user.id, subscriptionId, body.action, Date.now())
     return updated ? json({ ok: true }) : json({ error: 'Subscription not found.' }, 404)
+  }
+  if (body.action === 'refund') {
+    try {
+      const result=await requestFullRazorpayRefund(db,{subscriptionId,ownerId:session.user.id,actorId:session.user.id,source:'customer'})
+      return json({ok:true,message:result.status==='processed'?'Your full refund has been processed.':'Your full refund request is being processed by Razorpay.'})
+    } catch(error) {
+      if(error instanceof RefundRequestError)return json({error:error.message},error.status)
+      console.error('customer_refund_failed')
+      return json({error:'The refund could not be requested. Please try again.'},502)
+    }
   }
   return json({ error: 'Unsupported account action.' }, 400)
 }

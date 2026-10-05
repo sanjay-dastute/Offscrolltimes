@@ -328,10 +328,11 @@ export async function upsertContent(db: D1Database, actor: string, key: string, 
 export async function dispatchRows(db: D1Database, editionId: string) {
   const edition = await db.prepare(`SELECT label,status FROM editions WHERE id = ?`).bind(editionId).first<{ label: string; status:string }>()
   if (!edition || !['locked','dispatched','completed'].includes(edition.status)) return null
-  const rows = await db.prepare(`SELECT f.id fulfilment_id, f.edition_label, s.contact_email, s.quantity, s.delivery_address_json
+  const rows = await db.prepare(`SELECT f.id fulfilment_id, f.edition_label, s.contact_email, s.contact_phone, s.quantity, s.delivery_address_json, s.status subscription_status, s.ends_at
     FROM customer_fulfilments f JOIN customer_subscriptions s ON s.id = f.subscription_id
-    WHERE f.edition_label = ? AND f.status IN ('scheduled','prepared') ORDER BY s.id`).bind(edition.label).all<{
-      fulfilment_id: string; edition_label: string; contact_email: string | null; quantity: number; delivery_address_json: string
+    WHERE f.edition_label = ? AND f.status IN ('scheduled','prepared') AND s.status='active' AND s.entitlement_status='paid'
+      AND EXISTS(SELECT 1 FROM customer_payments p WHERE p.subscription_id=s.id AND p.status='paid') ORDER BY s.id`).bind(edition.label).all<{
+      fulfilment_id: string; edition_label: string; contact_email: string | null; contact_phone:string|null; quantity: number; delivery_address_json: string; subscription_status:string; ends_at:number|null
     }>()
   return rows.results.map(row => ({ ...row, address: parseAddress(row.delivery_address_json), delivery_address_json: undefined }))
 }

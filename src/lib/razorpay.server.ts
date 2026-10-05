@@ -26,6 +26,11 @@ export async function createRazorpayOrder(input:{amount:number;currency:string;r
 
 export async function retrieveRazorpayPayment(id:string){ return api(`/payments/${encodeURIComponent(id)}`) }
 
+export async function createRazorpayRefund(paymentId:string, amount:number, notes:Record<string,string>={}) {
+  if(!paymentId || !Number.isSafeInteger(amount) || amount < 1) throw new RangeError('A valid payment and refund amount are required.')
+  return api(`/payments/${encodeURIComponent(paymentId)}/refund`, { method:'POST', body:JSON.stringify({amount,notes}) })
+}
+
 function signature(secret:string,payload:string,received:string){
   const expected=createHmac('sha256',secret).update(payload).digest('hex')
   const a=Buffer.from(expected),b=Buffer.from(received)

@@ -809,4 +809,7 @@ body:has(.checkout-page) :is(.whatsapp-float, .instagram-float) { display: none;
 .checkout-start-button:hover { background: var(--color-sun); color: var(--color-graphite); }
 .checkout-start-button:disabled { opacity: .55; cursor: wait; }
 .checkout-start-button:focus-visible { outline: 3px solid var(--color-sun-deep); outline-offset: 4px; }
+/* Tax remains part of the server-side authoritative total where configured,
+   but is not presented as a separate checkout line at launch. */
+#plans aside dl > div:nth-child(5), .checkout-page aside dl > div:nth-child(6) { display: none; }
 @media (max-width: 639px) { .checkout-page { padding-inline: 16px; } .checkout-review { padding: 20px; } .checkout-plan-card { margin: -20px -20px 0; padding: 22px 20px; } }
