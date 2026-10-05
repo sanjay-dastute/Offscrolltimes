@@ -308,7 +308,7 @@ export function Plans() {
               )}
               <p className="m-0 mt-4 flex-1 leading-relaxed text-graphite-soft">{plan.blurb}</p>
               <a
-                href={`/checkout/stripe?duration=${plan.planId}&quantity=1&country=IN${plan.promotion ? `&code=${plan.promotion}` : ""}`}
+                href={`/checkout/razorpay?duration=${plan.planId}&quantity=1&country=IN${plan.promotion ? `&code=${plan.promotion}` : ""}`}
                 className={`mt-6 text-center ${plan.best ? CTA : CTA_OUTLINE}`}
               >
                 Choose {plan.name}

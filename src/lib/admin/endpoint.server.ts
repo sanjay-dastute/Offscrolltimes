@@ -1,6 +1,5 @@
 import { deleteRequestedCustomer } from './deletion.server'
 import { readAdministratorSession } from './auth.server'
-import {cancelStripeSubscription,syncStripePayments} from '#/lib/stripe.endpoint.server'
 import { json } from '#/lib/http.server'
 import { lifecycleBindings } from '#/lib/lifecycle/env.server'
 import { isSameOrigin } from '#/lib/security'
@@ -28,7 +27,6 @@ export async function getAdmin(request: Request) {
   if (!session) return json({ error: 'Administrator access required.' }, 403)
   const database = db()
   if (!database) return json({ error: 'Admin data is temporarily unavailable.' }, 503)
-  await syncStripePayments(database).catch(()=>console.error('stripe_admin_sync_failed'))
   await recordUserRole(database,session.user.id,'admin')
   return json({ user: session.user, csrf: session.csrf, ...(await getAdminDashboard(database)) })
 }
@@ -48,7 +46,7 @@ export async function mutateAdmin(request: Request) {
     if(action==='customer.delete'){
       const userId=text(body.userId),requestId=text(body.requestId)
       if(!SAFE_ID.test(userId)||!SAFE_ID.test(requestId)||body.confirm!==true)return json({error:'Confirm the requested account deletion.'},422)
-      try{await deleteRequestedCustomer(database,session.user.id,userId,requestId);return json({ok:true})}catch{return json({error:'Deletion could not be completed. Access is restricted if deletion started. Check Stripe and retry; data is kept until renewals are confirmed stopped.'},503)}
+      try{await deleteRequestedCustomer(database,session.user.id,userId,requestId);return json({ok:true})}catch{return json({error:'Deletion could not be completed. Access is restricted if deletion started. Payment and fulfilment history is retained where required.'},503)}
     }
     if(action==='newsletter.unsubscribe') {
       const subscriberId=text(body.subscriberId)
@@ -95,13 +93,6 @@ export async function mutateAdmin(request: Request) {
     if (action === 'subscription.status') {
       const subscriptionId = text(body.subscriptionId), status = text(body.status, 30), reason = text(body.reason, 500)
       if (!SAFE_ID.test(subscriptionId) || !STATUSES.has(status) || reason.length < 5) return json({ error: 'Choose a valid status and provide a reason.' }, 422)
-      const provider=await database.prepare('SELECT payment_provider,owner_id FROM customer_subscriptions WHERE id=?').bind(subscriptionId).first<{payment_provider:string;owner_id:string}>()
-      if(provider?.payment_provider==='stripe'){
-        if(status!=='cancelled')return json({error:'Stripe billing status is managed by verified Stripe events. Use cancellation to stop renewal.'},422)
-        await cancelStripeSubscription(database,provider.owner_id,subscriptionId)
-        await audit(database,session.user.id,'subscription.renewal_cancelled','subscription',subscriptionId,{reason,provider:'stripe'})
-        return json({ok:true})
-      }
       return await updateSubscriptionStatus(database, session.user.id, subscriptionId, status, reason) ? json({ ok: true }) : json({ error: 'This status transition is not permitted.' }, 409)
     }
     if (action === 'subscription.address') {

@@ -24,7 +24,7 @@ export async function getAdminDashboard(db: D1Database) {
     db.prepare(`SELECT id, owner_id customer_id, plan_name, duration_months, quantity, status, currency,
       amount_minor, contact_email, contact_phone, delivery_address_json, starts_at, ends_at, paid_through_at,
       next_dispatch_at, copies_total, copies_fulfilled, entitlement_status, pricing_snapshot_json, created_at, payment_provider, renewal_enabled, renewal_at, renewal_amount_minor
-      FROM customer_subscriptions WHERE (payment_provider!='stripe' OR EXISTS(SELECT 1 FROM customer_payments p WHERE p.subscription_id=customer_subscriptions.id AND p.status IN ('paid','refunded'))) AND owner_id NOT IN (SELECT owner_id FROM users WHERE account_state='deleted') ORDER BY created_at DESC,id DESC`).all(),
+      FROM customer_subscriptions WHERE owner_id NOT IN (SELECT owner_id FROM users WHERE account_state='deleted') ORDER BY created_at DESC,id DESC`).all(),
     db.prepare(`SELECT id, subscription_id, owner_id customer_id, provider_payment_id, status,(SELECT provider_status FROM refunds WHERE payment_id=customer_payments.id ORDER BY created_at DESC LIMIT 1) refund_status,
       amount_minor, currency, paid_at, created_at FROM customer_payments ORDER BY created_at DESC,id DESC`).all(),
     db.prepare(`SELECT id, subscription_id, owner_id customer_id, edition_label, status,
@@ -178,18 +178,15 @@ export async function generateEditionEligibility(db: D1Database, actor: string, 
     const address = parseAddress(row.delivery_address_json)
     const alreadyAssigned = await db.prepare(`SELECT id FROM customer_fulfilments WHERE subscription_id = ? AND edition_label = ?`).bind(row.id, edition.label).first()
     const paid = await db.prepare(`SELECT id FROM customer_payments WHERE subscription_id = ? AND status = 'paid'`).bind(row.id).first()
-    const refundPending=await db.prepare("SELECT payment_id FROM stripe_cancellation_refunds WHERE subscription_id=? AND status IN ('requested','processing')").bind(row.id).first()
     let reason = 'Eligible paid entitlement'
-    if(refundPending)reason='Cancellation refund is processing'
-    else if (row.status === 'paused') reason = 'Subscription is paused'
+    if (row.status === 'paused') reason = 'Subscription is paused'
     else if (row.status === 'refunded') reason = 'Subscription is refunded'
     else if (row.status === 'completed' || Number(row.copies_fulfilled) >= Number(row.copies_total)) reason = 'Paid copy entitlement is exhausted'
-    else if (row.status === 'cancelled' && row.payment_provider!=='stripe' && process.env.FULFIL_PAID_AFTER_CANCELLATION !== 'true') reason = 'Post-cancellation paid fulfilment is disabled by policy'
+    else if (row.status === 'cancelled' && process.env.FULFIL_PAID_AFTER_CANCELLATION !== 'true') reason = 'Post-cancellation paid fulfilment is disabled by policy'
     else if (!['active','cancelled'].includes(String(row.status))) reason = `Subscription status is ${row.status}`
     else if (row.entitlement_status !== 'paid' || !paid) reason = 'No confirmed paid entitlement'
     else if (Number(row.starts_at ?? 0) > edition.eligibility_cutoff_at) reason = 'Subscription starts after the edition cut-off'
-    else if (row.payment_provider==='stripe' && row.next_dispatch_at && Number(row.next_dispatch_at)>edition.dispatch_at) reason = 'First eligible edition dispatches later'
-    else if (row.payment_provider!=='stripe' && row.paid_through_at && Number(row.paid_through_at) < edition.eligibility_cutoff_at) reason = 'Paid term expired before the edition cut-off'
+    else if (row.paid_through_at && Number(row.paid_through_at) < edition.eligibility_cutoff_at) reason = 'Paid term expired before the edition cut-off'
     else if (!address?.name || !address.line1 || !address.city || !address.postalCode || !address.country) reason = 'Delivery address is incomplete'
     else if (alreadyAssigned) reason = 'Edition already assigned to this subscription'
     const decision = reason === 'Eligible paid entitlement' ? 'included' : 'excluded'

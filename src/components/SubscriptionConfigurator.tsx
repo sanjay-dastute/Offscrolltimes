@@ -16,7 +16,7 @@ export function SubscriptionConfigurator(){
   const [quote,setQuote]=useState<PricingQuote|null>(null),[state,setState]=useState<'loading'|'ready'|'error'>('loading')
   useEffect(()=>{const controller=new AbortController(),timer=setTimeout(async()=>{setState('loading');const params=new URLSearchParams({duration:String(months),quantity:String(Number(quantity)||1),country:countryCode});if(offer.trim())params.set('code',offer.trim());try{const response=await fetch(`/api/pricing?${params}`,{headers:{Accept:'application/json'},signal:controller.signal});const result=await response.json() as {quote?:PricingQuote};if(!response.ok||!result.quote)throw new Error('quote');setQuote(result.quote);setState('ready')}catch(error){if((error as Error).name!=='AbortError'){setQuote(null);setState('error')}}},250);return()=>{clearTimeout(timer);controller.abort()}},[months,quantity,countryCode,offer])
   const country=COUNTRIES.find(item=>item.code===countryCode)??COUNTRIES[0],copies=months*(Number(quantity)||1),dispatchDate=formatLongDate(firstEditionDate()),savings=quote?quote.durationDiscountMinor+quote.offerDiscountMinor:0
-  const checkoutHref=`/checkout/stripe?duration=${months}&quantity=${Number(quantity)||1}&country=${country.code}${quote?.promotion?`&code=${encodeURIComponent(offer.trim())}`:''}`
+  const checkoutHref=`/checkout/razorpay?duration=${months}&quantity=${Number(quantity)||1}&country=${country.code}${quote?.promotion?`&code=${encodeURIComponent(offer.trim())}`:''}`
   return <section id="plans" className="border-b border-graphite bg-paper scroll-mt-24">
     <Reveal className={`${SHELL} pt-4 pb-14 md:pb-20 lg:pb-24`}>
       <h2 className="sr-only">Choose your subscription plan</h2>

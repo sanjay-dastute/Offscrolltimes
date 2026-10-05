@@ -99,8 +99,8 @@ export function SubscriptionPlans() {
             const total = plan.priceUsd * quantity;
             const checkoutHref =
               quantity > 1
-                ? `/checkout/stripe?duration=${plan.planId}&quantity=${quantity}&country=IN${plan.promotion ? `&code=${plan.promotion}` : ""}`
-                : `/checkout/stripe?duration=${plan.planId}&quantity=1&country=IN${plan.promotion ? `&code=${plan.promotion}` : ""}`;
+                ? `/checkout/razorpay?duration=${plan.planId}&quantity=${quantity}&country=IN${plan.promotion ? `&code=${plan.promotion}` : ""}`
+                : `/checkout/razorpay?duration=${plan.planId}&quantity=1&country=IN${plan.promotion ? `&code=${plan.promotion}` : ""}`;
 
             return (
               <article

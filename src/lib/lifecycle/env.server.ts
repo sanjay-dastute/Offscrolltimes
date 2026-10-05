@@ -5,7 +5,6 @@ export type LifecycleBindings = {
 }
 
 export type LifecycleEnv = {
-  STRIPE_SECRET_KEY?: string
   LIFECYCLE_DB?: D1Database
   LIFECYCLE_SECRET?: string
   OFFSCROLL_FILES?: R2Bucket

@@ -106,7 +106,7 @@ test('email signup saves to the local database and the management link unsubscri
 
 test('profile has one default delivery address above account activity even with multiple subscriptions',async({page})=>{
   const address={name:'Test Reader',line1:'One Default Road',city:'Pune',region:'Maharashtra',postalCode:'411001',country:'IN'}
-  const subscription={planName:'3 month',status:'active',paymentProvider:'stripe',durationMonths:3,quantity:1,amountMinor:55500,currency:'INR',entitlementStatus:'paid',copiesRemaining:3,copiesTotal:3,renewalEnabled:true,deliveryAddress:address}
+  const subscription={planName:'3 month',status:'active',paymentProvider:'razorpay',durationMonths:3,quantity:1,amountMinor:55500,currency:'INR',entitlementStatus:'paid',copiesRemaining:3,copiesTotal:3,renewalEnabled:true,deliveryAddress:address}
   await page.route('**/api/customer',route=>route.fulfill({json:{user:{id:'reader_test',name:'Test Reader'},csrf:'customer-csrf',profile:{display_name:'Test Reader',email:'reader@example.com',whatsapp_number:'+919999999999'},address,identities:[],subscriptions:[{...subscription,id:'sub_one'},{...subscription,id:'sub_two'}],payments:[],fulfilments:[],events:[]}}))
   await page.goto('/account')
   await expect(page.locator('address')).toHaveCount(1)
@@ -138,7 +138,7 @@ test('deletion requests have a customer filter and a confirmed red delete action
 
 test('profile offers refund cancellation only during the 48-hour payment window and has no pause button',async({page})=>{
   const now=Date.now()
-  const subscription={planName:'3 month',status:'active',paymentProvider:'stripe',durationMonths:3,quantity:1,amountMinor:55500,currency:'INR',entitlementStatus:'paid',copiesRemaining:3,copiesTotal:3,renewalEnabled:true}
+  const subscription={planName:'3 month',status:'active',paymentProvider:'razorpay',durationMonths:3,quantity:1,amountMinor:55500,currency:'INR',entitlementStatus:'paid',copiesRemaining:3,copiesTotal:3,renewalEnabled:true}
   await page.route('**/api/customer',route=>route.fulfill({json:{user:{id:'reader_test',name:'Test Reader'},csrf:'customer-csrf',profile:null,address:null,identities:[],subscriptions:[{...subscription,id:'recent'},{...subscription,id:'expired'}],payments:[{id:'pay_recent',subscriptionId:'recent',status:'paid',amountMinor:55500,currency:'INR',paidAt:now-3600000,createdAt:now},{id:'pay_expired',subscriptionId:'expired',status:'paid',amountMinor:55500,currency:'INR',paidAt:now-49*3600000,createdAt:now}],fulfilments:[],events:[]}}))
   await page.goto('/account')
   const buttons=page.getByRole('button',{name:'Cancel subscription and refund',exact:true})
@@ -146,10 +146,10 @@ test('profile offers refund cancellation only during the 48-hour payment window 
   await expect(buttons.nth(0)).toBeEnabled()
   await expect(buttons.nth(1)).toBeDisabled()
   await expect(page.getByRole('button',{name:'Pause',exact:true})).toHaveCount(0)
-  await page.route('**/api/customer',async route=>{if(route.request().method()==='PATCH')return route.fulfill({json:{ok:true,message:'Subscription cancelled. Stripe has issued your refund to the original payment method.'}});await route.fallback()})
+  await page.route('**/api/customer',async route=>{if(route.request().method()==='PATCH')return route.fulfill({json:{ok:true,message:'Subscription cancellation request received.'}});await route.fallback()})
   page.once('dialog',dialog=>dialog.accept())
   const submitted=page.waitForRequest(request=>request.url().endsWith('/api/customer')&&request.method()==='PATCH')
   await buttons.nth(0).click()
   expect((await submitted).postDataJSON()).toMatchObject({subscriptionId:'recent',action:'cancel',csrf:'customer-csrf'})
-  await expect(page.getByText('Subscription cancelled. Stripe has issued your refund to the original payment method.')).toBeVisible()
+  await expect(page.getByText('Subscription cancellation request received.')).toBeVisible()
 })

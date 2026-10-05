@@ -40,6 +40,7 @@ const MIGRATION_FILES = [
   '0032_stripe_cancellation_refunds.sql',
   '0033_exact_plan_pricing.sql',
   '0034_exact_plan_rates.sql',
+  '0035_remove_stripe.sql',
 ]
 
 export function createTestD1(): D1Database {

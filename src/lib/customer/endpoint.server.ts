@@ -1,11 +1,9 @@
 import { isCustomerProfileComplete } from './profile.server'
-import {cancelAndRefundStripe,RefundWindowError,syncStripeRefunds} from '#/lib/stripe-refund.server'
 import { readSession } from '#/lib/auth.server'
 import { json } from '#/lib/http.server'
 import { lifecycleBindings } from '#/lib/lifecycle/env.server'
 import { isSameOrigin } from '#/lib/security'
 import { recordAddressVersion } from '#/lib/canonical-data.server'
-import {syncStripePayments} from '#/lib/stripe.endpoint.server'
 import {
   listCustomerSubscriptions,
   requestCustomerAction,
@@ -58,8 +56,6 @@ export async function getCustomerDashboard(request: Request): Promise<Response> 
   if (!session) return json({ error: 'Sign in to view your account.' }, 401)
   const db = customerDb()
   if (!db) return json({ error: 'Customer accounts are temporarily unavailable.' }, 503)
-  await syncStripePayments(db,session.user.id).catch(()=>console.error('stripe_customer_sync_failed'))
-  await syncStripeRefunds(db,undefined,session.user.id).catch(()=>console.error('stripe_refund_status_sync_failed'))
   const data = await listCustomerSubscriptions(db, session.user.id)
   const identities = session.internalUserId
     ? await db.prepare(`SELECT provider,provider_email,created_at FROM auth_identities WHERE user_id=? ORDER BY created_at`).bind(session.internalUserId).all<{provider:string;provider_email:string|null;created_at:number}>()
@@ -148,11 +144,6 @@ export async function patchCustomerDashboard(request: Request): Promise<Response
   }
   if (body.action === 'pause' || body.action === 'resume')return json({error:'Pausing is not available.'},422)
   if (body.action === 'cancel') {
-    const provider=await db.prepare('SELECT payment_provider FROM customer_subscriptions WHERE id=? AND owner_id=?').bind(subscriptionId,session.user.id).first<{payment_provider:string}>()
-    if(provider?.payment_provider==='stripe'){
-      if(body.action!=='cancel')return json({error:'Automatic subscription billing cannot be paused here. Contact support or cancel renewal.'},422)
-      try{const status=await cancelAndRefundStripe(db,session.user.id,subscriptionId);return json({ok:true,message:status==='succeeded'?'Subscription cancelled. Stripe has issued your refund to the original payment method.':'Subscription cancelled. Your Stripe refund is processing.'})}catch(error){return json({error:error instanceof RefundWindowError?error.message:'Cancellation or refund could not be completed. Check your account status and contact support; do not assume a refund was issued.'},error instanceof RefundWindowError?422:503)}
-    }
     const updated = await requestCustomerAction(db, session.user.id, subscriptionId, body.action, Date.now())
     return updated ? json({ ok: true }) : json({ error: 'Subscription not found.' }, 404)
   }

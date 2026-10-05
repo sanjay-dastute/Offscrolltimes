@@ -39,8 +39,6 @@ async function captured(db:D1Database,input:{subscriptionId:string;userId:string
 }
 
 export async function razorpayCheckout(request:Request){
-  // Disabled pending Razorpay approval; keep the implementation below for later.
-  if(process.env.ENABLE_RAZORPAY_CHECKOUT!=='true')return json({error:'Use Stripe subscription checkout.'},503)
   if(!isSameOrigin(request))return json({error:'Forbidden.'},403)
   const session=await readSession(request);if(!session)return json({error:'Sign in before checkout.'},401)
   const db=database();if(!db)return json({error:'Checkout storage is unavailable.'},503)

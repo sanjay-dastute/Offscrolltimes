@@ -227,7 +227,7 @@ export const FAQ_PREVIEW = [
   },
   {
     q: "When can I cancel and receive a refund?",
-    a: "Cancel from your profile within 48 hours of a successful payment. Automatic renewal stops and Stripe refunds that payment to its original payment method. After 48 hours the button is disabled; contact support for help.",
+    a: "Contact support to request a cancellation or refund. Eligibility depends on the published cancellation and refund policy.",
   },
   {
     q: "Is it suitable for kids?",
@@ -235,7 +235,7 @@ export const FAQ_PREVIEW = [
   },
   {
     q: "How am I billed?",
-    a: "Your selected prepaid term is charged through Stripe. The available payment methods and final currency are shown in the secure payment window.",
+    a: "Your selected prepaid term is charged through Razorpay. The available payment methods and final currency are shown in the secure payment window.",
   },
 ] as const;
 
@@ -287,7 +287,7 @@ export const FAQ_GROUPS = [
     title: "Payments and currencies",
     items: [
       { q: "What does the payment cover?", a: "One payment covers all copies, delivery, and applicable taxes for your selected subscription term." },
-      { q: "Which currencies and payment methods are supported?", a: "Online checkout currently supports INR for India delivery. Available payment methods appear in Stripe Checkout. For international orders, contact us before ordering." },
+      { q: "Which currencies and payment methods are supported?", a: "Online checkout currently supports INR for India delivery. Available payment methods appear in Razorpay Checkout. For international orders, contact us before ordering." },
     ],
   },
   {
@@ -321,7 +321,7 @@ export const FAQ_GROUPS = [
   },
   { key: "returns", title: "Returns, refunds and damaged copies", items: [
     { q: "What if my issue is damaged, missing or delayed?", a: "Contact support with your order details and, for damage, a photo. Report a missing issue within 7 days of the expected delivery date. We will investigate and, where eligible, arrange a replacement or refund for that issue." },
-    { q: "When can I receive a refund?", a: "Cancel within 48 hours of your verified Stripe payment for an automatic refund to the original payment method. A damaged or missing eligible issue may be replaced or refunded. Copies delivered in good condition are generally not refundable." },
+    { q: "When can I receive a refund?", a: "Contact support to request a refund under the published cancellation and refund policy. A damaged or missing eligible issue may be replaced or refunded. Copies delivered in good condition are generally not refundable." },
   ] },
   { key: "gift", title: "Gift subscriptions", items: [
     { q: "Can I send it as a gift?", a: "Yes. Enter the recipient's India delivery address at checkout. Request support if you need an international delivery or a gift message." },
@@ -334,7 +334,7 @@ export const FAQ_GROUPS = [
 export const FOOTER_DELIVERY_REGIONS = ["India (free)", "International — get in touch"] as const;
 
 export const FOOTER_PAYMENT_METHODS = [
-  "Stripe secure subscription checkout",
+  "Razorpay secure checkout",
   "Available methods shown before payment",
 ] as const;
 
@@ -518,7 +518,7 @@ export const SHIPPING_INFO = {
 };
 
 export const CANCELLATION_INFO = {
-  cancel: "Cancel from your profile within 48 hours of payment for an automatic Stripe refund. After 48 hours the button is disabled; contact support for help.",
+  cancel: "Contact support to request a cancellation or refund under the published policy.",
   pause: "Pausing is not available.",
 };
 
@@ -550,7 +550,7 @@ export const SUBSCRIPTION_FAQ = [
   },
   {
     q: "What currency will I actually be charged in?",
-    a: "The pricing calculator displays the supported currency for your destination. The exact server-calculated total is confirmed before Stripe payment authorisation.",
+    a: "The pricing calculator displays the supported currency for your destination. The exact server-calculated total is confirmed before Razorpay payment authorisation.",
   },
 ] as const;
 

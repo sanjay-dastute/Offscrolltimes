@@ -43,7 +43,7 @@ describe('UI accessibility contracts',()=>{
     expect(source('components/WhatsAppFloat.tsx')).toContain('WHATSAPP_URL.split("?")[0]')
   })
   it('contains explicit loading, empty, failed-request and retry states',()=>{
-    const admin=source('routes/admin.tsx'),checkout=source('routes/checkout.stripe.tsx'),account=source('routes/account.tsx')
+    const admin=source('routes/admin.tsx'),checkout=source('routes/checkout.razorpay.tsx'),account=source('routes/account.tsx')
     expect(admin).toContain("'loading'")
     expect(admin).toContain("'error'")
     expect(admin).toContain('No enquiries yet.')

@@ -1,5 +1,3 @@
-import {syncStripeRefunds} from '#/lib/stripe-refund.server'
-import { syncStripePayments } from '#/lib/stripe.endpoint.server'
 import serverEntry from '@tanstack/react-start/server-entry'
 import { initRequestLifecycleBindings, lifecycleBindingsFromEnv, type LifecycleEnv } from '#/lib/lifecycle/env.server'
 import { recordOperationalHealth } from '#/lib/health.server'
@@ -29,8 +27,6 @@ export default {
           recordOperationalHealth(bindings.db).catch(()=>{
             console.error('offscroll_health_monitor_failed')
           }),
-          syncStripeRefunds(bindings.db,env.STRIPE_SECRET_KEY).catch(()=>console.error('stripe_refund_scheduled_sync_failed')),
-          syncStripePayments(bindings.db,undefined,env.STRIPE_SECRET_KEY).catch(()=>console.error('stripe_scheduled_sync_failed')),
           runRetentionCleanup(bindings.db).catch(()=>console.error('offscroll_retention_cleanup_failed')),
         ])
       })().catch(() => {

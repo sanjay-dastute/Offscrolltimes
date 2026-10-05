@@ -47,7 +47,7 @@ function OrderComplete() {
               You're subscribed. Let the fun begin.
             </h1>
             <p className="m-0 max-w-[50ch] leading-relaxed text-graphite-soft">
-              Stripe verified your payment and your subscription is active. Your receipt and
+              Razorpay verified your payment and your subscription is active. Your receipt and
               first-edition status are available in your account.
               {payment_id ? (
                 <>
@@ -70,7 +70,7 @@ function OrderComplete() {
               WhatsApp if something looks wrong.
             </p>
           </>
-        ) : <><p className="m-0 font-mono text-[11.5px] font-bold tracking-[0.16em] text-founder-deep uppercase">Verification pending</p><h1 className="m-0 font-display text-[clamp(2rem,5.4vw,3rem)] leading-[1.02] font-bold">We are confirming your payment.</h1><p className="m-0 max-w-[50ch] leading-relaxed text-graphite-soft">This page will show confirmation only after the server has a verified Stripe payment. You can also check your account status.</p></>}
+        ) : <><p className="m-0 font-mono text-[11.5px] font-bold tracking-[0.16em] text-founder-deep uppercase">Verification pending</p><h1 className="m-0 font-display text-[clamp(2rem,5.4vw,3rem)] leading-[1.02] font-bold">We are confirming your payment.</h1><p className="m-0 max-w-[50ch] leading-relaxed text-graphite-soft">This page will show confirmation only after the server has a verified Razorpay payment. You can also check your account status.</p></>}
 
         <div className="mt-2 flex flex-wrap items-center justify-center gap-4">
           {verified&&payment_id&&<a href={`/api/customer/invoice/${encodeURIComponent(payment_id)}`} className="text-[14.5px] font-bold underline">Download receipt</a>}
