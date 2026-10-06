@@ -11,7 +11,10 @@ type InternationalRegion={code:string;name:string;currency:string;quotes:Pricing
 function money(minor:number,currency:string){return new Intl.NumberFormat('en',{style:'currency',currency}).format(minor/100)}
 
 function InternationalPriceTable({regions}:{regions:InternationalRegion[]}){
-  if(!regions.length)return null
+  // Regional rates are managed in Admin and shown only in the live checkout quote.
+  // Keep this component disabled so no public comparison table is rendered here.
+  void regions
+  return null
   return <section className="mt-10 overflow-hidden rounded-2xl border border-graphite bg-paper-raised"><div className="border-b border-graphite px-5 py-5 sm:px-7"><p className={EYEBROW}>International pricing</p><h3 className="mt-2 font-display text-2xl font-bold">Price breakdown by delivery region</h3><p className="mt-2 text-sm text-graphite-soft">Delivery is shown separately and included in each term total. India and INR pricing are not shown here.</p></div><div className="overflow-x-auto"><table className="min-w-[820px] w-full text-left text-sm"><thead className="border-b border-rule bg-paper"><tr><th className="px-5 py-4">Region</th><th className="px-4 py-4">Currency</th><th className="px-4 py-4 text-right">Product rate</th><th className="px-4 py-4 text-right">Delivery</th>{DURATIONS.map(duration=><th className="px-4 py-4 text-right" key={duration}>{duration} {duration===1?'month':'months'}</th>)}</tr></thead><tbody>{regions.map(region=>{const quoteFor=(duration:number)=>region.quotes.find(item=>item.durationMonths===duration),one=quoteFor(1);return <tr className="border-b border-rule last:border-0" key={region.code}><th className="px-5 py-4 whitespace-nowrap">{region.name}</th><td className="px-4 py-4">{region.currency}</td><td className="px-4 py-4 text-right font-semibold">{one?money(one.monthlyPriceMinor,region.currency):'—'}</td><td className="px-4 py-4 text-right font-semibold">{one?money(one.shippingMinor,region.currency):'—'}</td>{DURATIONS.map(duration=>{const item=quoteFor(duration);return <td className="px-4 py-4 text-right font-bold" key={duration}>{item?money(item.totalMinor,region.currency):'—'}</td>})}</tr>})}</tbody></table></div></section>
 }
 
