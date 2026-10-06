@@ -5,8 +5,8 @@ type Customer = {deletion_request_id?:string|null;user_id:string;display_name:st
 type NewsletterSubscriber={id:string;email:string;created_at:number}
 type Directory = {customers:Customer[];newsletterSubscribers:NewsletterSubscriber[];page:number;pages:number;total:number}
 
-export function AdminCustomers({mutate,csrf}:{mutate:(payload:Record<string,unknown>)=>Promise<boolean>;csrf:string}) {
-  const [data,setData]=useState<Directory|null>(null),[query,setQuery]=useState(''),[status,setStatus]=useState('all'),[page,setPage]=useState(1),[revision,setRevision]=useState(0)
+export function AdminCustomers({mutate,csrf,initialGroup='all'}:{mutate:(payload:Record<string,unknown>)=>Promise<boolean>;csrf:string;initialGroup?:'all'|'newsletter'}) {
+  const [data,setData]=useState<Directory|null>(null),[query,setQuery]=useState(''),[status,setStatus]=useState<string>(initialGroup),[page,setPage]=useState(1),[revision,setRevision]=useState(0)
   const [error,setError]=useState(''),[loading,setLoading]=useState(true),[editing,setEditing]=useState<Customer|null>(null),[saving,setSaving]=useState(false)
   useEffect(()=>{
     const controller=new AbortController()
@@ -37,8 +37,8 @@ export function AdminCustomers({mutate,csrf}:{mutate:(payload:Record<string,unkn
     const blob=await response.blob(),url=URL.createObjectURL(blob),link=document.createElement('a');link.href=url;link.download='offscroll-newsletter-subscribers.txt';link.click();URL.revokeObjectURL(url)
   }
   return <section>
-    <h2 className={H2}>Customer directory</h2>
-    <p className="mt-3 text-sm">All registered users, including people who have not subscribed. Payment status refers to the latest recorded payment.</p>
+    <h2 className={H2}>{status==='newsletter'?'Newsletter subscribers':'Customer directory'}</h2>
+    <p className="mt-3 text-sm">{status==='newsletter'?'People who explicitly opted in to Offscroll Times email updates.':'All registered users, including people who have not subscribed. Payment status refers to the latest recorded payment.'}</p>
     <div className="my-6 grid gap-4 sm:grid-cols-2">
       <label>Name, email, phone or WhatsApp<input className={`${FIELD} mt-2`} type="search" value={query} onChange={event=>{setQuery(event.target.value);setPage(1)}}/></label>
       <label>Customer group<select className={`${FIELD} mt-2`} value={status} onChange={event=>{setStatus(event.target.value);setPage(1)}}><option value="all">All registered users</option><option value="subscribers">Has a subscription</option><option value="registered">No subscription yet</option><option value="newsletter">Newsletter subscribers</option><option value="deletion">Deletion requested</option></select></label>

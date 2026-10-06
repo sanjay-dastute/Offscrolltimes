@@ -279,8 +279,11 @@ export async function updateAdminAddress(db: D1Database, actor: string, subscrip
   const result = await db.prepare(`UPDATE customer_subscriptions SET delivery_address_json = ?, contact_email = COALESCE(?,contact_email), contact_phone = COALESCE(?,contact_phone), updated_at = ? WHERE id = ?`)
     .bind(JSON.stringify(address), contact?.email||null, contact?.phone||null, now, subscriptionId).run()
   if ((result.meta.changes ?? 0) !== 1) return false
-  await db.prepare(`UPDATE customers SET display_name=?,email=COALESCE(?,email),phone=COALESCE(?,phone),updated_at=? WHERE user_id=(SELECT id FROM users WHERE owner_id=?)`)
-    .bind(address.name,contact?.email||null,contact?.phone||null,now,previous.owner_id).run()
+  const user=await db.prepare(`SELECT id FROM users WHERE owner_id=?`).bind(previous.owner_id).first<{id:string}>()
+  if(user)await db.prepare(`INSERT INTO customers(id,user_id,email,phone,display_name,transactional_contact_basis,marketing_consent,privacy_request_state,created_at,updated_at)
+    VALUES(?,?,?,?,?,'contract',0,'none',?,?)
+    ON CONFLICT(user_id) DO UPDATE SET display_name=excluded.display_name,email=COALESCE(excluded.email,customers.email),phone=COALESCE(excluded.phone,customers.phone),updated_at=excluded.updated_at`)
+    .bind(`customer_${user.id}`,user.id,contact?.email||null,contact?.phone||null,address.name,now,now).run()
   await audit(db, actor, 'subscription.address_corrected', 'subscription', subscriptionId, { reason, previous: parseAddress(previous.delivery_address_json), updated: address })
   await recordAddressVersion(db,{ownerId:previous.owner_id,address,reason:`Administrator correction: ${reason}`,now})
   await recordAccountEvent(db,{userId:previous.owner_id,subscriptionId,eventType:'address_changed',title:'Delivery address corrected',detail:`Support updated the delivery address. ${reason}`,now:Date.now()})

@@ -45,6 +45,18 @@ describe('administrator authorization and fulfilment', () => {
     for(const fields of [{eligibleDurations:'3,invalid'},{eligibleCountries:'IN,INVALID'},{usageLimit:0}])expect((await mutation('admin_1',{action:'catalog.upsert',kind:'discount',id:'invalid',code:'INVALID',discountKind:'percentage',value:1000,...fields})).status).toBe(422)
   })
 
+  it('saves an administrator delivery-address correction and returns it in the refreshed dashboard',async()=>{
+    const now=Date.now()
+    await db.prepare(`INSERT INTO users(id,owner_id,role,account_state,created_at,updated_at) VALUES('customer_internal','customer_address','customer','active',?,?)`).bind(now,now).run()
+    await registerCustomerCheckout(db,{id:'address_subscription',userId:'customer_address',planId:'monthly',planName:'Monthly',durationMonths:1,quantity:1,currency:'INR',amountMinor:19900,now})
+    const address={name:'Updated Reader',line1:'42 New Road',line2:'Flat 3',city:'Coimbatore',region:'Tamil Nadu',postalCode:'641001',country:'IN'}
+    expect((await mutation('admin_1',{action:'subscription.address',subscriptionId:'address_subscription',email:'updated@example.com',phone:'+917373050093',reason:'Customer moved address',address})).status).toBe(200)
+    expect(await db.prepare(`SELECT contact_email,contact_phone,delivery_address_json FROM customer_subscriptions WHERE id='address_subscription'`).first()).toMatchObject({contact_email:'updated@example.com',contact_phone:'+917373050093',delivery_address_json:JSON.stringify(address)})
+    expect(await db.prepare(`SELECT display_name,email,phone FROM customers WHERE user_id='customer_internal'`).first()).toMatchObject({display_name:'Updated Reader',email:'updated@example.com',phone:'+917373050093'})
+    const dashboard=await getAdmin(await request('admin_1','/api/admin'))
+    expect((await dashboard.json() as {subscriptions:Array<{id:string;delivery_address:typeof address}>}).subscriptions.find(row=>row.id==='address_subscription')?.delivery_address).toMatchObject(address)
+  })
+
   it('lets an administrator add and update delivery prices by country',async()=>{
     expect((await mutation('admin_1',{action:'catalog.upsert',kind:'shipping',countryCode:'GB',countryName:'United Kingdom',currency:'GBP',shippingMinor:1250,additionalCopyMinor:300,taxRateBasisPoints:0})).status).toBe(200)
     expect(await db.prepare(`SELECT shipping_minor,additional_copy_minor FROM admin_shipping_zones WHERE country_code='GB'`).first()).toMatchObject({shipping_minor:1250,additional_copy_minor:300})
