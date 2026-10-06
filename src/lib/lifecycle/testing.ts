@@ -42,6 +42,7 @@ const MIGRATION_FILES = [
   '0034_exact_plan_rates.sql',
   '0035_remove_stripe.sql',
   '0036_edition_inventory.sql',
+  '0037_regional_pricing.sql',
 ]
 
 export function createTestD1(): D1Database {

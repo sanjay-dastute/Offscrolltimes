@@ -131,6 +131,22 @@ export async function mutateAdmin(request: Request) {
       if (!SAFE_ID.test(fulfilmentId) || !FULFILMENT_STATUSES.has(status) || (trackingUrl && !trackingUrl.startsWith('https://'))) return json({ error: 'Invalid fulfilment update.' }, 422)
       return await updateFulfilment(database, session.user.id, fulfilmentId, status, trackingUrl, courier) ? json({ ok: true }) : json({ error: 'This fulfilment transition is not permitted or the edition is not locked.' }, 409)
     }
+    if(action==='regional.price'){
+      const countryCode=text(body.countryCode,2).toUpperCase(), currency=text(body.currency,3).toUpperCase(), amountMinor=Number(body.amountMinor)
+      if(!/^[A-Z]{2}$/.test(countryCode)||!/^[A-Z]{3}$/.test(currency)||!Number.isSafeInteger(amountMinor)||amountMinor<0)return json({error:'Choose a valid country, currency and regional price.'},422)
+      const result=await database.prepare(`UPDATE admin_shipping_zones SET currency=?,regional_monthly_price_minor=?,updated_at=? WHERE country_code=?`).bind(currency,amountMinor,Date.now(),countryCode).run()
+      if((result.meta.changes??0)!==1)return json({error:'Add delivery pricing for this country before setting its regional price.'},404)
+      await audit(database,session.user.id,'regional.price_updated','shipping_zone',countryCode,{currency,amountMinor})
+      return json({ok:true})
+    }
+    if(action==='shipping.delete'){
+      const countryCode=text(body.countryCode,2).toUpperCase()
+      if(!/^[A-Z]{2}$/.test(countryCode))return json({error:'Invalid country.'},422)
+      const result=await database.prepare(`DELETE FROM admin_shipping_zones WHERE country_code=?`).bind(countryCode).run()
+      if((result.meta.changes??0)!==1)return json({error:'Country pricing not found.'},404)
+      await audit(database,session.user.id,'shipping_zone.deleted','shipping_zone',countryCode,{})
+      return json({ok:true})
+    }
     if (action === 'catalog.upsert') {
       const kind = text(body.kind, 30)
       const safe = kind === 'product' ? { id:text(body.id), name:text(body.name), description:text(body.description,1000), baseMonthlyMinor:Number(body.baseMonthlyMinor ?? 999), active:body.active!==false } : kind === 'option' ? {

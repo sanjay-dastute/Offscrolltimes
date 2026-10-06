@@ -26,6 +26,13 @@ describe('server-owned pricing', () => {
     expect(quote?.totalMinor).toBe(131275)
   })
 
+  it('uses the configured regional currency and monthly price for a delivery country', async () => {
+    const db=createTestD1()
+    await db.prepare(`UPDATE admin_shipping_zones SET country_name='United Kingdom',currency='GBP',shipping_minor=500,additional_copy_minor=0,tax_rate_basis_points=0,regional_monthly_price_minor=750,active=1 WHERE country_code='GB'`).run()
+    const quote=await calculatePricing(db,{durationMonths:1,quantity:2,countryCode:'GB',now:Date.now()})
+    expect(quote).toMatchObject({currency:'GBP',monthlyPriceMinor:750,subtotalMinor:1500,shippingMinor:500,totalMinor:2000})
+  })
+
   it('ignores inactive and expired offer codes', async () => {
     const db = createTestD1()
     await db.prepare(`INSERT INTO admin_discounts (id,code,kind,value,ends_at,active,created_at,updated_at) VALUES ('old','OLD','percentage',5000,?,1,0,0)`).bind(Date.now()-1).run()

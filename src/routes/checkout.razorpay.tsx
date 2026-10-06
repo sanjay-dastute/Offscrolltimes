@@ -32,7 +32,7 @@ function RazorpayCheckout() {
   }
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault(); if (!csrf) { location.assign(`/login?returnTo=${encodeURIComponent(location.pathname + location.search)}`); return }
-    setState('creating'); setError(''); const form = new FormData(event.currentTarget); const address = Object.fromEntries(['name', 'line1', 'line2', 'city', 'region', 'postalCode', 'country'].map(key => [key, form.get(key)]))
+    setState('creating'); setError(''); const form = new FormData(event.currentTarget); form.set('country',search.country); const address = Object.fromEntries(['name', 'line1', 'line2', 'city', 'region', 'postalCode', 'country'].map(key => [key, form.get(key)]))
     try {
       const order = await send('create', { idempotencyKey: idempotencyKey.current, durationMonths: search.duration, quantity: search.quantity, discountCode: search.code, email: form.get('email'), phone: form.get('phone'), address, acceptTerms: form.get('terms') === 'on' })
       if (!window.Razorpay) throw new Error('Secure payment window did not load. Please retry.')

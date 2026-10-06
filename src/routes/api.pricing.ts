@@ -11,6 +11,11 @@ export const Route = createFileRoute('/api/pricing')({
     let db: D1Database
     try { db = lifecycleBindings().db } catch { return json({ error: 'Pricing is temporarily unavailable.' }, 503) }
     const url = new URL(request.url)
+    if(url.searchParams.get('catalog')==='1'){
+      const zones=await db.prepare(`SELECT country_code code,country_name name,currency FROM admin_shipping_zones WHERE active=1 ORDER BY country_name`).all<{code:string;name:string;currency:string}>()
+      const detected=(request.headers.get('CF-IPCountry')??'').toUpperCase()
+      return json({countries:zones.results,detectedCountry:zones.results.some(zone=>zone.code===detected)?detected:null})
+    }
     const durationMonths = Number(url.searchParams.get('duration'))
     const quantity = Number(url.searchParams.get('quantity'))
     const countryCode = (url.searchParams.get('country') ?? '').trim().toUpperCase().slice(0, 2)
