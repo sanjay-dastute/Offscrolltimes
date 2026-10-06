@@ -15,7 +15,7 @@ describe('server-owned pricing', () => {
       expect(quote?.countryCode).toBe(countryCode)
     }
     expect(await calculatePricing(db,{durationMonths:6,quantity:1,countryCode:'IN',now:Date.now()})).toBeNull()
-    expect(await calculatePricing(db,{durationMonths:1,quantity:1,countryCode:'GB',now:Date.now()})).toBeNull()
+    expect(await calculatePricing(db,{durationMonths:1,quantity:1,countryCode:'GB',now:Date.now()})).toMatchObject({currency:'GBP',totalMinor:799})
   })
   it('calculates subtotal, duration saving, shipping and configured tax', async () => {
     const db = createTestD1()
@@ -28,6 +28,7 @@ describe('server-owned pricing', () => {
 
   it('uses the configured regional currency and monthly price for a delivery country', async () => {
     const db=createTestD1()
+    await db.prepare(`DELETE FROM regional_subscription_prices WHERE country_code='GB'`).run()
     await db.prepare(`UPDATE admin_shipping_zones SET country_name='United Kingdom',currency='GBP',shipping_minor=500,additional_copy_minor=0,tax_rate_basis_points=0,regional_monthly_price_minor=750,active=1 WHERE country_code='GB'`).run()
     const quote=await calculatePricing(db,{durationMonths:1,quantity:2,countryCode:'GB',now:Date.now()})
     expect(quote).toMatchObject({currency:'GBP',monthlyPriceMinor:750,subtotalMinor:1500,shippingMinor:500,totalMinor:2000})
@@ -45,7 +46,7 @@ describe('server-owned pricing', () => {
     const db = createTestD1(), now = Date.now()
     await db.prepare(`INSERT INTO admin_discounts (id,code,kind,value,usage_limit,eligible_durations_json,eligible_countries_json,per_customer_limit,minimum_duration_months,minimum_order_minor,combinable_with_duration_discount,starts_at,ends_at,active,created_at,updated_at) VALUES ('rules','RULES','percentage',1000,1,'[3]','["IN"]',1,3,5000,0,?,?,1,?,?)`).bind(now-1000,now+1000,now,now).run()
     expect((await calculatePricing(db,{durationMonths:1,quantity:1,countryCode:'IN',discountCode:'RULES',userId:'u1',now}))?.discountId).toBeNull()
-    expect(await calculatePricing(db,{durationMonths:3,quantity:1,countryCode:'GB',discountCode:'RULES',userId:'u1',now})).toBeNull()
+    expect((await calculatePricing(db,{durationMonths:3,quantity:1,countryCode:'GB',discountCode:'RULES',userId:'u1',now}))?.discountId).toBeNull()
     const eligible=await calculatePricing(db,{durationMonths:3,quantity:1,countryCode:'IN',discountCode:'RULES',userId:'u1',now})
     expect(eligible?.discountId).toBe('rules')
     expect(eligible?.durationDiscountMinor).toBe(0)

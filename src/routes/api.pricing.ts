@@ -14,7 +14,12 @@ export const Route = createFileRoute('/api/pricing')({
     if(url.searchParams.get('catalog')==='1'){
       const zones=await db.prepare(`SELECT country_code code,country_name name,currency FROM admin_shipping_zones WHERE active=1 ORDER BY country_name`).all<{code:string;name:string;currency:string}>()
       const detected=(request.headers.get('CF-IPCountry')??'').toUpperCase()
-      return json({countries:zones.results,detectedCountry:zones.results.some(zone=>zone.code===detected)?detected:null})
+      const international=zones.results.filter(zone=>zone.currency!=='INR'&&zone.code!=='IN')
+      const breakdown=await Promise.all(international.map(async zone=>{
+        const quotes=await Promise.all([1,3,12].map(durationMonths=>calculatePricing(db,{durationMonths,quantity:1,countryCode:zone.code,now:Date.now()})))
+        return { ...zone, quotes:quotes.filter((quote):quote is NonNullable<typeof quote>=>Boolean(quote)) }
+      }))
+      return json({countries:zones.results,internationalPricing:breakdown,detectedCountry:zones.results.some(zone=>zone.code===detected)?detected:null})
     }
     const durationMonths = Number(url.searchParams.get('duration'))
     const quantity = Number(url.searchParams.get('quantity'))

@@ -17,6 +17,7 @@ export type PricingQuote = {
 
 type OptionRow = { id: string; duration_months: number; discount_basis_points: number; currency: string; base_monthly_minor: number; plan_monthly_minor: number }
 type ZoneRow = { country_code: string; currency: string; shipping_minor: number; additional_copy_minor: number; tax_rate_basis_points: number; regional_monthly_price_minor: number|null }
+type RegionalTermRow = { term_total_minor: number }
 type DiscountRow = { id: string; code: string; kind: 'percentage'|'fixed'|'free_shipping'; value: number; usage_limit: number|null; redemptions: number; customer_redemptions: number; eligible_durations_json: string|null; eligible_countries_json: string|null; per_customer_limit: number|null; minimum_duration_months: number|null; minimum_order_minor: number|null; combinable_with_duration_discount: number }
 
 function includesJsonNumber(value: string | null, expected: number) { if (!value) return true; try { return (JSON.parse(value) as unknown[]).map(Number).includes(expected) } catch { return false } }
@@ -31,18 +32,22 @@ export async function calculatePricing(db: D1Database, input: { durationMonths: 
   const zone = await db.prepare(`SELECT country_code, currency, shipping_minor, additional_copy_minor, tax_rate_basis_points, regional_monthly_price_minor
     FROM admin_shipping_zones WHERE country_code=? AND active=1`).bind(input.countryCode).first<ZoneRow>()
   if (!option || !zone) return null
+  const regionalTerm=await db.prepare(`SELECT term_total_minor FROM regional_subscription_prices WHERE country_code=? AND duration_months=?`).bind(input.countryCode,option.duration_months).first<RegionalTermRow>()
 
   // The standard monthly rate is the comparison price. The configured plan
   // rate is authoritative for the actual charge and creates the term saving.
   const regionalRate = zone.regional_monthly_price_minor
   const standardMonthlyPrice = regionalRate ?? option.base_monthly_minor
   const monthlyPriceMinor = regionalRate ?? option.plan_monthly_minor
-  const subtotalMinor = standardMonthlyPrice * option.duration_months * input.quantity
+  const shippingMinorBase = zone.shipping_minor + zone.additional_copy_minor * Math.max(0, input.quantity - 1)
+  const subtotalMinor = regionalTerm
+    ? Math.max(0, regionalTerm.term_total_minor - zone.shipping_minor) + monthlyPriceMinor * option.duration_months * Math.max(0,input.quantity-1)
+    : standardMonthlyPrice * option.duration_months * input.quantity
   if (!Number.isSafeInteger(subtotalMinor)) return null
-  const configuredPlanMinor = monthlyPriceMinor * option.duration_months * input.quantity
+  const configuredPlanMinor = regionalTerm ? subtotalMinor : monthlyPriceMinor * option.duration_months * input.quantity
   let durationDiscountMinor = Math.max(0, subtotalMinor - configuredPlanMinor)
   if (durationDiscountMinor === 0 && option.discount_basis_points > 0) durationDiscountMinor = Math.round(subtotalMinor * option.discount_basis_points / 10000)
-  let shippingMinor = zone.shipping_minor + zone.additional_copy_minor * Math.max(0, input.quantity - 1)
+  let shippingMinor = shippingMinorBase
   let offerDiscountMinor = 0
   let discountId: string | null = null
   let promotion: PricingQuote['promotion'] = null

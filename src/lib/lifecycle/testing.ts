@@ -44,6 +44,7 @@ const MIGRATION_FILES = [
   '0036_edition_inventory.sql',
   '0037_regional_pricing.sql',
   '0038_answer_sheets.sql',
+  '0039_regional_term_prices.sql',
 ]
 
 export function createTestD1(): D1Database {
