@@ -154,7 +154,7 @@ export const PLANS = [
     period: "/ month for 1 year",
     monthlyEquivalent: "INR 1,908 prepaid for 12 months",
     best: false,
-    renewsEvery: "Automatic renewal",
+    renewsEvery: "One prepaid term",
     blurb: "Available exclusively during the first month of launch. Limited-period introductory offer.",
   },
   {
@@ -167,8 +167,8 @@ export const PLANS = [
     period: "/ month",
     monthlyEquivalent: null,
     best: false,
-    renewsEvery: "Automatic renewal",
-    blurb: "Enjoy the flexibility of a monthly subscription that renews automatically. Self-service cancellation and an automatic refund are available within 48 hours of payment.",
+    renewsEvery: "One prepaid term",
+    blurb: "Enjoy one flexible monthly edition. Self-service cancellation and an automatic refund are available within 48 hours of payment.",
   },
   {
     key: "quarterly",
@@ -180,8 +180,8 @@ export const PLANS = [
     period: "/ month",
     monthlyEquivalent: "INR 555 prepaid for 3 months",
     best: false,
-    renewsEvery: "Automatic renewal",
-    blurb: "Three monthly editions, renewing automatically every three months. Cancel before your renewal date.",
+    renewsEvery: "One prepaid term",
+    blurb: "Three monthly editions, paid together as one prepaid term.",
   },
   {
     key: "annual",
@@ -193,8 +193,8 @@ export const PLANS = [
     period: "/ month",
     monthlyEquivalent: "INR 2,100 prepaid for 12 months",
     best: true,
-    renewsEvery: "Automatic renewal",
-    blurb: "Twelve monthly editions, renewing automatically every twelve months. Cancel before your renewal date.",
+    renewsEvery: "One prepaid term",
+    blurb: "Twelve monthly editions, paid together as one prepaid term.",
   },
 ] as const;
 
@@ -306,8 +306,8 @@ export const FAQ_GROUPS = [
     key: "cancellation",
     title: "Pause or cancellation",
     items: [
-      { q: "Can I pause my subscription?", a: "Contact support to discuss delivery changes. Automatic billing cannot be paused from your account; cancel renewal before the displayed renewal date to prevent the next charge." },
-      { q: "Does my subscription renew automatically?", a: "Yes, the subscription will renew automatically at the end of each term and will continue until you decide to cancel it. You will not need to manually renew your subscription each time." },
+      { q: "Can I pause my subscription?", a: "Contact support to discuss delivery changes before the monthly cut-off." },
+      { q: "Does my subscription renew automatically?", a: "No. Each purchase covers only the prepaid term you choose. You can place a new order whenever you would like another term." },
     ],
   },
   {
@@ -531,7 +531,7 @@ export const GIFT_INFO = {
 export const SUBSCRIPTION_FAQ = [
   {
     q: "When am I charged again?",
-    a: "Your subscription renews automatically for the same duration and quantity. Cancel before the renewal date to stop the next charge.",
+    a: "Each purchase covers only the prepaid term you select. Place a new order if you would like another term.",
   },
   {
     q: "How do I cancel and receive a refund?",
@@ -547,7 +547,7 @@ export const SUBSCRIPTION_FAQ = [
   },
   {
     q: "Can I switch plans later?",
-    a: "Contact support before your renewal date to discuss changing duration or quantity. Your existing automatic renewal continues unchanged until a change is confirmed.",
+    a: "Contact support before the monthly cut-off to discuss changing duration or quantity for a future order.",
   },
   {
     q: "What currency will I actually be charged in?",

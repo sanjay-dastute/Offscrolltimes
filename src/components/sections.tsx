@@ -318,7 +318,7 @@ export function Plans() {
         </div>
 
         <p className="mt-6 text-center font-mono text-[11px] tracking-[0.08em] text-graphite-mute uppercase">
-          Prices shown in INR. Free delivery across India. Subscriptions renew automatically for the same selected duration unless cancelled before the renewal date.
+          Prices shown in INR. Free delivery across India. Each payment covers the prepaid term you select.
         </p>
         <p className="mt-3 text-center">
           <a
@@ -414,7 +414,7 @@ export function FinalCta() {
           Put something worth opening through your letterbox.
         </h2>
         <p className="m-0 max-w-[48ch] leading-relaxed text-graphite-soft">
-          Choose a prepaid term and receive a fresh puzzle newspaper each month. Subscriptions renew automatically for the same selected duration unless cancelled before the renewal date.
+          Choose a prepaid term and receive a fresh puzzle newspaper each month for the duration you select.
         </p>
         <a href={SUBSCRIBE_HREF} className={`${CTA} mt-2`}>
           Choose your subscription

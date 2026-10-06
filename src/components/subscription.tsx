@@ -133,7 +133,7 @@ export function SubscriptionPlans() {
 
                 <dl className="m-0 mt-5 flex flex-col gap-2 border-t border-graphite pt-4 font-mono text-[11px] tracking-[0.04em] text-graphite-soft uppercase">
                   <div className="flex justify-between gap-3">
-                    <dt>Renews</dt>
+                    <dt>Term</dt>
                     <dd className="m-0 text-right text-graphite">{plan.renewsEvery}</dd>
                   </div>
                   <div className="flex justify-between gap-3">
@@ -142,7 +142,7 @@ export function SubscriptionPlans() {
                   </div>
                   <div className="flex justify-between gap-3">
                     <dt>Cancel</dt>
-                    <dd className="m-0 text-right text-graphite">Automatic renewal for the same duration</dd>
+                    <dd className="m-0 text-right text-graphite">No automatic renewal</dd>
                   </div>
                 </dl>
 

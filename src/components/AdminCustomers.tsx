@@ -27,7 +27,7 @@ export function AdminCustomers({mutate,csrf,initialGroup='all'}:{mutate:(payload
   }
   async function remove(customer:Customer){
     if(!customer.deletion_request_id||saving)return
-    if(!window.confirm('Delete this requested account? This removes all account access, stops automatic renewal and erases profile/contact/address data. Protected order, payment and audit history is retained. This cannot be undone.'))return
+    if(!window.confirm('Delete this requested account? This removes all account access and erases profile, contact and address data. Protected order, payment and audit history is retained. This cannot be undone.'))return
     setSaving(true)
     try{if(await mutate({action:'customer.delete',userId:customer.user_id,requestId:customer.deletion_request_id,confirm:true})){setEditing(null);setRevision(value=>value+1)}}finally{setSaving(false)}
   }

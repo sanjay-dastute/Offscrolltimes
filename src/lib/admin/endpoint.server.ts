@@ -72,7 +72,7 @@ export async function mutateAdmin(request: Request) {
       return json({ok:true})
     }
     if (action === 'edition.create') {
-      const label = text(body.label, 100), issueNumber = Number(body.issueNumber), copiesAvailable=Number(body.copiesAvailable ?? 0), now=Date.now(), cutoff = body.cutoff?Date.parse(String(body.cutoff)):now, dispatch = body.dispatch?Date.parse(String(body.dispatch)):now+7*24*60*60*1000
+      const label = text(body.label, 100), issueNumber = Number(body.issueNumber), copiesAvailable=Number(body.copiesAvailable ?? 0), dispatch = body.dispatch?Date.parse(String(body.dispatch)):NaN, cutoff = body.cutoff?Date.parse(String(body.cutoff)):dispatch-24*60*60*1000
       if (!label || !Number.isInteger(issueNumber) || issueNumber < 1 || !Number.isSafeInteger(copiesAvailable) || copiesAvailable < 0 || !Number.isFinite(cutoff) || !Number.isFinite(dispatch) || dispatch <= cutoff) return json({ error: 'Enter a valid edition name, number and copy quantity.' }, 422)
       return json({ ok: true, id: await createEdition(database, session.user.id, { label, issueNumber, copiesAvailable, cutoff, dispatch }) })
     }
