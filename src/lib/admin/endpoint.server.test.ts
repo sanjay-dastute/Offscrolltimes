@@ -44,6 +44,14 @@ describe('administrator authorization and fulfilment', () => {
     expect((await mutation('admin_1',{action:'catalog.upsert',kind:'discount',id:'invalid',code:'INVALID',discountKind:'percentage',value:10001})).status).toBe(422)
     for(const fields of [{eligibleDurations:'3,invalid'},{eligibleCountries:'IN,INVALID'},{usageLimit:0}])expect((await mutation('admin_1',{action:'catalog.upsert',kind:'discount',id:'invalid',code:'INVALID',discountKind:'percentage',value:1000,...fields})).status).toBe(422)
   })
+
+  it('lets an administrator add and update delivery prices by country',async()=>{
+    expect((await mutation('admin_1',{action:'catalog.upsert',kind:'shipping',countryCode:'GB',countryName:'United Kingdom',currency:'GBP',shippingMinor:1250,additionalCopyMinor:300,taxRateBasisPoints:0})).status).toBe(200)
+    expect(await db.prepare(`SELECT shipping_minor,additional_copy_minor FROM admin_shipping_zones WHERE country_code='GB'`).first()).toMatchObject({shipping_minor:1250,additional_copy_minor:300})
+    expect((await mutation('admin_1',{action:'catalog.upsert',kind:'shipping',countryCode:'GB',countryName:'United Kingdom',currency:'GBP',shippingMinor:1900,additionalCopyMinor:500,taxRateBasisPoints:0})).status).toBe(200)
+    expect(await db.prepare(`SELECT shipping_minor,additional_copy_minor FROM admin_shipping_zones WHERE country_code='GB'`).first()).toMatchObject({shipping_minor:1900,additional_copy_minor:500})
+    expect((await mutation('admin_1',{action:'catalog.upsert',kind:'shipping',countryCode:'INVALID',countryName:'Invalid',currency:'GBP',shippingMinor:0,additionalCopyMinor:0,taxRateBasisPoints:0})).status).toBe(422)
+  })
   it('rejects a signed-in customer who is not configured as an administrator', async () => {
     expect((await getAdmin(await request('customer_1', '/api/admin'))).status).toBe(403)
     expect((await mutation('customer_1', { action: 'edition.create' })).status).toBe(403)

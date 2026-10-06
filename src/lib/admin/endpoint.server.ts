@@ -147,6 +147,14 @@ export async function mutateAdmin(request: Request) {
       } : {
         countryCode: text(body.countryCode, 2).toUpperCase(), countryName: text(body.countryName), currency: text(body.currency, 3).toUpperCase(), shippingMinor: Number(body.shippingMinor), additionalCopyMinor:Number(body.additionalCopyMinor ?? 0), taxRateBasisPoints: Number(body.taxRateBasisPoints), active: body.active !== false,
       }
+      if(kind==='shipping'){
+        const countryInput=String(body.countryCode??'').trim(), currencyInput=String(body.currency??'').trim()
+        const shippingMinor=Number(safe.shippingMinor), additionalCopyMinor=Number(safe.additionalCopyMinor), taxRateBasisPoints=Number(safe.taxRateBasisPoints)
+        const validCountry=/^[A-Za-z]{2}$/.test(countryInput), validCurrency=/^[A-Za-z]{3}$/.test(currencyInput)
+        const validMoney=Number.isSafeInteger(shippingMinor)&&shippingMinor>=0&&Number.isSafeInteger(additionalCopyMinor)&&additionalCopyMinor>=0
+        const validTax=Number.isSafeInteger(taxRateBasisPoints)&&taxRateBasisPoints>=0&&taxRateBasisPoints<=10000
+        if(!validCountry||!safe.countryName||!validCurrency||!validMoney||!validTax)return json({error:'Enter a valid country, currency and non-negative delivery prices.'},422)
+      }
       if(kind==='option'&&safe.monthlyPriceMinor!==null&&(!Number.isSafeInteger(safe.monthlyPriceMinor)||Number(safe.monthlyPriceMinor)<=0))return json({error:'Enter a positive monthly price in minor units.'},422)
       if(kind==='discount') {
         const durations=text(body.eligibleDurations,200), countries=text(body.eligibleCountries,200)
