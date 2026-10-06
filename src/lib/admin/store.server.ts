@@ -272,14 +272,17 @@ export async function updateSubscriptionStatus(db: D1Database, actor: string, su
   return true
 }
 
-export async function updateAdminAddress(db: D1Database, actor: string, subscriptionId: string, address: CustomerAddress, reason: string) {
+export async function updateAdminAddress(db: D1Database, actor: string, subscriptionId: string, address: CustomerAddress, reason: string, contact?: { email: string; phone: string }) {
   const previous = await db.prepare(`SELECT delivery_address_json,contact_email,owner_id FROM customer_subscriptions WHERE id = ?`).bind(subscriptionId).first<{ delivery_address_json: string | null;contact_email:string|null;owner_id:string }>()
   if (!previous) return false
-  const result = await db.prepare(`UPDATE customer_subscriptions SET delivery_address_json = ?, updated_at = ? WHERE id = ?`)
-    .bind(JSON.stringify(address), Date.now(), subscriptionId).run()
+  const now=Date.now()
+  const result = await db.prepare(`UPDATE customer_subscriptions SET delivery_address_json = ?, contact_email = COALESCE(?,contact_email), contact_phone = COALESCE(?,contact_phone), updated_at = ? WHERE id = ?`)
+    .bind(JSON.stringify(address), contact?.email||null, contact?.phone||null, now, subscriptionId).run()
   if ((result.meta.changes ?? 0) !== 1) return false
+  await db.prepare(`UPDATE customers SET display_name=?,email=COALESCE(?,email),phone=COALESCE(?,phone),updated_at=? WHERE user_id=(SELECT id FROM users WHERE owner_id=?)`)
+    .bind(address.name,contact?.email||null,contact?.phone||null,now,previous.owner_id).run()
   await audit(db, actor, 'subscription.address_corrected', 'subscription', subscriptionId, { reason, previous: parseAddress(previous.delivery_address_json), updated: address })
-  await recordAddressVersion(db,{ownerId:previous.owner_id,address,reason:`Administrator correction: ${reason}`,now:Date.now()})
+  await recordAddressVersion(db,{ownerId:previous.owner_id,address,reason:`Administrator correction: ${reason}`,now})
   await recordAccountEvent(db,{userId:previous.owner_id,subscriptionId,eventType:'address_changed',title:'Delivery address corrected',detail:`Support updated the delivery address. ${reason}`,now:Date.now()})
   return true
 }

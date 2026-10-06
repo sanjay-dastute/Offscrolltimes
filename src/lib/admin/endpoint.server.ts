@@ -109,9 +109,10 @@ export async function mutateAdmin(request: Request) {
       const subscriptionId = text(body.subscriptionId)
       const raw = body.address as Record<string, unknown> | undefined
       const address = raw && { name:text(raw.name,100), line1:text(raw.line1), line2:text(raw.line2)||undefined, city:text(raw.city,100), region:text(raw.region,100)||undefined, postalCode:text(raw.postalCode,24), country:text(raw.country,2).toUpperCase() }
+      const email=text(body.email,200).toLowerCase(), phone=text(body.phone,30)
       const reason = text(body.reason, 500)
-      if (!SAFE_ID.test(subscriptionId) || !address || !address.name || !address.line1 || !address.city || !address.postalCode || !/^[A-Z]{2}$/.test(address.country) || reason.length < 5) return json({ error: 'Enter a complete address and correction reason.' }, 422)
-      return await updateAdminAddress(database, session.user.id, subscriptionId, address, reason) ? json({ ok:true }) : json({ error:'Subscription not found.' },404)
+      if (!SAFE_ID.test(subscriptionId) || !address || !address.name || !address.line1 || !address.city || !address.postalCode || !/^[A-Z]{2}$/.test(address.country) || reason.length < 5 || (email&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) || (phone&&!/^\+?[0-9 ()-]{7,30}$/.test(phone))) return json({ error: 'Enter complete delivery details, a valid email/phone and a correction reason.' }, 422)
+      return await updateAdminAddress(database, session.user.id, subscriptionId, address, reason,{email,phone}) ? json({ ok:true }) : json({ error:'Subscription not found.' },404)
     }
     if (action === 'payment.refund') {
       const subscriptionId=text(body.subscriptionId)
