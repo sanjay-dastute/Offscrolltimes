@@ -1,6 +1,6 @@
 import { lifecycleBindings } from './lifecycle/env.server'
 
-export type StoredCategory='damage_evidence'|'receipt'|'edition_file'|'product_asset'|'dispatch_export'
+export type StoredCategory='damage_evidence'|'receipt'|'edition_file'|'product_asset'|'dispatch_export'|'answer_sheet'
 const SAFE_NAME=/[^A-Za-z0-9._-]+/g
 
 export function storageBindings(){

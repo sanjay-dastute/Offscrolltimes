@@ -17,11 +17,13 @@ import { Route as CompleteProfileRouteImport } from './routes/complete-profile'
 import { Route as ContactRouteImport } from './routes/contact'
 import { Route as FaqRouteImport } from './routes/faq'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as OfflimitsRouteImport } from './routes/offlimits'
 import { Route as OrderCompleteRouteImport } from './routes/order-complete'
 import { Route as RegisterRouteImport } from './routes/register'
 import { Route as SubscriptionRouteImport } from './routes/subscription'
 import { Route as ApiAdminRouteImport } from './routes/api.admin'
 import { Route as ApiAnalyticsRouteImport } from './routes/api.analytics'
+import { Route as ApiAnswersRouteImport } from './routes/api.answers'
 import { Route as ApiCustomerRouteImport } from './routes/api.customer'
 import { Route as ApiHealthRouteImport } from './routes/api.health'
 import { Route as ApiLogoutRouteImport } from './routes/api.logout'
@@ -32,6 +34,7 @@ import { Route as ApiSessionRouteImport } from './routes/api.session'
 import { Route as CheckoutRazorpayRouteImport } from './routes/checkout.razorpay'
 import { Route as NewsletterUnsubscribeRouteImport } from './routes/newsletter.unsubscribe'
 import { Route as PoliciesSlugRouteImport } from './routes/policies.$slug'
+import { Route as ApiAdminAnswersRouteImport } from './routes/api.admin.answers'
 import { Route as ApiAdminCustomersRouteImport } from './routes/api.admin.customers'
 import { Route as ApiAdminDispatchRouteImport } from './routes/api.admin.dispatch'
 import { Route as ApiAdminExportRouteImport } from './routes/api.admin.export'
@@ -87,6 +90,11 @@ const LoginRoute = LoginRouteImport.update({
   path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
+const OfflimitsRoute = OfflimitsRouteImport.update({
+  id: '/offlimits',
+  path: '/offlimits',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const OrderCompleteRoute = OrderCompleteRouteImport.update({
   id: '/order-complete',
   path: '/order-complete',
@@ -110,6 +118,11 @@ const ApiAdminRoute = ApiAdminRouteImport.update({
 const ApiAnalyticsRoute = ApiAnalyticsRouteImport.update({
   id: '/api/analytics',
   path: '/api/analytics',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAnswersRoute = ApiAnswersRouteImport.update({
+  id: '/api/answers',
+  path: '/api/answers',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiCustomerRoute = ApiCustomerRouteImport.update({
@@ -161,6 +174,11 @@ const PoliciesSlugRoute = PoliciesSlugRouteImport.update({
   id: '/policies/$slug',
   path: '/policies/$slug',
   getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAdminAnswersRoute = ApiAdminAnswersRouteImport.update({
+  id: '/answers',
+  path: '/answers',
+  getParentRoute: () => ApiAdminRoute,
 } as any)
 const ApiAdminCustomersRoute = ApiAdminCustomersRouteImport.update({
   id: '/customers',
@@ -243,11 +261,13 @@ export interface FileRoutesByFullPath {
   '/contact': typeof ContactRoute
   '/faq': typeof FaqRoute
   '/login': typeof LoginRoute
+  '/offlimits': typeof OfflimitsRoute
   '/order-complete': typeof OrderCompleteRoute
   '/register': typeof RegisterRoute
   '/subscription': typeof SubscriptionRoute
   '/api/admin': typeof ApiAdminRouteWithChildren
   '/api/analytics': typeof ApiAnalyticsRoute
+  '/api/answers': typeof ApiAnswersRoute
   '/api/customer': typeof ApiCustomerRouteWithChildren
   '/api/health': typeof ApiHealthRoute
   '/api/logout': typeof ApiLogoutRoute
@@ -258,6 +278,7 @@ export interface FileRoutesByFullPath {
   '/checkout/razorpay': typeof CheckoutRazorpayRoute
   '/newsletter/unsubscribe': typeof NewsletterUnsubscribeRoute
   '/policies/$slug': typeof PoliciesSlugRoute
+  '/api/admin/answers': typeof ApiAdminAnswersRoute
   '/api/admin/customers': typeof ApiAdminCustomersRoute
   '/api/admin/dispatch': typeof ApiAdminDispatchRoute
   '/api/admin/export': typeof ApiAdminExportRoute
@@ -282,11 +303,13 @@ export interface FileRoutesByTo {
   '/contact': typeof ContactRoute
   '/faq': typeof FaqRoute
   '/login': typeof LoginRoute
+  '/offlimits': typeof OfflimitsRoute
   '/order-complete': typeof OrderCompleteRoute
   '/register': typeof RegisterRoute
   '/subscription': typeof SubscriptionRoute
   '/api/admin': typeof ApiAdminRouteWithChildren
   '/api/analytics': typeof ApiAnalyticsRoute
+  '/api/answers': typeof ApiAnswersRoute
   '/api/customer': typeof ApiCustomerRouteWithChildren
   '/api/health': typeof ApiHealthRoute
   '/api/logout': typeof ApiLogoutRoute
@@ -297,6 +320,7 @@ export interface FileRoutesByTo {
   '/checkout/razorpay': typeof CheckoutRazorpayRoute
   '/newsletter/unsubscribe': typeof NewsletterUnsubscribeRoute
   '/policies/$slug': typeof PoliciesSlugRoute
+  '/api/admin/answers': typeof ApiAdminAnswersRoute
   '/api/admin/customers': typeof ApiAdminCustomersRoute
   '/api/admin/dispatch': typeof ApiAdminDispatchRoute
   '/api/admin/export': typeof ApiAdminExportRoute
@@ -322,11 +346,13 @@ export interface FileRoutesById {
   '/contact': typeof ContactRoute
   '/faq': typeof FaqRoute
   '/login': typeof LoginRoute
+  '/offlimits': typeof OfflimitsRoute
   '/order-complete': typeof OrderCompleteRoute
   '/register': typeof RegisterRoute
   '/subscription': typeof SubscriptionRoute
   '/api/admin': typeof ApiAdminRouteWithChildren
   '/api/analytics': typeof ApiAnalyticsRoute
+  '/api/answers': typeof ApiAnswersRoute
   '/api/customer': typeof ApiCustomerRouteWithChildren
   '/api/health': typeof ApiHealthRoute
   '/api/logout': typeof ApiLogoutRoute
@@ -337,6 +363,7 @@ export interface FileRoutesById {
   '/checkout/razorpay': typeof CheckoutRazorpayRoute
   '/newsletter/unsubscribe': typeof NewsletterUnsubscribeRoute
   '/policies/$slug': typeof PoliciesSlugRoute
+  '/api/admin/answers': typeof ApiAdminAnswersRoute
   '/api/admin/customers': typeof ApiAdminCustomersRoute
   '/api/admin/dispatch': typeof ApiAdminDispatchRoute
   '/api/admin/export': typeof ApiAdminExportRoute
@@ -363,11 +390,13 @@ export interface FileRouteTypes {
     | '/contact'
     | '/faq'
     | '/login'
+    | '/offlimits'
     | '/order-complete'
     | '/register'
     | '/subscription'
     | '/api/admin'
     | '/api/analytics'
+    | '/api/answers'
     | '/api/customer'
     | '/api/health'
     | '/api/logout'
@@ -378,6 +407,7 @@ export interface FileRouteTypes {
     | '/checkout/razorpay'
     | '/newsletter/unsubscribe'
     | '/policies/$slug'
+    | '/api/admin/answers'
     | '/api/admin/customers'
     | '/api/admin/dispatch'
     | '/api/admin/export'
@@ -402,11 +432,13 @@ export interface FileRouteTypes {
     | '/contact'
     | '/faq'
     | '/login'
+    | '/offlimits'
     | '/order-complete'
     | '/register'
     | '/subscription'
     | '/api/admin'
     | '/api/analytics'
+    | '/api/answers'
     | '/api/customer'
     | '/api/health'
     | '/api/logout'
@@ -417,6 +449,7 @@ export interface FileRouteTypes {
     | '/checkout/razorpay'
     | '/newsletter/unsubscribe'
     | '/policies/$slug'
+    | '/api/admin/answers'
     | '/api/admin/customers'
     | '/api/admin/dispatch'
     | '/api/admin/export'
@@ -441,11 +474,13 @@ export interface FileRouteTypes {
     | '/contact'
     | '/faq'
     | '/login'
+    | '/offlimits'
     | '/order-complete'
     | '/register'
     | '/subscription'
     | '/api/admin'
     | '/api/analytics'
+    | '/api/answers'
     | '/api/customer'
     | '/api/health'
     | '/api/logout'
@@ -456,6 +491,7 @@ export interface FileRouteTypes {
     | '/checkout/razorpay'
     | '/newsletter/unsubscribe'
     | '/policies/$slug'
+    | '/api/admin/answers'
     | '/api/admin/customers'
     | '/api/admin/dispatch'
     | '/api/admin/export'
@@ -481,11 +517,13 @@ export interface RootRouteChildren {
   ContactRoute: typeof ContactRoute
   FaqRoute: typeof FaqRoute
   LoginRoute: typeof LoginRoute
+  OfflimitsRoute: typeof OfflimitsRoute
   OrderCompleteRoute: typeof OrderCompleteRoute
   RegisterRoute: typeof RegisterRoute
   SubscriptionRoute: typeof SubscriptionRoute
   ApiAdminRoute: typeof ApiAdminRouteWithChildren
   ApiAnalyticsRoute: typeof ApiAnalyticsRoute
+  ApiAnswersRoute: typeof ApiAnswersRoute
   ApiCustomerRoute: typeof ApiCustomerRouteWithChildren
   ApiHealthRoute: typeof ApiHealthRoute
   ApiLogoutRoute: typeof ApiLogoutRoute
@@ -561,6 +599,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/offlimits': {
+      id: '/offlimits'
+      path: '/offlimits'
+      fullPath: '/offlimits'
+      preLoaderRoute: typeof OfflimitsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/order-complete': {
       id: '/order-complete'
       path: '/order-complete'
@@ -594,6 +639,13 @@ declare module '@tanstack/react-router' {
       path: '/api/analytics'
       fullPath: '/api/analytics'
       preLoaderRoute: typeof ApiAnalyticsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/answers': {
+      id: '/api/answers'
+      path: '/api/answers'
+      fullPath: '/api/answers'
+      preLoaderRoute: typeof ApiAnswersRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/customer': {
@@ -665,6 +717,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/policies/$slug'
       preLoaderRoute: typeof PoliciesSlugRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/api/admin/answers': {
+      id: '/api/admin/answers'
+      path: '/answers'
+      fullPath: '/api/admin/answers'
+      preLoaderRoute: typeof ApiAdminAnswersRouteImport
+      parentRoute: typeof ApiAdminRoute
     }
     '/api/admin/customers': {
       id: '/api/admin/customers'
@@ -768,6 +827,7 @@ declare module '@tanstack/react-router' {
 }
 
 interface ApiAdminRouteChildren {
+  ApiAdminAnswersRoute: typeof ApiAdminAnswersRoute
   ApiAdminCustomersRoute: typeof ApiAdminCustomersRoute
   ApiAdminDispatchRoute: typeof ApiAdminDispatchRoute
   ApiAdminExportRoute: typeof ApiAdminExportRoute
@@ -777,6 +837,7 @@ interface ApiAdminRouteChildren {
 }
 
 const ApiAdminRouteChildren: ApiAdminRouteChildren = {
+  ApiAdminAnswersRoute: ApiAdminAnswersRoute,
   ApiAdminCustomersRoute: ApiAdminCustomersRoute,
   ApiAdminDispatchRoute: ApiAdminDispatchRoute,
   ApiAdminExportRoute: ApiAdminExportRoute,
@@ -814,11 +875,13 @@ const rootRouteChildren: RootRouteChildren = {
   ContactRoute: ContactRoute,
   FaqRoute: FaqRoute,
   LoginRoute: LoginRoute,
+  OfflimitsRoute: OfflimitsRoute,
   OrderCompleteRoute: OrderCompleteRoute,
   RegisterRoute: RegisterRoute,
   SubscriptionRoute: SubscriptionRoute,
   ApiAdminRoute: ApiAdminRouteWithChildren,
   ApiAnalyticsRoute: ApiAnalyticsRoute,
+  ApiAnswersRoute: ApiAnswersRoute,
   ApiCustomerRoute: ApiCustomerRouteWithChildren,
   ApiHealthRoute: ApiHealthRoute,
   ApiLogoutRoute: ApiLogoutRoute,
