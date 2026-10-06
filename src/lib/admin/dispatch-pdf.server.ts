@@ -11,7 +11,7 @@ export function deliveryPrintPdf(rows:DeliveryRow[],title:string){
     const body=rows.slice(start,start+25)
     const lines=[text('OFFSCROLL TIMES - DELIVERY PRINT LIST',36,555,15),text(title,36,538,9),text('Customer and delivery address',36,516,8),text('Phone',520,516,8),text('Status / end date',635,516,8)]
     body.forEach((row,index)=>{const y=496-index*18;lines.push(`36 ${y-4} m 806 ${y-4} l S`,text(`${row.name} - ${row.address}`,36,y),text(row.phone,520,y),text(`${row.status} / ${row.endsAt}`,635,y))})
-    if(!body.length)lines.push(text('No active paid subscriptions are eligible for this edition.',36,496,10))
+    if(!body.length)lines.push(text('No active paid subscriptions are currently eligible for delivery.',36,496,10))
     pages.push(lines.join('\n'))
   }
   const objects:string[]=['<< /Type /Catalog /Pages 2 0 R >>',`<< /Type /Pages /Kids [${pages.map((_,i)=>`${3+i*2} 0 R`).join(' ')}] /Count ${pages.length} >>`]

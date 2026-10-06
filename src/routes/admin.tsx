@@ -73,7 +73,7 @@ function AdminPage() {
       {tab === 'editions' && <Editions data={data} busy={busy} mutate={mutate} />}
       {tab === 'offers' && <AdminOffers offers={data.discounts} busy={busy} mutate={mutate} />}
       {tab === 'pricing' && <><Pricing data={data} busy={busy} mutate={mutate} /><EditionCopyPricing editions={data.editions} busy={busy} mutate={mutate} /></>}
-      {tab === 'exports' && <AdminExports editions={data.editions} />}
+      {tab === 'exports' && <AdminExports />}
       {tab === 'audit' && <Audit rows={data.audits} />}
     </>}
   </main></>

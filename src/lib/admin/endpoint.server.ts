@@ -11,7 +11,7 @@ import { deliveryPrintPdf } from './dispatch-pdf.server'
 import { updateCustomerContact } from './directory.server'
 import { RefundRequestError, requestFullRazorpayRefund } from '#/lib/refund.server'
 import {
-  audit, createEdition, dispatchRows, generateEditionEligibility, getAdminDashboard, lockEdition, overrideEditionEligibility,
+  activePaidDeliveryRows, audit, createEdition, dispatchRows, generateEditionEligibility, getAdminDashboard, lockEdition, overrideEditionEligibility,
   updateAdminAddress, updateEnquiry, updateFulfilment, updateSubscriptionStatus, upsertCatalog, upsertContent,
 } from './store.server'
 
@@ -194,15 +194,16 @@ export async function getDispatchCsv(request: Request) {
   const database = db()
   if (!database) return new Response('Admin data is temporarily unavailable.', { status: 503 })
   const editionId = new URL(request.url).searchParams.get('edition') ?? ''
-  if (!SAFE_ID.test(editionId)) return new Response('Invalid edition.', { status: 400 })
-  if(!await validExportGrant(request,session.user.id,editionId)){const grant=await issueExportGrant(session.user.id,editionId);if(!grant)return new Response('Export signing is unavailable.',{status:503});return new Response(null,{status:303,headers:{Location:new URL(request.url).toString(),'Set-Cookie':`${EXPORT_COOKIE}=${encodeURIComponent(grant)}; Path=/; Max-Age=120; HttpOnly; Secure; SameSite=Strict`,'Cache-Control':'no-store'}})}
-  const rows = await dispatchRows(database, editionId)
+  const exportScope=editionId||'active-paid-customers'
+  if(editionId&&!SAFE_ID.test(editionId)) return new Response('Invalid edition.', { status: 400 })
+  if(!await validExportGrant(request,session.user.id,exportScope)){const grant=await issueExportGrant(session.user.id,exportScope);if(!grant)return new Response('Export signing is unavailable.',{status:503});return new Response(null,{status:303,headers:{Location:new URL(request.url).toString(),'Set-Cookie':`${EXPORT_COOKIE}=${encodeURIComponent(grant)}; Path=/; Max-Age=120; HttpOnly; Secure; SameSite=Strict`,'Cache-Control':'no-store'}})}
+  const rows = editionId?await dispatchRows(database, editionId):await activePaidDeliveryRows(database)
   if (!rows) return new Response('Edition not found.', { status: 404 })
   const format=new URL(request.url).searchParams.get('format')==='pdf'?'pdf':'csv'
-  await audit(database,session.user.id,'edition.dispatch_exported','edition',editionId,{rowCount:rows.length,expiresWithinSeconds:120})
+  await audit(database,session.user.id,'delivery_print_exported',editionId?'edition':'customers',exportScope,{rowCount:rows.length,expiresWithinSeconds:120})
   if(format==='pdf'){
     const pdf=deliveryPrintPdf(rows.map(row=>({name:row.address?.name??'',address:[row.address?.line1,row.address?.line2,row.address?.city,row.address?.region,row.address?.postalCode,row.address?.country].filter(Boolean).join(', '),phone:row.contact_phone??'',status:row.subscription_status,endsAt:row.ends_at?new Date(row.ends_at).toLocaleDateString('en-GB'):'—'})),'Delivery addresses')
-    return new Response(pdf,{headers:{'Content-Type':'application/pdf','Content-Disposition':`attachment; filename="delivery-print-${editionId}.pdf"`,'Cache-Control':'private, no-store, max-age=0','X-Content-Type-Options':'nosniff'}})
+    return new Response(pdf,{headers:{'Content-Type':'application/pdf','Content-Disposition':`attachment; filename="offscroll-times-current-delivery-list.pdf"`,'Cache-Control':'private, no-store, max-age=0','X-Content-Type-Options':'nosniff'}})
   }
   const header = ['fulfilment_id','edition','quantity','name','address_line_1','address_line_2','city','region','postal_code','country','contact_email']
   const lines = rows.map(row => [row.fulfilment_id,row.edition_label,row.quantity,row.address?.name,row.address?.line1,row.address?.line2,row.address?.city,row.address?.region,row.address?.postalCode,row.address?.country,row.contact_email].map(csvCell).join(','))
