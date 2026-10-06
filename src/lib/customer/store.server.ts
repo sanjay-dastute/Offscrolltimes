@@ -244,6 +244,10 @@ export async function applyCustomerPaymentSucceeded(db: D1Database, input: {
         VALUES (?,?,?,?,?) ON CONFLICT(discount_id,subscription_id) DO NOTHING`).bind(`redemption_${input.id}`,snapshot.discountId,input.id,purchased.owner_id,paidAt).run()
     } catch { /* A legacy snapshot must not block payment activation. */ }
   }
+  // Reserve the customer's next copy from the next suitable edition inventory.
+  // The guarded update prevents inventory from ever becoming negative.
+  await db.prepare(`UPDATE editions SET copies_available=copies_available-(SELECT quantity FROM customer_subscriptions WHERE id=?),updated_at=?
+    WHERE id=(SELECT id FROM editions WHERE dispatch_at>=? AND status IN ('draft','eligibility_generated') AND copies_available>=(SELECT quantity FROM customer_subscriptions WHERE id=?) ORDER BY dispatch_at LIMIT 1)`).bind(input.id,input.now,paidAt,input.id).run()
   if(purchased) await recordAccountEvent(db,{userId:purchased.owner_id,subscriptionId:input.id,eventType:'subscription_activated',title:'Subscription activated',detail:'Payment was verified and your prepaid subscription is active.',effectiveAt:nextDispatchAt,now:input.now})
   return true
 }

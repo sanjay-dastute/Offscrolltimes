@@ -1,4 +1,4 @@
-type DeliveryRow={edition:string;name:string;address:string;phone:string;status:string;endsAt:string}
+type DeliveryRow={name:string;address:string;phone:string;status:string;endsAt:string}
 
 const safe=(value:string)=>value.replace(/[^\x20-\x7E]/g,'?').replace(/[\\()]/g,'\\$&').slice(0,118)
 const text=(value:string,x:number,y:number,size=8)=>`BT /F1 ${size} Tf ${x} ${y} Td (${safe(value)}) Tj ET`
@@ -9,8 +9,8 @@ export function deliveryPrintPdf(rows:DeliveryRow[],title:string){
   const pages:Array<string>=[]
   for(let start=0;start<Math.max(rows.length,1);start+=25){
     const body=rows.slice(start,start+25)
-    const lines=[text('OFFSCROLL TIMES - DELIVERY PRINT LIST',36,555,15),text(title,36,538,9),text('Edition',36,516,8),text('Customer and delivery address',105,516,8),text('Phone',475,516,8),text('Status / end date',590,516,8)]
-    body.forEach((row,index)=>{const y=496-index*18;lines.push(`36 ${y-4} m 806 ${y-4} l S`,text(row.edition,36,y),text(`${row.name} - ${row.address}`,105,y),text(row.phone,475,y),text(`${row.status} / ${row.endsAt}`,590,y))})
+    const lines=[text('OFFSCROLL TIMES - DELIVERY PRINT LIST',36,555,15),text(title,36,538,9),text('Customer and delivery address',36,516,8),text('Phone',520,516,8),text('Status / end date',635,516,8)]
+    body.forEach((row,index)=>{const y=496-index*18;lines.push(`36 ${y-4} m 806 ${y-4} l S`,text(`${row.name} - ${row.address}`,36,y),text(row.phone,520,y),text(`${row.status} / ${row.endsAt}`,635,y))})
     if(!body.length)lines.push(text('No active paid subscriptions are eligible for this edition.',36,496,10))
     pages.push(lines.join('\n'))
   }

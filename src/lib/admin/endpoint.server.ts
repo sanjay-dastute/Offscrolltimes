@@ -72,15 +72,23 @@ export async function mutateAdmin(request: Request) {
       return json({ok:true})
     }
     if (action === 'edition.create') {
-      const label = text(body.label, 100), issueNumber = Number(body.issueNumber), cutoff = Date.parse(String(body.cutoff)), dispatch = Date.parse(String(body.dispatch))
-      if (!label || !Number.isInteger(issueNumber) || issueNumber < 1 || !Number.isFinite(cutoff) || !Number.isFinite(dispatch) || dispatch <= cutoff) return json({ error: 'Enter valid edition dates and issue number.' }, 422)
-      return json({ ok: true, id: await createEdition(database, session.user.id, { label, issueNumber, cutoff, dispatch }) })
+      const label = text(body.label, 100), issueNumber = Number(body.issueNumber), copiesAvailable=Number(body.copiesAvailable ?? 0), cutoff = Date.parse(String(body.cutoff)), dispatch = Date.parse(String(body.dispatch))
+      if (!label || !Number.isInteger(issueNumber) || issueNumber < 1 || !Number.isSafeInteger(copiesAvailable) || copiesAvailable < 0 || !Number.isFinite(cutoff) || !Number.isFinite(dispatch) || dispatch <= cutoff) return json({ error: 'Enter a valid name, issue number, copy quantity and edition dates.' }, 422)
+      return json({ ok: true, id: await createEdition(database, session.user.id, { label, issueNumber, copiesAvailable, cutoff, dispatch }) })
     }
     if (action === 'edition.generate') {
       const editionId = text(body.editionId)
       if (!SAFE_ID.test(editionId)) return json({ error: 'Invalid edition.' }, 400)
       const count = await generateEditionEligibility(database, session.user.id, editionId)
       return count === null ? json({ error: 'Only a draft edition can generate a frozen eligibility snapshot.' }, 409) : json({ ok: true, count })
+    }
+    if(action==='edition.price'){
+      const editionId=text(body.editionId), copyPriceMinor=Number(body.copyPriceMinor)
+      if(!SAFE_ID.test(editionId)||!Number.isSafeInteger(copyPriceMinor)||copyPriceMinor<0)return json({error:'Enter a valid edition and copy price.'},422)
+      const result=await database.prepare(`UPDATE editions SET copy_price_minor=?,updated_at=? WHERE id=? AND status='draft'`).bind(copyPriceMinor,Date.now(),editionId).run()
+      if((result.meta.changes??0)!==1)return json({error:'Only draft editions can have their copy price changed.'},409)
+      await audit(database,session.user.id,'edition.price_updated','edition',editionId,{copyPriceMinor})
+      return json({ok:true})
     }
     if(action==='edition.override'){
       const editionId=text(body.editionId),subscriptionId=text(body.subscriptionId),reason=text(body.reason,500)
@@ -193,7 +201,7 @@ export async function getDispatchCsv(request: Request) {
   const format=new URL(request.url).searchParams.get('format')==='pdf'?'pdf':'csv'
   await audit(database,session.user.id,'edition.dispatch_exported','edition',editionId,{rowCount:rows.length,expiresWithinSeconds:120})
   if(format==='pdf'){
-    const pdf=deliveryPrintPdf(rows.map(row=>({edition:row.edition_label,name:row.address?.name??'',address:[row.address?.line1,row.address?.line2,row.address?.city,row.address?.region,row.address?.postalCode,row.address?.country].filter(Boolean).join(', '),phone:row.contact_phone??'',status:row.subscription_status,endsAt:row.ends_at?new Date(row.ends_at).toLocaleDateString('en-GB'):'—'})),`Edition ${editionId}`)
+    const pdf=deliveryPrintPdf(rows.map(row=>({name:row.address?.name??'',address:[row.address?.line1,row.address?.line2,row.address?.city,row.address?.region,row.address?.postalCode,row.address?.country].filter(Boolean).join(', '),phone:row.contact_phone??'',status:row.subscription_status,endsAt:row.ends_at?new Date(row.ends_at).toLocaleDateString('en-GB'):'—'})),'Delivery addresses')
     return new Response(pdf,{headers:{'Content-Type':'application/pdf','Content-Disposition':`attachment; filename="delivery-print-${editionId}.pdf"`,'Cache-Control':'private, no-store, max-age=0','X-Content-Type-Options':'nosniff'}})
   }
   const header = ['fulfilment_id','edition','quantity','name','address_line_1','address_line_2','city','region','postal_code','country','contact_email']

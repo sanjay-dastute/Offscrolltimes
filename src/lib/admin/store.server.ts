@@ -49,7 +49,7 @@ export async function getAdminDashboard(db: D1Database) {
   const rows = subscriptions.results as Array<Record<string, unknown>>
   const paymentRows = payments.results as Array<{ status: string; amount_minor: number; currency:string }>
   const fulfilmentRows = fulfilments.results as Array<{ subscription_id: string; edition_label: string; status: string }>
-  const editionRows = editions.results as Array<{ label: string; dispatch_at: number; status: string }>
+  const editionRows = editions.results as Array<{ label: string; dispatch_at: number; status: string; copies_available:number }>
   const now = Date.now()
   const expirationWindow = now + 30 * 24 * 60 * 60 * 1000
   const revenue = paymentRows.filter(p => p.status === 'paid').reduce((sum, p) => sum + Number(p.amount_minor), 0)
@@ -127,6 +127,7 @@ export async function getAdminDashboard(db: D1Database) {
         label: nextEditionRow.label,
         dispatchAt: Number(nextEditionRow.dispatch_at),
         copiesRequired: nextEditionFulfilments.reduce((sum, row) => sum + Number(subscriptionById.get(row.subscription_id)?.quantity ?? 1), 0),
+        copiesAvailable: Number(nextEditionRow.copies_available),
         eligibilityGenerated: nextEditionFulfilments.length > 0,
       } : null,
       countryDistribution: Array.from(countryCounts, ([country, totals]) => ({ country, ...totals })).sort((a, b) => b.subscriptions - a.subscriptions),
@@ -157,10 +158,10 @@ function parseJsonRecord(value: unknown): Record<string, unknown> | null {
   } catch { return null }
 }
 
-export async function createEdition(db: D1Database, actor: string, input: { label: string; issueNumber: number; cutoff: number; dispatch: number }) {
+export async function createEdition(db: D1Database, actor: string, input: { label: string; issueNumber: number; cutoff: number; dispatch: number; copiesAvailable:number }) {
   const editionId = `edition_${input.issueNumber}`
-  await db.prepare(`INSERT INTO editions (id, label, issue_number, eligibility_cutoff_at, dispatch_at, status, created_at, updated_at)
-    VALUES (?, ?, ?, ?, ?, 'draft', ?, ?)`).bind(editionId, input.label, input.issueNumber, input.cutoff, input.dispatch, Date.now(), Date.now()).run()
+  await db.prepare(`INSERT INTO editions (id, label, issue_number, eligibility_cutoff_at, dispatch_at, copies_available, status, created_at, updated_at)
+    VALUES (?, ?, ?, ?, ?, ?, 'draft', ?, ?)`).bind(editionId, input.label, input.issueNumber, input.cutoff, input.dispatch, input.copiesAvailable, Date.now(), Date.now()).run()
   await audit(db, actor, 'edition.created', 'edition', editionId, input)
   return editionId
 }

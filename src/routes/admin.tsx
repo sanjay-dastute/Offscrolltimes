@@ -2,7 +2,6 @@ import { createFileRoute } from '@tanstack/react-router'
 import { useEffect, useState } from 'react'
 import { SiteHeader } from '#/components/SiteHeader'
 import { CTA, CTA_OUTLINE, EYEBROW, H2 } from '#/lib/uiKit'
-import { AdminFileLibrary } from '#/components/AdminFileLibrary'
 import { AdminCustomers } from '#/components/AdminCustomers'
 import { AdminOffers } from '#/components/AdminOffers'
 import { AdminExports } from '#/components/AdminExports'
@@ -18,7 +17,7 @@ type AdminData = {
     customers: number; activeSubscriptions: number; activePaidEntitlements: number; entitledCopiesRemaining: number; upcomingExpirations: number; cancellations: number; completedTerms: number; renewals: number; retentionPercent: number
     addressExceptions: number; paymentExceptions: number; fulfilmentExceptions: number; deliveryExceptions: number
     paidRevenueMinor: number; refundedPayments: number; refundedMinor: number; discountRedemptions: number; discountCostMinor: number
-    nextEdition: { label: string; dispatchAt: number; copiesRequired: number; eligibilityGenerated: boolean } | null
+    nextEdition: { label: string; dispatchAt: number; copiesRequired: number; copiesAvailable:number; eligibilityGenerated: boolean } | null
     countryDistribution: Array<{ country: string; subscriptions: number; copies: number }>
     fulfilmentByCountry: Array<{ country: string; required: number; dispatched: number }>
     funnel: { pageViews:number; durationSelections:number; checkoutStarts:number; successfulPurchases:number; paymentFailures:number }
@@ -67,23 +66,20 @@ function AdminPage() {
     {error && <p role="alert" className="mb-6 rounded-xl border border-red-700 bg-red-50 p-4 text-red-900">{error}</p>}
     {data && <>
       <header className="flex flex-wrap items-end justify-between gap-5 border-b border-graphite pb-7"><div><p className={EYEBROW}>Administrator</p><h1 className="m-0 font-display text-5xl font-bold tracking-tight">Business control room</h1><p className="mt-3 text-graphite-soft">Signed in as {data.user.name ?? data.user.id}</p></div><button className={CTA_OUTLINE} onClick={async()=>{const response=await fetch('/api/admin/login',{method:'DELETE',headers:{'Content-Type':'application/json'},body:JSON.stringify({csrf:data.csrf})});if(response.ok){setData(null);setState('denied')}else{setError('Sign-out failed. Please retry.')}}}>Sign out</button></header>
-      <nav className="my-7 flex flex-wrap gap-2" aria-label="Admin sections">{['overview','customers','subscriptions','editions','enquiries','offers','catalogue','files','content','exports','audit'].map(item => <button key={item} onClick={() => setTab(item)} className={`rounded-full border border-graphite px-4 py-2 font-mono text-xs uppercase ${tab === item ? 'bg-graphite text-paper' : 'bg-paper'}`}>{item}</button>)}</nav>
+      <nav className="my-7 flex flex-wrap gap-2" aria-label="Admin sections">{['overview','customers','subscriptions','editions','offers','pricing','exports','audit'].map(item => <button key={item} onClick={() => setTab(item)} className={`rounded-full border border-graphite px-4 py-2 font-mono text-xs uppercase ${tab === item ? 'bg-graphite text-paper' : 'bg-paper'}`}>{item}</button>)}</nav>
       {tab === 'customers' && <AdminCustomers mutate={mutate} />}
       {tab === 'overview' && <Overview data={data} />}
       {tab === 'subscriptions' && <Subscriptions data={data} busy={busy} mutate={mutate} />}
       {tab === 'editions' && <Editions data={data} busy={busy} mutate={mutate} />}
-      {tab === 'enquiries' && <Enquiries rows={data.enquiries} busy={busy} mutate={mutate} />}
       {tab === 'offers' && <AdminOffers offers={data.discounts} busy={busy} mutate={mutate} />}
-      {tab === 'catalogue' && <Catalogue data={data} busy={busy} mutate={mutate} />}
-      {tab === 'files' && <AdminFileLibrary csrf={data.csrf} />}
-      {tab === 'content' && <Content data={data} busy={busy} mutate={mutate} />}
+      {tab === 'pricing' && <><Pricing data={data} busy={busy} mutate={mutate} /><EditionCopyPricing editions={data.editions} busy={busy} mutate={mutate} /></>}
       {tab === 'exports' && <AdminExports editions={data.editions} />}
       {tab === 'audit' && <Audit rows={data.audits} />}
     </>}
   </main></>
 }
 
-function Enquiries({ rows, busy, mutate }: { rows: Row[]; busy: boolean; mutate: (p: Record<string,unknown>) => Promise<boolean> }) {
+export function Enquiries({ rows, busy, mutate }: { rows: Row[]; busy: boolean; mutate: (p: Record<string,unknown>) => Promise<boolean> }) {
   return <section><h2 className={H2}>Contact enquiries</h2><div className="mt-6 grid gap-4">{rows.length === 0 && <p>No enquiries yet.</p>}{rows.map(row => <article className={card} key={row.id}><div className="flex flex-wrap items-start justify-between gap-3"><div><p className="m-0 font-mono text-xs font-bold uppercase">{row.reference} · {row.enquiry_type}</p><h3 className="mt-2 text-xl font-bold">{row.name}</h3><a href={`mailto:${row.email}`}>{row.email}</a>{row.country && <span> · {row.country}</span>}</div><select disabled={busy} value={row.status} className={`${input} w-auto`} onChange={event=>void mutate({action:'enquiry.update',enquiryId:row.id,status:event.target.value,staffNotes:row.staff_notes})}>{['new','in_progress','waiting_customer','resolved','closed'].map(status=><option key={status}>{status}</option>)}</select></div>{row.detail && <p className="mt-3 text-sm"><strong>Detail:</strong> {row.detail}</p>}<p className="mt-3 whitespace-pre-wrap text-sm">{row.message}</p><label className="mt-4 block text-sm font-bold">Private staff notes<textarea defaultValue={row.staff_notes} className={`${input} mt-1 min-h-24`} onBlur={event=>void mutate({action:'enquiry.update',enquiryId:row.id,status:row.status,staffNotes:event.target.value})}/></label></article>)}</div></section>
 }
 
@@ -96,7 +92,7 @@ function Overview({ data }: { data: AdminData }) {
   return <div className="grid gap-7">
     <section><div className="flex items-end justify-between gap-4"><div><p className={EYEBROW}>Subscription health</p><h2 className="text-2xl font-bold">Customer terms</h2></div><p className="font-mono text-xs uppercase">{data.reports.customers} customers</p></div><div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">{statusStats.map(([label,value]) => <Metric key={String(label)} label={String(label)} value={value} />)}</div></section>
     <section className="grid gap-4 lg:grid-cols-[1.2fr_2fr]">
-      <article className="rounded-2xl border border-graphite bg-sun p-6"><p className={EYEBROW}>Next edition</p>{data.reports.nextEdition ? <><h2 className="mt-2 text-3xl font-bold">{data.reports.nextEdition.label}</h2><strong className="mt-6 block text-5xl">{data.reports.nextEdition.copiesRequired}</strong><p className="mt-1">copies currently required</p><p className="mt-5 text-sm">Dispatch: {new Date(data.reports.nextEdition.dispatchAt).toLocaleDateString()}</p>{!data.reports.nextEdition.eligibilityGenerated && <p className="mt-3 rounded-lg border border-graphite bg-paper/70 p-3 text-sm">Generate the edition eligibility list to calculate its print quantity.</p>}</> : <><h2 className="mt-2 text-3xl font-bold">No edition scheduled</h2><p className="mt-4">Create the next edition to prepare its dispatch list.</p></>}</article>
+      <article className="rounded-2xl border border-graphite bg-sun p-6"><p className={EYEBROW}>Next edition</p>{data.reports.nextEdition ? <><h2 className="mt-2 text-3xl font-bold">{data.reports.nextEdition.label}</h2><strong className="mt-6 block text-5xl">{data.reports.nextEdition.copiesAvailable}</strong><p className="mt-1">copies available after sales</p><p className="mt-3 text-sm">{data.reports.nextEdition.copiesRequired} copies currently required for fulfilment</p><p className="mt-5 text-sm">Dispatch: {new Date(data.reports.nextEdition.dispatchAt).toLocaleDateString()}</p>{!data.reports.nextEdition.eligibilityGenerated && <p className="mt-3 rounded-lg border border-graphite bg-paper/70 p-3 text-sm">Generate the edition eligibility list to calculate its print quantity.</p>}</> : <><h2 className="mt-2 text-3xl font-bold">No edition scheduled</h2><p className="mt-4">Create the next edition to prepare its dispatch list.</p></>}</article>
       <div><p className={EYEBROW}>Needs attention</p><h2 className="text-2xl font-bold">Operational exceptions</h2><div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">{exceptions.map(([label,value]) => <Metric key={String(label)} label={`${label} exceptions`} value={value} alert={Number(value) > 0} />)}</div></div>
     </section>
     <section><p className={EYEBROW}>Commercial summary</p><h2 className="text-2xl font-bold">Revenue, refunds and promotions</h2><div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">{commercial.map(([label,value]) => <Metric key={String(label)} label={String(label)} value={value} />)}</div></section>
@@ -135,7 +131,7 @@ function Subscriptions({ data, busy, mutate }: { data: AdminData; busy: boolean;
 }
 
 function Editions({ data, busy, mutate }: { data: AdminData; busy: boolean; mutate: (p: Record<string,unknown>) => Promise<boolean> }) {
-  async function create(event: React.FormEvent<HTMLFormElement>) { event.preventDefault(); const form=event.currentTarget; const f = new FormData(form); if (await mutate({action:'edition.create',label:f.get('label'),issueNumber:Number(f.get('issue')),cutoff:f.get('cutoff'),dispatch:f.get('dispatch')})) form.reset() }
+  async function create(event: React.FormEvent<HTMLFormElement>) { event.preventDefault(); const form=event.currentTarget; const f = new FormData(form); const copiesAvailable=Number(f.get('copiesAvailable'))||Number(window.prompt('How many copies are available for this edition?','0')||0); if (await mutate({action:'edition.create',label:f.get('label'),issueNumber:Number(f.get('issue')),copiesAvailable,cutoff:f.get('cutoff'),dispatch:f.get('dispatch')})) form.reset() }
   return <EditionManager data={data} busy={busy} mutate={mutate} create={create}/>
   // Kept temporarily as a compact fallback while the richer manager remains API-compatible.
   return <div className="grid gap-7 lg:grid-cols-[360px_1fr]"><form className={card} onSubmit={create}><h2 className="text-2xl font-bold">Create edition</h2>{[['label','Edition label','text'],['issue','Issue number','number'],['cutoff','Eligibility cut-off','datetime-local'],['dispatch','Dispatch date','datetime-local']].map(([name,label,type]) => <label className="mt-4 block" key={name}><span className="mb-1 block text-sm">{label}</span><input className={input} required name={name} type={type}/></label>)}<button disabled={busy} className={`${CTA} mt-5`} type="submit">Create edition</button></form><section><h2 className={H2}>Editions and dispatch</h2><div className="mt-5 grid gap-4">{data.editions.map(e => <article className={card} key={e.id}><div className="flex flex-wrap justify-between gap-3"><div><strong>{e.label}</strong><p className="mt-1 text-sm capitalize">Issue {e.issue_number} · {e.status}</p></div><div className="flex gap-2"><button disabled={busy} className={CTA_OUTLINE} onClick={() => void mutate({action:'edition.generate',editionId:e.id})}>Generate list</button><a className={CTA_OUTLINE} href={`/api/admin/dispatch?edition=${encodeURIComponent(e.id)}`}>Export CSV</a></div></div><div className="mt-4 overflow-x-auto"><table className="w-full text-sm"><tbody>{data.fulfilments.filter(f => f.edition_label === e.label).map(f => <tr key={f.id}><td className="py-2">{f.subscription_id}</td><td className="py-2"><select className={input} value={f.status} onChange={event => void mutate({action:'fulfilment.status',fulfilmentId:f.id,status:event.target.value})}>{['scheduled','prepared','dispatched','delivered','delayed','returned','replacement'].map(s => <option key={s}>{s}</option>)}</select></td></tr>)}</tbody></table></div></article>)}</div></section></div>
@@ -151,7 +147,7 @@ function EditionManager({data,busy,mutate,create}:{data:AdminData;busy:boolean;m
         <details className="mt-4 border-t border-rule pt-4"><summary className="cursor-pointer font-bold">Edition audit trail ({editionAudits.length})</summary><div className="mt-3 grid gap-2">{editionAudits.map(item=><p className="text-sm" key={item.id}><strong>{item.action}</strong> · {new Date(item.created_at).toLocaleString()} · {item.actor_user_id}</p>)}</div></details></article>})}</div></section></div>
 }
 
-function Catalogue({ data, busy, mutate }: { data: AdminData; busy: boolean; mutate: (p: Record<string,unknown>) => Promise<boolean> }) {
+function Pricing({ data, busy, mutate }: { data: AdminData; busy: boolean; mutate: (p: Record<string,unknown>) => Promise<boolean> }) {
   const [preview,setPreview]=useState<Row|null>(null)
   async function submit(event: React.FormEvent<HTMLFormElement>, kind: string) { event.preventDefault(); const form=event.currentTarget; const o=Object.fromEntries(new FormData(form)); if(await mutate({action:'catalog.upsert',kind,...o,active:kind==='discount'?o.active==='on':true})) form.reset() }
   async function previewDiscount(event: React.FormEvent<HTMLFormElement>) { event.preventDefault(); const o=Object.fromEntries(new FormData(event.currentTarget)); const response=await fetch('/api/admin',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({csrf:data.csrf,action:'discount.preview',...o})}); const result=await response.json() as {quote?:Row;error?:string}; setPreview(result.quote??{error:result.error}) }
@@ -167,7 +163,13 @@ function Catalogue({ data, busy, mutate }: { data: AdminData; busy: boolean; mut
   </div>
 }
 
-function Content({ data, busy, mutate }: { data: AdminData; busy: boolean; mutate: (p: Record<string,unknown>) => Promise<boolean> }) {
+function EditionCopyPricing({editions,busy,mutate}:{editions:Row[];busy:boolean;mutate:(payload:Record<string,unknown>)=>Promise<boolean>}){
+  const drafts=editions.filter(edition=>edition.status==='draft')
+  async function submit(event:React.FormEvent<HTMLFormElement>){event.preventDefault();const form=new FormData(event.currentTarget);await mutate({action:'edition.price',editionId:form.get('editionId'),copyPriceMinor:Number(form.get('copyPriceMinor'))})}
+  return <section className={`${card} mt-6 max-w-xl`}><h2 className="text-2xl font-bold">Edition copy price</h2><p className="mt-2 text-sm text-graphite-soft">Choose a draft edition and save its per-copy reference price. This does not rewrite past orders.</p>{drafts.length?<form onSubmit={e=>void submit(e)} className="mt-4 grid gap-3 sm:grid-cols-2"><label>Edition<select required name="editionId" className={`${input} mt-1`}>{drafts.map(edition=><option key={edition.id} value={edition.id}>{edition.label} — Issue {edition.issue_number}</option>)}</select></label><label>Price in paise<input required min="0" name="copyPriceMinor" type="number" className={`${input} mt-1`}/></label><button disabled={busy} className={`${CTA} sm:col-span-2`}>Save edition price</button></form>:<p className="mt-4 text-sm">Create a draft edition before setting its copy price.</p>}</section>
+}
+
+export function Content({ data, busy, mutate }: { data: AdminData; busy: boolean; mutate: (p: Record<string,unknown>) => Promise<boolean> }) {
   async function submit(event: React.FormEvent<HTMLFormElement>) { event.preventDefault(); const form=event.currentTarget; const f=new FormData(form); if(await mutate({action:'content.upsert',key:f.get('key'),title:f.get('title'),body:f.get('body')})) form.reset() }
   return <div className="grid gap-7 lg:grid-cols-[420px_1fr]"><form className={card} onSubmit={submit}><h2 className="text-2xl font-bold">Update managed content</h2><label className="mt-4 block">Content key<input className={input} name="key" placeholder="faq_delivery" required/></label><label className="mt-4 block">Title<input className={input} name="title" required/></label><label className="mt-4 block">Body<textarea className={`${input} min-h-40`} name="body" required/></label><button disabled={busy} className={`${CTA} mt-4`}>Save content</button></form><section><h2 className={H2}>Managed content</h2><div className="mt-5 grid gap-3">{data.content.map(row=><article className={card} key={row.content_key}><p className="font-mono text-xs uppercase">{row.content_key}</p><h3 className="mt-2 text-xl font-bold">{row.title}</h3><p className="mt-2 whitespace-pre-wrap">{row.body}</p></article>)}</div></section></div>
 }
