@@ -43,6 +43,7 @@ import { Route as ApiAdminLoginRouteImport } from './routes/api.admin.login'
 import { Route as ApiAssetsIdRouteImport } from './routes/api.assets.$id'
 import { Route as ApiCustomerFilesRouteImport } from './routes/api.customer.files'
 import { Route as ApiRazorpayCheckoutRouteImport } from './routes/api.razorpay.checkout'
+import { Route as ApiRazorpaySubscriptionRouteImport } from './routes/api.razorpay.subscription'
 import { Route as ApiWebhooksRazorpayRouteImport } from './routes/api.webhooks.razorpay'
 import { Route as AuthProviderCallbackRouteImport } from './routes/auth.$provider.callback'
 import { Route as AuthProviderStartRouteImport } from './routes/auth.$provider.start'
@@ -220,6 +221,11 @@ const ApiRazorpayCheckoutRoute = ApiRazorpayCheckoutRouteImport.update({
   path: '/api/razorpay/checkout',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiRazorpaySubscriptionRoute = ApiRazorpaySubscriptionRouteImport.update({
+  id: '/api/razorpay/subscription',
+  path: '/api/razorpay/subscription',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiWebhooksRazorpayRoute = ApiWebhooksRazorpayRouteImport.update({
   id: '/api/webhooks/razorpay',
   path: '/api/webhooks/razorpay',
@@ -287,6 +293,7 @@ export interface FileRoutesByFullPath {
   '/api/assets/$id': typeof ApiAssetsIdRoute
   '/api/customer/files': typeof ApiCustomerFilesRoute
   '/api/razorpay/checkout': typeof ApiRazorpayCheckoutRoute
+  '/api/razorpay/subscription': typeof ApiRazorpaySubscriptionRoute
   '/api/webhooks/razorpay': typeof ApiWebhooksRazorpayRoute
   '/auth/$provider/callback': typeof AuthProviderCallbackRoute
   '/auth/$provider/start': typeof AuthProviderStartRoute
@@ -329,6 +336,7 @@ export interface FileRoutesByTo {
   '/api/assets/$id': typeof ApiAssetsIdRoute
   '/api/customer/files': typeof ApiCustomerFilesRoute
   '/api/razorpay/checkout': typeof ApiRazorpayCheckoutRoute
+  '/api/razorpay/subscription': typeof ApiRazorpaySubscriptionRoute
   '/api/webhooks/razorpay': typeof ApiWebhooksRazorpayRoute
   '/auth/$provider/callback': typeof AuthProviderCallbackRoute
   '/auth/$provider/start': typeof AuthProviderStartRoute
@@ -372,6 +380,7 @@ export interface FileRoutesById {
   '/api/assets/$id': typeof ApiAssetsIdRoute
   '/api/customer/files': typeof ApiCustomerFilesRoute
   '/api/razorpay/checkout': typeof ApiRazorpayCheckoutRoute
+  '/api/razorpay/subscription': typeof ApiRazorpaySubscriptionRoute
   '/api/webhooks/razorpay': typeof ApiWebhooksRazorpayRoute
   '/auth/$provider/callback': typeof AuthProviderCallbackRoute
   '/auth/$provider/start': typeof AuthProviderStartRoute
@@ -416,6 +425,7 @@ export interface FileRouteTypes {
     | '/api/assets/$id'
     | '/api/customer/files'
     | '/api/razorpay/checkout'
+    | '/api/razorpay/subscription'
     | '/api/webhooks/razorpay'
     | '/auth/$provider/callback'
     | '/auth/$provider/start'
@@ -458,6 +468,7 @@ export interface FileRouteTypes {
     | '/api/assets/$id'
     | '/api/customer/files'
     | '/api/razorpay/checkout'
+    | '/api/razorpay/subscription'
     | '/api/webhooks/razorpay'
     | '/auth/$provider/callback'
     | '/auth/$provider/start'
@@ -500,6 +511,7 @@ export interface FileRouteTypes {
     | '/api/assets/$id'
     | '/api/customer/files'
     | '/api/razorpay/checkout'
+    | '/api/razorpay/subscription'
     | '/api/webhooks/razorpay'
     | '/auth/$provider/callback'
     | '/auth/$provider/start'
@@ -536,6 +548,7 @@ export interface RootRouteChildren {
   PoliciesSlugRoute: typeof PoliciesSlugRoute
   ApiAssetsIdRoute: typeof ApiAssetsIdRoute
   ApiRazorpayCheckoutRoute: typeof ApiRazorpayCheckoutRoute
+  ApiRazorpaySubscriptionRoute: typeof ApiRazorpaySubscriptionRoute
   ApiWebhooksRazorpayRoute: typeof ApiWebhooksRazorpayRoute
   AuthProviderCallbackRoute: typeof AuthProviderCallbackRoute
   AuthProviderStartRoute: typeof AuthProviderStartRoute
@@ -781,6 +794,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiRazorpayCheckoutRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/razorpay/subscription': {
+      id: '/api/razorpay/subscription'
+      path: '/api/razorpay/subscription'
+      fullPath: '/api/razorpay/subscription'
+      preLoaderRoute: typeof ApiRazorpaySubscriptionRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/webhooks/razorpay': {
       id: '/api/webhooks/razorpay'
       path: '/api/webhooks/razorpay'
@@ -894,6 +914,7 @@ const rootRouteChildren: RootRouteChildren = {
   PoliciesSlugRoute: PoliciesSlugRoute,
   ApiAssetsIdRoute: ApiAssetsIdRoute,
   ApiRazorpayCheckoutRoute: ApiRazorpayCheckoutRoute,
+  ApiRazorpaySubscriptionRoute: ApiRazorpaySubscriptionRoute,
   ApiWebhooksRazorpayRoute: ApiWebhooksRazorpayRoute,
   AuthProviderCallbackRoute: AuthProviderCallbackRoute,
   AuthProviderStartRoute: AuthProviderStartRoute,

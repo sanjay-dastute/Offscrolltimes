@@ -24,6 +24,21 @@ export async function createRazorpayOrder(input:{amount:number;currency:string;r
   return api('/orders',{method:'POST',body:JSON.stringify(input)})
 }
 
+export async function createRazorpayPlan(input:{period:'monthly'|'quarterly'|'yearly';amount:number;currency:string;name:string;description:string;notes:Record<string,string>}) {
+  if(!Number.isSafeInteger(input.amount)||input.amount<100) throw new RangeError('Subscription amount must be at least 100 in the smallest currency unit.')
+  return api('/plans',{method:'POST',body:JSON.stringify({period:input.period,interval:1,item:{name:input.name,amount:input.amount,currency:input.currency,description:input.description},notes:input.notes})})
+}
+
+export async function createRazorpaySubscription(input:{planId:string;totalCount:number;notes:Record<string,string>}) {
+  if(!input.planId||!Number.isSafeInteger(input.totalCount)||input.totalCount<1) throw new RangeError('A valid subscription plan and billing-cycle count are required.')
+  return api('/subscriptions',{method:'POST',body:JSON.stringify({plan_id:input.planId,total_count:input.totalCount,quantity:1,customer_notify:false,notes:input.notes})})
+}
+
+export async function cancelRazorpaySubscription(subscriptionId:string) {
+  if(!subscriptionId) throw new RangeError('A Razorpay subscription id is required.')
+  return api(`/subscriptions/${encodeURIComponent(subscriptionId)}/cancel`,{method:'POST',body:JSON.stringify({cancel_at_cycle_end:1})})
+}
+
 export async function retrieveRazorpayPayment(id:string){ return api(`/payments/${encodeURIComponent(id)}`) }
 
 export async function createRazorpayRefund(paymentId:string, amount:number, notes:Record<string,string>={}) {
@@ -38,4 +53,5 @@ function signature(secret:string,payload:string,received:string){
 }
 
 export function verifyCheckoutSignature(orderId:string,paymentId:string,received:string){ return signature(credentials().keySecret,`${orderId}|${paymentId}`,received) }
+export function verifySubscriptionSignature(subscriptionId:string,paymentId:string,received:string){ return signature(credentials().keySecret,`${paymentId}|${subscriptionId}`,received) }
 export function verifyWebhookSignature(raw:string,received:string){ const secret=process.env.RAZORPAY_WEBHOOK_SECRET; return Boolean(secret&&signature(secret,raw,received)) }

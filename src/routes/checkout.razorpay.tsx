@@ -62,8 +62,8 @@ function RazorpayCheckout() {
     return () => { script.remove() }
   }, [])
 
-  async function send(action: 'create' | 'verify' | 'record_state', body: Record<string, unknown>) {
-    const response = await fetch('/api/razorpay/checkout', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action, csrf, ...body }) })
+  async function send(action: 'create' | 'verify', body: Record<string, unknown>) {
+    const response = await fetch('/api/razorpay/subscription', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action, csrf, ...body }) })
     const result = await response.json() as Record<string, unknown>
     if (!response.ok) throw new Error(typeof result.error === 'string' ? result.error : 'Payment request failed.')
     return result
@@ -79,7 +79,26 @@ function RazorpayCheckout() {
       const order = await send('create', { idempotencyKey: idempotencyKey.current, durationMonths: search.duration, quantity: search.quantity, discountCode: search.code, email: form.get('email'), phone: form.get('phone'), address, acceptTerms: form.get('terms') === 'on' })
       if (!window.Razorpay) throw new Error('Secure payment window did not load. Please retry.')
       setState('paying')
-      const checkout = new window.Razorpay({ key: order.keyId, amount: order.amount, currency: order.currency, order_id: order.orderId, name: 'Offscroll Times', description: `${search.duration}-month subscription · ${search.quantity} copies`, prefill: { name: form.get('name'), email: form.get('email'), contact: form.get('phone') }, theme: { color: '#f6c945' }, modal: { ondismiss: () => { void send('record_state', { orderId: order.orderId, paymentState: 'cancelled' }).catch(() => undefined); setState('cancelled') } }, handler: async (payment: Record<string, string>) => { setState('verifying'); try { const verified = await send('verify', payment); if (verified.status !== 'captured') throw new Error('Payment is awaiting capture. Check your account in a moment.'); setState('success') } catch (reason) { setError(reason instanceof Error ? reason.message : 'Payment verification failed.'); setState('failed') } } })
+      const checkout = new window.Razorpay({
+        key: order.keyId,
+        subscription_id: order.subscriptionId,
+        name: 'Offscroll Times',
+        description: `${search.duration}-month subscription · ${search.quantity} copies`,
+        prefill: { name: form.get('name'), email: form.get('email'), contact: form.get('phone') },
+        theme: { color: '#f6c945' },
+        modal: { ondismiss: () => setState('cancelled') },
+        handler: async (payment: Record<string, string>) => {
+          setState('verifying')
+          try {
+            const verified = await send('verify', payment)
+            if (verified.status !== 'captured') throw new Error('Mandate authorisation is awaiting capture. Check your account in a moment.')
+            setState('success')
+          } catch (reason) {
+            setError(reason instanceof Error ? reason.message : 'Mandate verification failed.')
+            setState('failed')
+          }
+        },
+      })
       checkout.on('payment.failed', () => { setError('Payment failed. No subscription has been activated. Please try again.'); setState('failed') })
       checkout.open()
     } catch (reason) { setError(reason instanceof Error ? reason.message : 'Payment could not be started.'); setState('failed') }

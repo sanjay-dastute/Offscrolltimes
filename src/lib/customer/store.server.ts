@@ -254,6 +254,25 @@ export async function applyCustomerPaymentSucceeded(db: D1Database, input: {
   return true
 }
 
+export async function recordCustomerSubscriptionRenewal(db: D1Database, input: {
+  id: string; paymentId: string; paidAt: number; amountMinor: number; currency: string; nextChargeAt?: number | null; now: number
+}) {
+  const subscription = await db.prepare(`SELECT owner_id,duration_months,paid_through_at FROM customer_subscriptions WHERE id=?`).bind(input.id).first<{owner_id:string;duration_months:number;paid_through_at:number|null}>()
+  if (!subscription) return false
+  const periodMs = subscription.duration_months * 2629800000
+  const base = Math.max(subscription.paid_through_at ?? 0, input.paidAt)
+  const paidThrough = base + periodMs
+  const inserted = await db.prepare(`INSERT INTO customer_payments(id,subscription_id,owner_id,provider_payment_id,status,amount_minor,currency,paid_at,created_at,updated_at)
+    VALUES(?,?,?,?, 'paid', ?,?,?,?,?) ON CONFLICT(provider_payment_id) DO NOTHING`).bind(`payment_${input.paymentId}`, input.id, subscription.owner_id, input.paymentId, input.amountMinor, input.currency, input.paidAt, input.now, input.now).run()
+  if ((inserted.meta.changes ?? 0) !== 1) return false
+  await db.batch([
+    db.prepare(`UPDATE customer_subscriptions SET status='active',entitlement_status='paid',ends_at=?,paid_through_at=?,renewal_enabled=1,renewal_at=?,renewal_amount_minor=?,updated_at=? WHERE id=?`).bind(paidThrough, paidThrough, input.nextChargeAt ?? paidThrough, input.amountMinor, input.now, input.id),
+    db.prepare(`UPDATE razorpay_recurring_subscriptions SET paid_count=paid_count+1,next_charge_at=?,status='active',updated_at=? WHERE subscription_id=?`).bind(input.nextChargeAt ?? null, input.now, input.id),
+  ])
+  await recordAccountEvent(db,{userId:subscription.owner_id,subscriptionId:input.id,eventType:'subscription_renewed',title:'Subscription renewed',detail:`Your next prepaid term was collected automatically.`,effectiveAt:paidThrough,now:input.now})
+  return true
+}
+
 export async function updateCustomerAddress(
   db: D1Database, userId: string, subscriptionId: string, address: CustomerAddress, now: number,
 ) {

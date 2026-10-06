@@ -12,6 +12,7 @@ import {
   type CustomerAddress,
 } from './store.server'
 import { RefundRequestError, requestFullRazorpayRefund } from '#/lib/refund.server'
+import { cancelRazorpaySubscription, RazorpayApiError } from '#/lib/razorpay.server'
 
 const SUBSCRIPTION_ID = /^[A-Za-z0-9_-]{6,160}$/
 const COUNTRY = /^[A-Z]{2}$/
@@ -145,8 +146,15 @@ export async function patchCustomerDashboard(request: Request): Promise<Response
   }
   if (body.action === 'pause' || body.action === 'resume')return json({error:'Pausing is not available.'},422)
   if (body.action === 'cancel') {
+    const provider=await db.prepare(`SELECT razorpay_subscription_id FROM razorpay_recurring_subscriptions WHERE subscription_id=? AND owner_id=?`).bind(subscriptionId,session.user.id).first<{razorpay_subscription_id:string}>()
+    if(provider){
+      try{await cancelRazorpaySubscription(provider.razorpay_subscription_id)}catch(error){
+        if(error instanceof RazorpayApiError)return json({error:'Razorpay could not stop the next automatic debit. Please try again.'},502)
+        throw error
+      }
+    }
     const updated = await requestCustomerAction(db, session.user.id, subscriptionId, body.action, Date.now())
-    return updated ? json({ ok: true }) : json({ error: 'Subscription not found.' }, 404)
+    return updated ? json({ ok: true,message:'Auto-renewal is cancelled. Your current prepaid term remains available.' }) : json({ error: 'Subscription not found.' }, 404)
   }
   if (body.action === 'refund') {
     try {
