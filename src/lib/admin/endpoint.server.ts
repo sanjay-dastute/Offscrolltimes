@@ -59,8 +59,8 @@ export async function mutateAdmin(request: Request) {
       return json({ok:true})
     }
     if (action === 'customer.contact') {
-      const userId=text(body.userId), name=text(body.name,100), email=text(body.email,200).toLowerCase(), phone=text(body.phone,30), whatsapp=text(body.whatsapp,30), reason=text(body.reason,500)
-      if(!SAFE_ID.test(userId)||!name||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)||reason.length<5||(phone&&!/^\+?[0-9 ()-]{7,30}$/.test(phone))||(whatsapp&&!/^\+[1-9][0-9]{7,14}$/.test(whatsapp)))return json({error:'Enter a name, valid email, correction reason and WhatsApp number with country code (for example +917373050093).'},422)
+      const userId=text(body.userId), name=text(body.name,100), email=text(body.email,200).toLowerCase(), phone=text(body.phone,30), whatsapp=text(body.whatsapp,30), reason=text(body.reason,500)||'Administrator contact edit'
+      if(!SAFE_ID.test(userId)||!name||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)||(phone&&!/^\+?[0-9 ()-]{7,30}$/.test(phone))||(whatsapp&&!/^\+[1-9][0-9]{7,14}$/.test(whatsapp)))return json({error:'Enter a name, valid email and WhatsApp number with country code (for example +917373050093).'},422)
       return await updateCustomerContact(database,session.user.id,{userId,name,email,phone,whatsapp,reason})?json({ok:true}):json({error:'Customer not found.'},404)
     }
     if (action === 'discount.toggle') {

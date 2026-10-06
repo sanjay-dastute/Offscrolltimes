@@ -16,7 +16,7 @@ const queries:Record<string,string>={
   fulfilments:'SELECT * FROM customer_fulfilments ORDER BY created_at,id',
   editions:'SELECT * FROM editions ORDER BY dispatch_at,id',
   eligibility:'SELECT * FROM edition_eligibility_snapshots ORDER BY created_at,id',
-  newsletter:'SELECT id,email,status,consent_at,consent_text,created_at,updated_at FROM newsletter_subscribers ORDER BY created_at,id',
+  newsletter:"SELECT id,email,status,consent_at,consent_text,created_at,updated_at FROM newsletter_subscribers WHERE status='subscribed' ORDER BY created_at,id",
   enquiries:'SELECT * FROM contact_enquiries ORDER BY created_at,id',
   discounts:'SELECT * FROM admin_discounts ORDER BY created_at,id',
   redemptions:'SELECT * FROM discount_redemptions ORDER BY created_at,id',
@@ -47,7 +47,8 @@ export async function downloadAdminExport(request:Request){
   if(body?.csrf!==session.csrf)return json({error:'Refresh your admin session and retry.'},403)
   const dataset=typeof body.dataset==='string'?body.dataset:''
   const format=body.format
-  if(!Object.hasOwn(queries,dataset)||!ADMIN_EXPORTS.some(item=>item[0]===dataset)||(format!=='csv'&&format!=='json'))return json({error:'Choose a valid export and format.'},422)
+  const newsletterText=dataset==='newsletter'&&format==='txt'
+  if(!Object.hasOwn(queries,dataset)||!ADMIN_EXPORTS.some(item=>item[0]===dataset)||(format!=='csv'&&format!=='json'&&!newsletterText))return json({error:'Choose a valid export and format.'},422)
   try{
     const db=lifecycleBindings().db
     // Read directly from D1, never from the paginated dashboard lists.
@@ -55,9 +56,9 @@ export async function downloadAdminExport(request:Request){
     const raw=await db.prepare(queries[dataset]).raw({columnNames:true})
     const columns=raw[0] as string[]
     const rows=raw.slice(1).map(values=>Object.fromEntries(columns.map((column,index)=>[column,values[index]])))
-    const content=format==='json'?JSON.stringify(rows,null,2):'\uFEFF'+[columns.map(exportCsvCell).join(','),...rows.map(row=>columns.map(column=>exportCsvCell(row[column])).join(','))].join('\r\n')
+    const content=newsletterText?rows.map(row=>String(row.email??'').trim()).filter(Boolean).join('\r\n')+'\r\n':format==='json'?JSON.stringify(rows,null,2):'\uFEFF'+[columns.map(exportCsvCell).join(','),...rows.map(row=>columns.map(column=>exportCsvCell(row[column])).join(','))].join('\r\n')
     await audit(db,session.user.id,'data.exported','dataset',dataset,{format,rowCount:rows.length})
     const filename=`offscroll-${dataset}-${new Date().toISOString().slice(0,10)}.${format}`
-    return new Response(content,{headers:{'Content-Type':format==='csv'?'text/csv; charset=utf-8':'application/json; charset=utf-8','Content-Disposition':`attachment; filename="${filename}"`,'Cache-Control':'private, no-store','X-Content-Type-Options':'nosniff','Referrer-Policy':'no-referrer'}})
+    return new Response(content,{headers:{'Content-Type':newsletterText?'text/plain; charset=utf-8':format==='csv'?'text/csv; charset=utf-8':'application/json; charset=utf-8','Content-Disposition':`attachment; filename="${filename}"`,'Cache-Control':'private, no-store','X-Content-Type-Options':'nosniff','Referrer-Policy':'no-referrer'}})
   }catch{return json({error:'Export could not be completed. Please retry.'},503)}
 }

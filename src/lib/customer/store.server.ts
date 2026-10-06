@@ -141,11 +141,13 @@ export async function listCustomerSubscriptions(db: D1Database, userId: string) 
             next_dispatch_at, copies_total, copies_fulfilled,
             cancellation_requested_at, paused_at, entitlement_status, paid_through_at,
             payment_provider,renewal_enabled,renewal_at,renewal_amount_minor
-       FROM customer_subscriptions WHERE owner_id = ? ORDER BY created_at DESC`,
+       FROM customer_subscriptions s WHERE owner_id = ?
+         AND EXISTS (SELECT 1 FROM customer_payments p WHERE p.subscription_id=s.id AND p.owner_id=s.owner_id AND p.status='paid')
+       ORDER BY created_at DESC`,
   ).bind(userId).all<SubscriptionRow>()
   const payments = await db.prepare(
     `SELECT id, subscription_id, status, amount_minor, currency, invoice_url, paid_at, created_at, (SELECT provider_status FROM refunds WHERE payment_id=customer_payments.id ORDER BY created_at DESC LIMIT 1) refund_status
-       FROM customer_payments WHERE owner_id = ? ORDER BY created_at DESC`,
+       FROM customer_payments WHERE owner_id = ? AND status='paid' ORDER BY created_at DESC`,
   ).bind(userId).all<{
     refund_status:string|null;id: string; subscription_id: string; status: string; amount_minor: number; currency: string
     invoice_url: string | null; paid_at: number | null; created_at: number

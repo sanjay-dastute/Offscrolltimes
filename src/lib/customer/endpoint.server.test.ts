@@ -3,7 +3,7 @@ import { sessionCookie, type SessionData } from '#/lib/auth.server'
 import { initRequestLifecycleBindings, resetRequestLifecycleBindings } from '#/lib/lifecycle/env.server'
 import { createTestD1 } from '#/lib/lifecycle/testing'
 import { getCustomerDashboard, isAddressChangeBeforeCutoff, patchCustomerDashboard } from './endpoint.server'
-import { listCustomerSubscriptions, registerCustomerCheckout } from './store.server'
+import { applyCustomerPaymentSucceeded, listCustomerSubscriptions, registerCustomerCheckout } from './store.server'
 import { firstEditionTimestamp } from '#/lib/dates'
 import { testing as authTesting } from '#/lib/auth.server'
 import { customerDirectory } from '#/lib/admin/directory.server'
@@ -108,6 +108,8 @@ describe('customer role and ownership endpoints', () => {
     const now = Date.now()
     await registerCustomerCheckout(db, { id: 'checkout_owner1', userId: 'user_a', planId: 'plan_a', planName: 'Monthly', durationMonths: 1, quantity: 1, currency: 'USD', amountMinor: 999, now })
     await registerCustomerCheckout(db, { id: 'checkout_owner2', userId: 'user_b', planId: 'plan_b', planName: 'Annual', durationMonths: 12, quantity: 1, currency: 'USD', amountMinor: 8999, now })
+    await applyCustomerPaymentSucceeded(db, { id: 'checkout_owner1', payerUserId: 'user_a', paymentId: 'pay_owner1', paidAt: now, now })
+    await applyCustomerPaymentSucceeded(db, { id: 'checkout_owner2', payerUserId: 'user_b', paymentId: 'pay_owner2', paidAt: now, now })
     const response = await getCustomerDashboard(await requestFor('user_a', '/api/customer'))
     const body = await response.json() as { subscriptions: Array<{ id: string }> }
     expect(response.status).toBe(200)
@@ -115,13 +117,15 @@ describe('customer role and ownership endpoints', () => {
   })
 
   it('does not allow one customer to cancel another customer subscription', async () => {
-    await registerCustomerCheckout(db, { id: 'checkout_private', userId: 'user_b', planId: 'plan_b', planName: 'Annual', durationMonths: 12, quantity: 1, currency: 'USD', amountMinor: 8999, now: Date.now() })
+    const now = Date.now()
+    await registerCustomerCheckout(db, { id: 'checkout_private', userId: 'user_b', planId: 'plan_b', planName: 'Annual', durationMonths: 12, quantity: 1, currency: 'USD', amountMinor: 8999, now })
+    await applyCustomerPaymentSucceeded(db, { id: 'checkout_private', payerUserId: 'user_b', paymentId: 'pay_private', paidAt: now, now })
     const request = await requestFor('user_a', '/api/customer', {
       method: 'PATCH', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ csrf: 'csrf-user_a', subscriptionId: 'checkout_private', action: 'cancel' }),
     })
     expect((await patchCustomerDashboard(request)).status).toBe(404)
-    expect((await listCustomerSubscriptions(db, 'user_b')).subscriptions[0]?.status).toBe('upcoming')
+    expect((await listCustomerSubscriptions(db, 'user_b')).subscriptions[0]?.status).toBe('active')
   })
 })
 
