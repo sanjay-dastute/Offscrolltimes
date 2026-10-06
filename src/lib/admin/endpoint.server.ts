@@ -11,8 +11,8 @@ import { deliveryPrintPdf } from './dispatch-pdf.server'
 import { updateCustomerContact } from './directory.server'
 import { RefundRequestError, requestFullRazorpayRefund } from '#/lib/refund.server'
 import {
-  activePaidDeliveryRows, audit, createEdition, dispatchRows, generateEditionEligibility, getAdminDashboard, lockEdition, overrideEditionEligibility,
-  updateAdminAddress, updateEnquiry, updateFulfilment, updateSubscriptionStatus, upsertCatalog, upsertContent,
+  activePaidDeliveryRows, audit, createEdition, deleteEdition, dispatchRows, generateEditionEligibility, getAdminDashboard, lockEdition, overrideEditionEligibility,
+  updateAdminAddress, updateEdition, updateEnquiry, updateFulfilment, updateSubscriptionStatus, upsertCatalog, upsertContent,
 } from './store.server'
 
 const SAFE_ID = /^[A-Za-z0-9_-]{1,160}$/
@@ -75,6 +75,18 @@ export async function mutateAdmin(request: Request) {
       const label = text(body.label, 100), issueNumber = Number(body.issueNumber), copiesAvailable=Number(body.copiesAvailable ?? 0), dispatch = body.dispatch?Date.parse(String(body.dispatch)):NaN, cutoff = body.cutoff?Date.parse(String(body.cutoff)):dispatch-24*60*60*1000
       if (!label || !Number.isInteger(issueNumber) || issueNumber < 1 || !Number.isSafeInteger(copiesAvailable) || copiesAvailable < 0 || !Number.isFinite(cutoff) || !Number.isFinite(dispatch) || dispatch <= cutoff) return json({ error: 'Enter a valid edition name, number and copy quantity.' }, 422)
       return json({ ok: true, id: await createEdition(database, session.user.id, { label, issueNumber, copiesAvailable, cutoff, dispatch }) })
+    }
+    if (action === 'edition.update') {
+      const editionId=text(body.editionId), label=text(body.label,100), issueNumber=Number(body.issueNumber), copiesAvailable=Number(body.copiesAvailable), dispatch=body.dispatch?Date.parse(String(body.dispatch)):NaN, cutoff=dispatch-24*60*60*1000
+      if(!SAFE_ID.test(editionId)||!label||!Number.isInteger(issueNumber)||issueNumber<1||!Number.isSafeInteger(copiesAvailable)||copiesAvailable<0||!Number.isFinite(dispatch))return json({error:'Enter a valid edition name, number, copy quantity and dispatch date.'},422)
+      try {
+        return await updateEdition(database,session.user.id,editionId,{label,issueNumber,copiesAvailable,cutoff,dispatch})?json({ok:true}):json({error:'Only editions without a generated delivery list can be edited.'},409)
+      } catch { return json({error:'That edition number is already in use.'},409) }
+    }
+    if (action === 'edition.delete') {
+      const editionId=text(body.editionId)
+      if(!SAFE_ID.test(editionId)||body.confirm!==true)return json({error:'Confirm the unused edition deletion.'},422)
+      return await deleteEdition(database,session.user.id,editionId)?json({ok:true}):json({error:'Only editions without a generated delivery list can be deleted.'},409)
     }
     if (action === 'edition.generate') {
       const editionId = text(body.editionId)

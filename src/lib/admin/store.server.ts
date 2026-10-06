@@ -166,6 +166,28 @@ export async function createEdition(db: D1Database, actor: string, input: { labe
   return editionId
 }
 
+export async function updateEdition(db: D1Database, actor: string, editionId: string, input: { label: string; issueNumber: number; cutoff: number; dispatch: number; copiesAvailable: number }) {
+  const result = await db.prepare(`UPDATE editions
+    SET label=?, issue_number=?, eligibility_cutoff_at=?, dispatch_at=?, copies_available=?, updated_at=?
+    WHERE id=? AND status IN ('draft','locked')
+      AND NOT EXISTS(SELECT 1 FROM edition_eligibility_snapshots WHERE edition_id=editions.id)
+      AND NOT EXISTS(SELECT 1 FROM customer_fulfilments WHERE edition_label=editions.label)`) 
+    .bind(input.label, input.issueNumber, input.cutoff, input.dispatch, input.copiesAvailable, Date.now(), editionId).run()
+  if ((result.meta.changes ?? 0) !== 1) return false
+  await audit(db, actor, 'edition.updated', 'edition', editionId, input)
+  return true
+}
+
+export async function deleteEdition(db: D1Database, actor: string, editionId: string) {
+  const result = await db.prepare(`DELETE FROM editions
+    WHERE id=? AND status IN ('draft','locked')
+      AND NOT EXISTS(SELECT 1 FROM edition_eligibility_snapshots WHERE edition_id=editions.id)
+      AND NOT EXISTS(SELECT 1 FROM customer_fulfilments WHERE edition_label=editions.label)`).bind(editionId).run()
+  if ((result.meta.changes ?? 0) !== 1) return false
+  await audit(db, actor, 'edition.deleted', 'edition', editionId, {})
+  return true
+}
+
 export async function generateEditionEligibility(db: D1Database, actor: string, editionId: string) {
   const edition = await db.prepare(`SELECT id, label, eligibility_cutoff_at, dispatch_at, status FROM editions WHERE id = ?`).bind(editionId).first<{ id: string; label: string; eligibility_cutoff_at: number; dispatch_at:number; status: string }>()
   // This is a frozen point-in-time business record. Corrections happen through

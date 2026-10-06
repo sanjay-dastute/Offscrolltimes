@@ -39,10 +39,10 @@ export function AdminCustomers({mutate,csrf,initialGroup='all'}:{mutate:(payload
   return <section>
     <h2 className={H2}>{status==='newsletter'?'Newsletter subscribers':'Customer directory'}</h2>
     <p className="mt-3 text-sm">{status==='newsletter'?'People who explicitly opted in to Offscroll Times email updates.':'All registered users, including people who have not subscribed. Payment status refers to the latest recorded payment.'}</p>
-    <div className="my-6 grid gap-4 sm:grid-cols-2">
+    {status!=='newsletter'&&<div className="my-6 grid gap-4 sm:grid-cols-2">
       <label>Name, email, phone or WhatsApp<input className={`${FIELD} mt-2`} type="search" value={query} onChange={event=>{setQuery(event.target.value);setPage(1)}}/></label>
       <label>Customer group<select className={`${FIELD} mt-2`} value={status} onChange={event=>{setStatus(event.target.value);setPage(1)}}><option value="all">All registered users</option><option value="subscribers">Has a subscription</option><option value="registered">No subscription yet</option><option value="newsletter">Newsletter subscribers</option><option value="deletion">Deletion requested</option></select></label>
-    </div>
+    </div>}
     {error&&<div role="alert" className="my-4"><p>{error}</p><button className={CTA_OUTLINE} onClick={()=>setRevision(value=>value+1)}>Retry</button></div>}
     {loading&&<p role="status">Loading customers…</p>}
     {!loading&&!error&&data&&<>{status==='newsletter'?<section className="rounded-2xl border border-graphite bg-paper p-5"><div className="flex flex-wrap items-center justify-between gap-3"><div><h3 className="text-xl font-bold">Newsletter subscribers</h3><p className="mt-1 text-sm">{data.newsletterSubscribers.length} active subscribers. Unsubscribed addresses are excluded.</p></div><button className={CTA} onClick={()=>void downloadSubscribers()}>Download emails (.txt)</button></div><div className="mt-5 grid gap-2">{data.newsletterSubscribers.map(subscriber=><p className="rounded-xl border border-rule p-3" key={subscriber.id}>{subscriber.email}</p>)}{!data.newsletterSubscribers.length&&<p>No active newsletter subscribers.</p>}</div></section>:<>

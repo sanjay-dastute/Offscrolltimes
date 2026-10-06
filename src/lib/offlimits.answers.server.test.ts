@@ -3,7 +3,7 @@ import { sessionCookie,type SessionData } from '#/lib/auth.server'
 import { initRequestLifecycleBindings,resetRequestLifecycleBindings } from '#/lib/lifecycle/env.server'
 import { createTestD1 } from '#/lib/lifecycle/testing'
 import { listPublicAnswerSheets } from '../routes/api.answers'
-import { listAdminAnswerSheets,uploadAdminAnswerSheet } from '../routes/api.admin.answers'
+import { deleteAdminAnswerSheet, listAdminAnswerSheets,replaceAdminAnswerSheet,updateAdminAnswerSheet,uploadAdminAnswerSheet } from '../routes/api.admin.answers'
 import { objectResponse } from './object-storage.server'
 
 let db:D1Database
@@ -40,5 +40,20 @@ describe('OFFLIMITS answer sheets',()=>{
     expect((await uploadAdminAnswerSheet(await request(headers))).status).toBe(201)
     expect((await uploadAdminAnswerSheet(await request(headers))).status).toBe(409)
     expect((await uploadAdminAnswerSheet(new Request('https://example.com/api/admin/answers',{method:'POST',headers:{Origin:'https://example.com'}}))).status).toBe(403)
+  })
+  it('allows an administrator to rename, replace, and delete an answer sheet',async()=>{
+    const original=new Uint8Array([37,80,68,70,45,49]),replacement=new Uint8Array([37,80,68,70,45,50])
+    const published=await uploadAdminAnswerSheet(await adminRequest({method:'POST',headers:{'Content-Type':'application/pdf','X-CSRF-Token':'csrf-admin_1','X-Issue-Number':'3','X-Issue-Date':'2026-10-03','X-File-Name':'original.pdf','X-File-Size':String(original.byteLength)},body:original}))
+    const {id,assetId}=await published.json() as {id:string;assetId:string}
+    expect((await updateAdminAnswerSheet(await adminRequest({method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({csrf:'csrf-admin_1',id,issueNumber:'Three',issueDate:'2026-10-04'})}))).status).toBe(200)
+    const replaced=await replaceAdminAnswerSheet(await adminRequest({method:'PUT',headers:{'Content-Type':'application/pdf','X-CSRF-Token':'csrf-admin_1','X-Answer-Id':id,'X-File-Name':'replacement.pdf','X-File-Size':String(replacement.byteLength)},body:replacement}))
+    expect(replaced.status).toBe(200)
+    const replacementId=(await replaced.json() as {assetId:string}).assetId
+    expect(replacementId).not.toBe(assetId)
+    expect(await objectResponse(assetId,{})).toBeNull()
+    expect((await listPublicAnswerSheets()).json()).resolves.toMatchObject({answers:[{issueNumber:'Three',issueDate:'2026-10-04',assetId:replacementId}]})
+    expect((await deleteAdminAnswerSheet(await adminRequest({method:'DELETE',headers:{'Content-Type':'application/json'},body:JSON.stringify({csrf:'csrf-admin_1',id})}))).status).toBe(200)
+    expect((await listPublicAnswerSheets()).json()).resolves.toMatchObject({answers:[]})
+    expect(await objectResponse(replacementId,{})).toBeNull()
   })
 })

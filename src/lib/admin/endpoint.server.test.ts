@@ -78,6 +78,14 @@ describe('administrator authorization and fulfilment', () => {
     expect(text).not.toContain(process.env.SESSION_SECRET!)
   })
 
+  it('edits and deletes an unused edition, but only before a delivery list exists', async () => {
+    expect((await mutation('admin_1',{action:'edition.create',label:'Launch edition',issueNumber:7,copiesAvailable:100,dispatch:'2026-12-20'})).status).toBe(200)
+    expect((await mutation('admin_1',{action:'edition.update',editionId:'edition_7',label:'December launch',issueNumber:7,copiesAvailable:0,dispatch:'2026-12-22'})).status).toBe(200)
+    expect(await db.prepare(`SELECT label,copies_available FROM editions WHERE id='edition_7'`).first()).toMatchObject({label:'December launch',copies_available:0})
+    expect((await mutation('admin_1',{action:'edition.delete',editionId:'edition_7',confirm:true})).status).toBe(200)
+    expect(await db.prepare(`SELECT id FROM editions WHERE id='edition_7'`).first()).toBeNull()
+  })
+
   it('creates an edition, generates paid eligibility, and exports a minimal dispatch CSV', async () => {
     const now = Date.now()
     await registerCustomerCheckout(db, { id: 'order_customer_1', userId: 'customer_1', planId: 'monthly', planName: 'Monthly', durationMonths: 1, quantity: 1, currency: 'INR', amountMinor: 79900, now })

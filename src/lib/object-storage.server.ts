@@ -21,6 +21,17 @@ export async function storeObject(input:{category:StoredCategory;ownerId?:string
   return id
 }
 
+/** Retire metadata before deleting the bucket object so a published file is
+ * immediately inaccessible even if the bucket operation later fails. */
+export async function retireObject(id:string){
+  const {db,bucket}=storageBindings()
+  const record=await db.prepare(`SELECT object_key FROM object_storage_records WHERE id=? AND deleted_at IS NULL`).bind(id).first<{object_key:string}>()
+  if(!record)return false
+  await db.prepare(`UPDATE object_storage_records SET deleted_at=? WHERE id=? AND deleted_at IS NULL`).bind(Date.now(),id).run()
+  await bucket.delete(record.object_key)
+  return true
+}
+
 export async function objectResponse(id:string,actor:{ownerId?:string;admin?:boolean}){
   const {db,bucket}=storageBindings()
   const row=await db.prepare(`SELECT object_key,owner_id,original_name,content_type,visibility FROM object_storage_records WHERE id=? AND deleted_at IS NULL`).bind(id).first<{object_key:string;owner_id:string|null;original_name:string;content_type:string;visibility:string}>()
