@@ -80,13 +80,13 @@ export async function mutateAdmin(request: Request) {
       const editionId=text(body.editionId), label=text(body.label,100), issueNumber=Number(body.issueNumber), copiesAvailable=Number(body.copiesAvailable), dispatch=body.dispatch?Date.parse(String(body.dispatch)):NaN, cutoff=dispatch-24*60*60*1000
       if(!SAFE_ID.test(editionId)||!label||!Number.isInteger(issueNumber)||issueNumber<1||!Number.isSafeInteger(copiesAvailable)||copiesAvailable<0||!Number.isFinite(dispatch))return json({error:'Enter a valid edition name, number, copy quantity and dispatch date.'},422)
       try {
-        return await updateEdition(database,session.user.id,editionId,{label,issueNumber,copiesAvailable,cutoff,dispatch})?json({ok:true}):json({error:'Only editions without a generated delivery list can be edited.'},409)
+        return await updateEdition(database,session.user.id,editionId,{label,issueNumber,copiesAvailable,cutoff,dispatch})?json({ok:true}):json({error:'Only editions with no prepared or dispatched copies can be edited.'},409)
       } catch { return json({error:'That edition number is already in use.'},409) }
     }
     if (action === 'edition.delete') {
       const editionId=text(body.editionId)
       if(!SAFE_ID.test(editionId)||body.confirm!==true)return json({error:'Confirm the unused edition deletion.'},422)
-      return await deleteEdition(database,session.user.id,editionId)?json({ok:true}):json({error:'Only editions without a generated delivery list can be deleted.'},409)
+      return await deleteEdition(database,session.user.id,editionId)?json({ok:true}):json({error:'Only editions with no prepared or dispatched copies can be removed.'},409)
     }
     if (action === 'edition.generate') {
       const editionId = text(body.editionId)

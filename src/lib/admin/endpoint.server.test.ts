@@ -84,7 +84,20 @@ describe('administrator authorization and fulfilment', () => {
     expect((await mutation('admin_1',{action:'edition.update',editionId:'edition_7',label:'December launch',issueNumber:7,copiesAvailable:0,dispatch:'2026-12-22'})).status).toBe(200)
     expect(await db.prepare(`SELECT label,copies_available FROM editions WHERE id='edition_7'`).first()).toMatchObject({label:'December launch',copies_available:0})
     expect((await mutation('admin_1',{action:'edition.delete',editionId:'edition_7',confirm:true})).status).toBe(200)
-    expect(await db.prepare(`SELECT id FROM editions WHERE id='edition_7'`).first()).toBeNull()
+    expect(await db.prepare(`SELECT deleted_at FROM editions WHERE id='edition_7'`).first<{deleted_at:number}>()).toMatchObject({deleted_at:expect.any(Number)})
+  })
+
+  it('allows a locked edition with no prepared copies to be edited or removed from the working list', async () => {
+    const now = Date.now()
+    expect((await mutation('admin_1',{action:'edition.create',label:'Locked edition',issueNumber:8,copiesAvailable:100,cutoff:new Date(now + 1_000).toISOString(),dispatch:new Date(now + 86_400_000).toISOString()})).status).toBe(200)
+    expect((await mutation('admin_1',{action:'edition.generate',editionId:'edition_8'})).status).toBe(200)
+    expect((await mutation('admin_1',{action:'edition.lock',editionId:'edition_8',reason:'No copies have been prepared'})).status).toBe(200)
+    expect((await mutation('admin_1',{action:'edition.update',editionId:'edition_8',label:'Corrected locked edition',issueNumber:8,copiesAvailable:120,dispatch:new Date(now + 172_800_000).toISOString()})).status).toBe(200)
+    expect((await mutation('admin_1',{action:'edition.delete',editionId:'edition_8',confirm:true})).status).toBe(200)
+    expect(await db.prepare(`SELECT deleted_at FROM editions WHERE id='edition_8'`).first<{deleted_at:number}>()).toMatchObject({ deleted_at: expect.any(Number) })
+    const dashboard=await getAdmin(await request('admin_1','/api/admin'))
+    const body=await dashboard.json() as { editions:Array<{id:string}> }
+    expect(body.editions.find(edition=>edition.id==='edition_8')).toBeUndefined()
   })
 
   it('reserves paid term copies in each monthly edition instead of all copies in the first edition', async () => {

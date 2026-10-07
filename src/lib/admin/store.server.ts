@@ -31,7 +31,7 @@ export async function getAdminDashboard(db: D1Database) {
       amount_minor, currency, paid_at, created_at FROM customer_payments ORDER BY created_at DESC,id DESC`).all(),
     db.prepare(`SELECT id, subscription_id, owner_id customer_id, edition_label, status,
       tracking_url, dispatched_at, delivered_at, created_at FROM customer_fulfilments ORDER BY created_at DESC,id DESC`).all(),
-    db.prepare(`SELECT * FROM editions ORDER BY dispatch_at DESC LIMIT 100`).all(),
+    db.prepare(`SELECT * FROM editions WHERE deleted_at IS NULL ORDER BY dispatch_at DESC LIMIT 100`).all(),
     db.prepare(`SELECT * FROM edition_eligibility_snapshots ORDER BY created_at DESC LIMIT 5000`).all(),
     db.prepare(`SELECT * FROM admin_products ORDER BY name`).all(),
     db.prepare(`SELECT * FROM admin_subscription_options ORDER BY duration_months`).all(),
@@ -183,11 +183,15 @@ export async function createEdition(db: D1Database, actor: string, input: { labe
 export async function updateEdition(db: D1Database, actor: string, editionId: string, input: { label: string; issueNumber: number; cutoff: number; dispatch: number; copiesAvailable: number }) {
   const committed = await committedCopiesForEdition(db, input.cutoff)
   const available = Math.max(0, input.copiesAvailable - committed)
+  const edition = await db.prepare(`SELECT label, status FROM editions WHERE id=? AND deleted_at IS NULL`).bind(editionId).first<{label:string;status:string}>()
+  if (!edition || !['draft','eligibility_generated','locked'].includes(edition.status)) return false
+  const progressed = await db.prepare(`SELECT id FROM customer_fulfilments WHERE edition_label=? AND status <> 'scheduled' LIMIT 1`).bind(edition.label).first()
+  const hasFulfilments = await db.prepare(`SELECT id FROM customer_fulfilments WHERE edition_label=? LIMIT 1`).bind(edition.label).first()
+  // Renaming after a delivery row exists would sever its immutable fulfilment history.
+  if (progressed || (hasFulfilments && edition.label !== input.label)) return false
   const result = await db.prepare(`UPDATE editions
     SET label=?, issue_number=?, eligibility_cutoff_at=?, dispatch_at=?, copies_available=?, updated_at=?
-    WHERE id=? AND status IN ('draft','locked')
-      AND NOT EXISTS(SELECT 1 FROM edition_eligibility_snapshots WHERE edition_id=editions.id)
-      AND NOT EXISTS(SELECT 1 FROM customer_fulfilments WHERE edition_label=editions.label)`) 
+    WHERE id=? AND deleted_at IS NULL`) 
     .bind(input.label, input.issueNumber, input.cutoff, input.dispatch, available, Date.now(), editionId).run()
   if ((result.meta.changes ?? 0) !== 1) return false
   await audit(db, actor, 'edition.updated', 'edition', editionId, { ...input, committedCopies: committed, copiesAvailableAfterReservations: available })
@@ -210,12 +214,17 @@ async function committedCopiesForEdition(db: D1Database, cutoff: number) {
 }
 
 export async function deleteEdition(db: D1Database, actor: string, editionId: string) {
-  const result = await db.prepare(`DELETE FROM editions
-    WHERE id=? AND status IN ('draft','locked')
-      AND NOT EXISTS(SELECT 1 FROM edition_eligibility_snapshots WHERE edition_id=editions.id)
-      AND NOT EXISTS(SELECT 1 FROM customer_fulfilments WHERE edition_label=editions.label)`).bind(editionId).run()
+  const edition = await db.prepare(`SELECT label, issue_number, status FROM editions WHERE id=? AND deleted_at IS NULL`).bind(editionId).first<{label:string;issue_number:number;status:string}>()
+  if (!edition || !['draft','eligibility_generated','locked'].includes(edition.status)) return false
+  const progressed = await db.prepare(`SELECT id FROM customer_fulfilments WHERE edition_label=? AND status <> 'scheduled' LIMIT 1`).bind(edition.label).first()
+  if (progressed) return false
+  const now = Date.now()
+  // Keep the locked eligibility/audit history but remove the edition from all
+  // operational screens and free its human issue number for a replacement.
+  const result = await db.prepare(`UPDATE editions SET label=?, issue_number=?, status='completed', deleted_at=?, updated_at=? WHERE id=? AND deleted_at IS NULL`)
+    .bind(`[Deleted] ${edition.label}`, -now, now, now, editionId).run()
   if ((result.meta.changes ?? 0) !== 1) return false
-  await audit(db, actor, 'edition.deleted', 'edition', editionId, {})
+  await audit(db, actor, 'edition.deleted', 'edition', editionId, { previousLabel: edition.label, previousIssueNumber: edition.issue_number, softDeleted: true })
   return true
 }
 
