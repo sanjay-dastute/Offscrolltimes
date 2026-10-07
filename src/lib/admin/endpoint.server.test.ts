@@ -85,6 +85,9 @@ describe('administrator authorization and fulfilment', () => {
     expect(await db.prepare(`SELECT label,copies_available FROM editions WHERE id='edition_7'`).first()).toMatchObject({label:'December launch',copies_available:0})
     expect((await mutation('admin_1',{action:'edition.delete',editionId:'edition_7',confirm:true})).status).toBe(200)
     expect(await db.prepare(`SELECT deleted_at FROM editions WHERE id='edition_7'`).first<{deleted_at:number}>()).toMatchObject({deleted_at:expect.any(Number)})
+    const replacement=await mutation('admin_1',{action:'edition.create',label:'Replacement launch',issueNumber:7,copiesAvailable:100,dispatch:'2026-12-23'})
+    expect(replacement.status).toBe(200)
+    expect((await replacement.json() as {id:string}).id).not.toBe('edition_7')
   })
 
   it('allows a locked edition with no prepared copies to be edited or removed from the working list', async () => {

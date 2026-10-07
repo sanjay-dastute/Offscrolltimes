@@ -171,7 +171,11 @@ function parseJsonRecord(value: unknown): Record<string, unknown> | null {
 }
 
 export async function createEdition(db: D1Database, actor: string, input: { label: string; issueNumber: number; cutoff: number; dispatch: number; copiesAvailable:number }) {
-  const editionId = `edition_${input.issueNumber}`
+  const baseEditionId = `edition_${input.issueNumber}`
+  // A removed edition remains in the database for its audit trail. Give a
+  // replacement using the same human issue number a new internal ID.
+  const existing = await db.prepare(`SELECT id FROM editions WHERE id=?`).bind(baseEditionId).first()
+  const editionId = existing ? `${baseEditionId}_${crypto.randomUUID()}` : baseEditionId
   const committed = await committedCopiesForEdition(db, input.cutoff)
   const available = Math.max(0, input.copiesAvailable - committed)
   await db.prepare(`INSERT INTO editions (id, label, issue_number, eligibility_cutoff_at, dispatch_at, copies_available, status, created_at, updated_at)
