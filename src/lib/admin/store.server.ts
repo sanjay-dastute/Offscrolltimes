@@ -51,7 +51,7 @@ export async function getAdminDashboard(db: D1Database) {
   const rows = subscriptions.results as Array<Record<string, unknown>>
   const paymentRows = payments.results as Array<{ status: string; amount_minor: number; currency:string }>
   const fulfilmentRows = fulfilments.results as Array<{ subscription_id: string; edition_label: string; status: string }>
-  const editionRows = editions.results as Array<{ label: string; dispatch_at: number; status: string; copies_available:number }>
+  const editionRows = editions.results as Array<{ label: string; dispatch_at: number; eligibility_cutoff_at: number; status: string; copies_available:number }>
   const now = Date.now()
   const expirationWindow = now + 30 * 24 * 60 * 60 * 1000
   // The commercial summary is an INR business total. Do not add minor units
@@ -65,6 +65,12 @@ export async function getAdminDashboard(db: D1Database) {
   const nextEditionFulfilments = nextEditionRow
     ? fulfilmentRows.filter(row => row.edition_label === nextEditionRow.label && ['scheduled', 'prepared'].includes(row.status))
     : []
+  // Before the delivery list is frozen, show the copies already committed by
+  // paid subscriptions. This makes inventory visible as soon as an edition is
+  // created instead of waiting until the dispatch list is generated.
+  const nextEditionCommitted = nextEditionRow
+    ? await committedCopiesForEdition(db, Number(nextEditionRow.eligibility_cutoff_at))
+    : 0
   const countryCounts = new Map<string, { subscriptions: number; copies: number }>()
   for (const row of rows) {
     const address = parseAddress(row.delivery_address_json)
@@ -130,7 +136,9 @@ export async function getAdminDashboard(db: D1Database) {
       nextEdition: nextEditionRow ? {
         label: nextEditionRow.label,
         dispatchAt: Number(nextEditionRow.dispatch_at),
-        copiesRequired: nextEditionFulfilments.reduce((sum, row) => sum + Number(subscriptionById.get(row.subscription_id)?.quantity ?? 1), 0),
+        copiesRequired: nextEditionFulfilments.length
+          ? nextEditionFulfilments.reduce((sum, row) => sum + Number(subscriptionById.get(row.subscription_id)?.quantity ?? 1), 0)
+          : nextEditionCommitted,
         copiesAvailable: Number(nextEditionRow.copies_available),
         eligibilityGenerated: nextEditionFulfilments.length > 0,
       } : null,
@@ -164,22 +172,41 @@ function parseJsonRecord(value: unknown): Record<string, unknown> | null {
 
 export async function createEdition(db: D1Database, actor: string, input: { label: string; issueNumber: number; cutoff: number; dispatch: number; copiesAvailable:number }) {
   const editionId = `edition_${input.issueNumber}`
+  const committed = await committedCopiesForEdition(db, input.cutoff)
+  const available = Math.max(0, input.copiesAvailable - committed)
   await db.prepare(`INSERT INTO editions (id, label, issue_number, eligibility_cutoff_at, dispatch_at, copies_available, status, created_at, updated_at)
-    VALUES (?, ?, ?, ?, ?, ?, 'draft', ?, ?)`).bind(editionId, input.label, input.issueNumber, input.cutoff, input.dispatch, input.copiesAvailable, Date.now(), Date.now()).run()
-  await audit(db, actor, 'edition.created', 'edition', editionId, input)
+    VALUES (?, ?, ?, ?, ?, ?, 'draft', ?, ?)`).bind(editionId, input.label, input.issueNumber, input.cutoff, input.dispatch, available, Date.now(), Date.now()).run()
+  await audit(db, actor, 'edition.created', 'edition', editionId, { ...input, committedCopies: committed, copiesAvailableAfterReservations: available })
   return editionId
 }
 
 export async function updateEdition(db: D1Database, actor: string, editionId: string, input: { label: string; issueNumber: number; cutoff: number; dispatch: number; copiesAvailable: number }) {
+  const committed = await committedCopiesForEdition(db, input.cutoff)
+  const available = Math.max(0, input.copiesAvailable - committed)
   const result = await db.prepare(`UPDATE editions
     SET label=?, issue_number=?, eligibility_cutoff_at=?, dispatch_at=?, copies_available=?, updated_at=?
     WHERE id=? AND status IN ('draft','locked')
       AND NOT EXISTS(SELECT 1 FROM edition_eligibility_snapshots WHERE edition_id=editions.id)
       AND NOT EXISTS(SELECT 1 FROM customer_fulfilments WHERE edition_label=editions.label)`) 
-    .bind(input.label, input.issueNumber, input.cutoff, input.dispatch, input.copiesAvailable, Date.now(), editionId).run()
+    .bind(input.label, input.issueNumber, input.cutoff, input.dispatch, available, Date.now(), editionId).run()
   if ((result.meta.changes ?? 0) !== 1) return false
-  await audit(db, actor, 'edition.updated', 'edition', editionId, input)
+  await audit(db, actor, 'edition.updated', 'edition', editionId, { ...input, committedCopies: committed, copiesAvailableAfterReservations: available })
   return true
+}
+
+async function committedCopiesForEdition(db: D1Database, cutoff: number) {
+  const policyAllowsCancelled = process.env.FULFIL_PAID_AFTER_CANCELLATION === 'true'
+  const statusFilter = policyAllowsCancelled ? "status IN ('active','cancelled')" : "status = 'active'"
+  const row = await db.prepare(`SELECT COALESCE(SUM(quantity), 0) AS copies
+    FROM customer_subscriptions
+    WHERE entitlement_status = 'paid'
+      AND ${statusFilter}
+      AND copies_fulfilled < copies_total
+      AND starts_at IS NOT NULL AND starts_at <= ?
+      AND (paid_through_at IS NULL OR paid_through_at >= ?)
+      AND EXISTS (SELECT 1 FROM customer_payments paid WHERE paid.subscription_id = customer_subscriptions.id AND paid.status = 'paid')`)
+    .bind(cutoff, cutoff).first<{ copies: number }>()
+  return Number(row?.copies ?? 0)
 }
 
 export async function deleteEdition(db: D1Database, actor: string, editionId: string) {

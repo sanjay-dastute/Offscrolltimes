@@ -246,18 +246,22 @@ export async function applyCustomerPaymentSucceeded(db: D1Database, input: {
         VALUES (?,?,?,?,?) ON CONFLICT(discount_id,subscription_id) DO NOTHING`).bind(`redemption_${input.id}`,snapshot.discountId,input.id,purchased.owner_id,paidAt).run()
     } catch { /* A legacy snapshot must not block payment activation. */ }
   }
-  // Reserve the customer's next copy from the next suitable edition inventory.
-  // The guarded update prevents inventory from ever becoming negative.
-  await db.prepare(`UPDATE editions SET copies_available=copies_available-(SELECT quantity FROM customer_subscriptions WHERE id=?),updated_at=?
-    WHERE id=(SELECT id FROM editions WHERE dispatch_at>=? AND status IN ('draft','eligibility_generated') AND copies_available>=(SELECT quantity FROM customer_subscriptions WHERE id=?) ORDER BY dispatch_at LIMIT 1)`).bind(input.id,input.now,paidAt,input.id).run()
+  await reserveNextEditionCopies(db,input.id,paidAt,input.now)
   if(purchased) await recordAccountEvent(db,{userId:purchased.owner_id,subscriptionId:input.id,eventType:'subscription_activated',title:'Subscription activated',detail:'Payment was verified and your prepaid subscription is active.',effectiveAt:nextDispatchAt,now:input.now})
   return true
+}
+
+export async function reserveNextEditionCopies(db: D1Database, subscriptionId: string, paidAt: number, now: number) {
+  // A sale reserves only one edition's quantity now. Future editions reserve
+  // their own copies when the administrator creates their monthly issue.
+  await db.prepare(`UPDATE editions SET copies_available=copies_available-(SELECT quantity FROM customer_subscriptions WHERE id=?),updated_at=?
+    WHERE id=(SELECT id FROM editions WHERE eligibility_cutoff_at>=? AND status IN ('draft','eligibility_generated') AND copies_available>=(SELECT quantity FROM customer_subscriptions WHERE id=?) ORDER BY dispatch_at LIMIT 1)`).bind(subscriptionId,now,paidAt,subscriptionId).run()
 }
 
 export async function recordCustomerSubscriptionRenewal(db: D1Database, input: {
   id: string; paymentId: string; paidAt: number; amountMinor: number; currency: string; nextChargeAt?: number | null; now: number
 }) {
-  const subscription = await db.prepare(`SELECT owner_id,duration_months,paid_through_at FROM customer_subscriptions WHERE id=?`).bind(input.id).first<{owner_id:string;duration_months:number;paid_through_at:number|null}>()
+  const subscription = await db.prepare(`SELECT owner_id,duration_months,quantity,paid_through_at FROM customer_subscriptions WHERE id=?`).bind(input.id).first<{owner_id:string;duration_months:number;quantity:number;paid_through_at:number|null}>()
   if (!subscription) return false
   const periodMs = subscription.duration_months * 2629800000
   const base = Math.max(subscription.paid_through_at ?? 0, input.paidAt)
@@ -266,9 +270,10 @@ export async function recordCustomerSubscriptionRenewal(db: D1Database, input: {
     VALUES(?,?,?,?, 'paid', ?,?,?,?,?) ON CONFLICT(provider_payment_id) DO NOTHING`).bind(`payment_${input.paymentId}`, input.id, subscription.owner_id, input.paymentId, input.amountMinor, input.currency, input.paidAt, input.now, input.now).run()
   if ((inserted.meta.changes ?? 0) !== 1) return false
   await db.batch([
-    db.prepare(`UPDATE customer_subscriptions SET status='active',entitlement_status='paid',ends_at=?,paid_through_at=?,renewal_enabled=1,renewal_at=?,renewal_amount_minor=?,updated_at=? WHERE id=?`).bind(paidThrough, paidThrough, input.nextChargeAt ?? paidThrough, input.amountMinor, input.now, input.id),
+    db.prepare(`UPDATE customer_subscriptions SET status='active',entitlement_status='paid',ends_at=?,paid_through_at=?,copies_total=copies_total+(duration_months*quantity),renewal_enabled=1,renewal_at=?,renewal_amount_minor=?,updated_at=? WHERE id=?`).bind(paidThrough, paidThrough, input.nextChargeAt ?? paidThrough, input.amountMinor, input.now, input.id),
     db.prepare(`UPDATE razorpay_recurring_subscriptions SET paid_count=paid_count+1,next_charge_at=?,status='active',updated_at=? WHERE subscription_id=?`).bind(input.nextChargeAt ?? null, input.now, input.id),
   ])
+  await reserveNextEditionCopies(db,input.id,input.paidAt,input.now)
   await recordAccountEvent(db,{userId:subscription.owner_id,subscriptionId:input.id,eventType:'subscription_renewed',title:'Subscription renewed',detail:`Your next prepaid term was collected automatically.`,effectiveAt:paidThrough,now:input.now})
   return true
 }

@@ -87,6 +87,21 @@ describe('administrator authorization and fulfilment', () => {
     expect(await db.prepare(`SELECT id FROM editions WHERE id='edition_7'`).first()).toBeNull()
   })
 
+  it('reserves paid term copies in each monthly edition instead of all copies in the first edition', async () => {
+    const now = Date.now()
+    await registerCustomerCheckout(db, { id: 'term_inventory', userId: 'inventory_customer', planId: 'quarterly', planName: '3 months', durationMonths: 3, quantity: 2, currency: 'INR', amountMinor: 99900, now })
+    await saveCustomerCheckoutDetails(db, { id: 'term_inventory', userId: 'inventory_customer', email: 'inventory@example.com', address: { name: 'Inventory Reader', line1: '1 Test Road', city: 'Pune', postalCode: '411001', country: 'IN' }, now })
+    await applyCustomerPaymentSucceeded(db, { id: 'term_inventory', payerUserId: 'inventory_customer', paymentId: 'pay_inventory', paidAt: now, now })
+
+    const response = await mutation('admin_1', { action: 'edition.create', label: 'Inventory edition', issueNumber: 9, copiesAvailable: 10, cutoff: new Date(now + 1_000).toISOString(), dispatch: new Date(now + 86_400_000).toISOString() })
+    expect(response.status).toBe(200)
+    expect(await db.prepare(`SELECT copies_available FROM editions WHERE id='edition_9'`).first()).toMatchObject({ copies_available: 8 })
+
+    const dashboard = await getAdmin(await request('admin_1', '/api/admin'))
+    const body = await dashboard.json() as { reports: { nextEdition: { copiesRequired: number; copiesAvailable: number } } }
+    expect(body.reports.nextEdition).toMatchObject({ copiesRequired: 2, copiesAvailable: 8 })
+  })
+
   it('creates an edition, generates paid eligibility, and exports a minimal dispatch CSV', async () => {
     const now = Date.now()
     await registerCustomerCheckout(db, { id: 'order_customer_1', userId: 'customer_1', planId: 'monthly', planName: 'Monthly', durationMonths: 1, quantity: 1, currency: 'INR', amountMinor: 79900, now })

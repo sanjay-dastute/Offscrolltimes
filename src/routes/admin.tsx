@@ -147,7 +147,7 @@ function SimpleEditionManager({data,busy,mutate,create}:{data:AdminData;busy:boo
   async function edit(edition:Row){
     const label=window.prompt('Edition name',String(edition.label??'')); if(!label?.trim())return
     const issueNumber=window.prompt('Edition number',String(edition.issue_number??'')); if(issueNumber===null)return
-    const copiesAvailable=window.prompt('Number of copies',String(edition.copies_available??0)); if(copiesAvailable===null)return
+    const copiesAvailable=window.prompt('Total copies to print',String(edition.copies_available??0)); if(copiesAvailable===null)return
     const dispatch=window.prompt('Dispatch date (YYYY-MM-DD)',dateValue(edition.dispatch_at)); if(!dispatch)return
     if(!window.confirm(`Save changes to ${edition.label}?`))return
     const saved=await mutate({action:'edition.update',editionId:edition.id,label,issueNumber:Number(issueNumber),copiesAvailable:Number(copiesAvailable),dispatch})
