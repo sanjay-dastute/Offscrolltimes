@@ -49,6 +49,7 @@ describe('administrator authorization and fulfilment', () => {
     const now=Date.now()
     await db.prepare(`INSERT INTO users(id,owner_id,role,account_state,created_at,updated_at) VALUES('customer_internal','customer_address','customer','active',?,?)`).bind(now,now).run()
     await registerCustomerCheckout(db,{id:'address_subscription',userId:'customer_address',planId:'monthly',planName:'Monthly',durationMonths:1,quantity:1,currency:'INR',amountMinor:19900,now})
+    await applyCustomerPaymentSucceeded(db,{id:'address_subscription',payerUserId:'customer_address',paymentId:'pay_address_test',paidAt:now,now})
     const address={name:'Updated Reader',line1:'42 New Road',line2:'Flat 3',city:'Coimbatore',region:'Tamil Nadu',postalCode:'641001',country:'IN'}
     expect((await mutation('admin_1',{action:'subscription.address',subscriptionId:'address_subscription',email:'updated@example.com',phone:'+917373050093',reason:'Customer moved address',address})).status).toBe(200)
     expect(await db.prepare(`SELECT contact_email,contact_phone,delivery_address_json FROM customer_subscriptions WHERE id='address_subscription'`).first()).toMatchObject({contact_email:'updated@example.com',contact_phone:'+917373050093',delivery_address_json:JSON.stringify(address)})

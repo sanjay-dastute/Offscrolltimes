@@ -24,7 +24,9 @@ export async function getAdminDashboard(db: D1Database) {
     db.prepare(`SELECT id, owner_id customer_id, plan_name, duration_months, quantity, status, currency,
       amount_minor, contact_email, contact_phone, delivery_address_json, starts_at, ends_at, paid_through_at,
       next_dispatch_at, copies_total, copies_fulfilled, entitlement_status, pricing_snapshot_json, created_at, payment_provider, renewal_enabled, renewal_at, renewal_amount_minor
-      FROM customer_subscriptions WHERE owner_id NOT IN (SELECT owner_id FROM users WHERE account_state='deleted') ORDER BY created_at DESC,id DESC`).all(),
+      FROM customer_subscriptions WHERE owner_id NOT IN (SELECT owner_id FROM users WHERE account_state='deleted')
+        AND EXISTS (SELECT 1 FROM customer_payments paid WHERE paid.subscription_id=customer_subscriptions.id AND paid.status='paid')
+      ORDER BY created_at DESC,id DESC`).all(),
     db.prepare(`SELECT id, subscription_id, owner_id customer_id, provider_payment_id, status,(SELECT provider_status FROM refunds WHERE payment_id=customer_payments.id ORDER BY created_at DESC LIMIT 1) refund_status,
       amount_minor, currency, paid_at, created_at FROM customer_payments ORDER BY created_at DESC,id DESC`).all(),
     db.prepare(`SELECT id, subscription_id, owner_id customer_id, edition_label, status,
@@ -52,8 +54,10 @@ export async function getAdminDashboard(db: D1Database) {
   const editionRows = editions.results as Array<{ label: string; dispatch_at: number; status: string; copies_available:number }>
   const now = Date.now()
   const expirationWindow = now + 30 * 24 * 60 * 60 * 1000
-  const revenue = paymentRows.filter(p => p.status === 'paid').reduce((sum, p) => sum + Number(p.amount_minor), 0)
-  const refunds = paymentRows.filter(p => p.status === 'refunded')
+  // The commercial summary is an INR business total. Do not add minor units
+  // from different currencies together and incorrectly label the result INR.
+  const revenue = paymentRows.filter(p => p.status === 'paid' && p.currency === 'INR').reduce((sum, p) => sum + Number(p.amount_minor), 0)
+  const refunds = paymentRows.filter(p => p.status === 'refunded' && p.currency === 'INR')
   const nextEditionRow = editionRows
     .filter(row => Number(row.dispatch_at) >= now && row.status !== 'completed')
     .sort((a, b) => Number(a.dispatch_at) - Number(b.dispatch_at))[0]
