@@ -48,6 +48,7 @@ export async function getAdminDashboard(db: D1Database) {
       GROUP BY d.id,d.code ORDER BY redemptions DESC`).all(),
     db.prepare(`SELECT event_name,COUNT(*) total FROM first_party_analytics_events GROUP BY event_name`).all(),
   ])
+  const referralSettings=await db.prepare(`SELECT discount_basis_points,updated_at FROM referral_settings WHERE id=1`).first<{discount_basis_points:number;updated_at:number}>()
   const rows = subscriptions.results as Array<Record<string, unknown>>
   const paymentRows = payments.results as Array<{ status: string; amount_minor: number; currency:string }>
   const fulfilmentRows = fulfilments.results as Array<{ subscription_id: string; edition_label: string; status: string }>
@@ -91,6 +92,7 @@ export async function getAdminDashboard(db: D1Database) {
     if (country) dispatchedByCountry.set(country, (dispatchedByCountry.get(country) ?? 0) + Number(subscription?.quantity ?? 1))
   }
   return {
+    referralSettings: referralSettings ?? { discount_basis_points: 0, updated_at: 0 },
     subscriptions: rows.map(row => ({
       ...row,
       delivery_address: parseAddress(row.delivery_address_json),

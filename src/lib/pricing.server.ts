@@ -69,7 +69,9 @@ export async function calculatePricing(db: D1Database, input: { durationMonths: 
     }
   }
   const code = input.discountCode?.trim().toUpperCase()
-  if (code) {
+  // A valid referral replaces a promotion entirely, including its effect on
+  // the term discount, so customers receive exactly one incentive.
+  if (code && !referralCode) {
     const discount = await db.prepare(`SELECT d.id,d.code,d.kind,d.value,d.usage_limit,d.eligible_durations_json,d.eligible_countries_json,
       d.per_customer_limit,d.minimum_duration_months,d.minimum_order_minor,d.combinable_with_duration_discount,
       (SELECT COUNT(*) FROM discount_redemptions r WHERE r.discount_id=d.id) redemptions,
@@ -93,7 +95,6 @@ export async function calculatePricing(db: D1Database, input: { durationMonths: 
       promotion = { id: discount.id, code: discount.code, kind: discount.kind, value: discount.value, combinable }
     }
   }
-  if (referralCode) { offerDiscountMinor = 0; promotion = null }
   const taxableMinor = Math.max(0, subtotalMinor-durationDiscountMinor-offerDiscountMinor-referralDiscountMinor+shippingMinor)
   const taxMinor = Math.round(taxableMinor * zone.tax_rate_basis_points / 10000)
   return { currency: zone.currency, monthlyPriceMinor, durationMonths: option.duration_months, quantity: input.quantity, subtotalMinor, durationDiscountMinor, offerDiscountMinor, referralDiscountMinor, shippingMinor, taxBasisPoints: zone.tax_rate_basis_points, taxMinor, totalMinor: taxableMinor+taxMinor, discountId, promotion, referralCode, countryCode: zone.country_code }

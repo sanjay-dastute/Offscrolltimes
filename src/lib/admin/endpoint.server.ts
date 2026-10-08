@@ -89,6 +89,14 @@ export async function mutateAdmin(request: Request) {
       await audit(database,session.user.id,'discount.deleted','discount',discountId,{})
       return json({ok:true})
     }
+    if (action === 'referral.settings') {
+      const percentage=Number(body.percentage)
+      if(!Number.isFinite(percentage)||percentage<0||percentage>100)return json({error:'Enter a referral discount from 0 to 100%.'},422)
+      const now=Date.now(),basisPoints=Math.round(percentage*100)
+      await database.prepare(`INSERT INTO referral_settings(id,discount_basis_points,updated_at) VALUES(1,?,?) ON CONFLICT(id) DO UPDATE SET discount_basis_points=excluded.discount_basis_points,updated_at=excluded.updated_at`).bind(basisPoints,now).run()
+      await audit(database,session.user.id,'referral.settings_updated','referral_settings','1',{basisPoints})
+      return json({ok:true})
+    }
     if (action === 'edition.create') {
       const label = text(body.label, 100), issueNumber = Number(body.issueNumber), copiesAvailable=Number(body.copiesAvailable ?? 0), dispatch = body.dispatch?Date.parse(String(body.dispatch)):NaN, cutoff = body.cutoff?Date.parse(String(body.cutoff)):dispatch-24*60*60*1000
       if (!label || !Number.isInteger(issueNumber) || issueNumber < 1 || !Number.isSafeInteger(copiesAvailable) || copiesAvailable < 0 || !Number.isFinite(cutoff) || !Number.isFinite(dispatch) || dispatch <= cutoff) return json({ error: 'Enter a valid edition name, number and copy quantity.' }, 422)

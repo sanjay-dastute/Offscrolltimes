@@ -7,12 +7,14 @@ import { AdminOffers } from '#/components/AdminOffers'
 import { AdminExports } from '#/components/AdminExports'
 import { AdminLogin } from '#/components/AdminLogin'
 import { AdminAnswers } from '#/components/AdminAnswers'
+import { AdminReferrals } from '#/components/AdminReferrals'
 
 type Row = Record<string, any>
 type AdminData = {
   user: { id: string; name?: string }; csrf: string
   subscriptions: Row[]; payments: Row[]; fulfilments: Row[]; editions: Row[]; eligibility: Row[]
   products: Row[]; options: Row[]; discounts: Row[]; zones: Row[]; content: Row[]; enquiries: Row[]; audits: Row[]; promotionReports: Row[]
+  referralSettings: { discount_basis_points:number; updated_at:number }
   reports: {
     financialByCurrency:Array<{currency:string;revenueMinor:number;refundMinor:number}>
     customers: number; activeSubscriptions: number; activePaidEntitlements: number; entitledCopiesRemaining: number; upcomingExpirations: number; cancellations: number; completedTerms: number; renewals: number; retentionPercent: number
@@ -67,7 +69,7 @@ function AdminPage() {
     {error && <p role="alert" className="mb-6 rounded-xl border border-red-700 bg-red-50 p-4 text-red-900">{error}</p>}
     {data && <>
       <header className="flex flex-wrap items-end justify-between gap-5 border-b border-graphite pb-7"><div><p className={EYEBROW}>Administrator</p><h1 className="m-0 font-display text-5xl font-bold tracking-tight">Business control room</h1><p className="mt-3 text-graphite-soft">Signed in as {data.user.name ?? data.user.id}</p></div><button className={CTA_OUTLINE} onClick={async()=>{const response=await fetch('/api/admin/login',{method:'DELETE',headers:{'Content-Type':'application/json'},body:JSON.stringify({csrf:data.csrf})});if(response.ok){setData(null);setState('denied')}else{setError('Sign-out failed. Please retry.')}}}>Sign out</button></header>
-      <nav className="my-7 flex flex-wrap gap-2" aria-label="Admin sections">{['overview','customers','newsletter','subscriptions','editions','answers','offers','pricing','exports','audit'].map(item => <button key={item} onClick={() => setTab(item)} className={`rounded-full border border-graphite px-4 py-2 font-mono text-xs uppercase ${tab === item ? 'bg-graphite text-paper' : 'bg-paper'}`}>{item}</button>)}</nav>
+      <nav className="my-7 flex flex-wrap gap-2" aria-label="Admin sections">{['overview','customers','newsletter','subscriptions','editions','answers','offers','referrals','pricing','exports','audit'].map(item => <button key={item} onClick={() => setTab(item)} className={`rounded-full border border-graphite px-4 py-2 font-mono text-xs uppercase ${tab === item ? 'bg-graphite text-paper' : 'bg-paper'}`}>{item}</button>)}</nav>
       {tab === 'customers' && <AdminCustomers mutate={mutate} csrf={data.csrf} />}
       {tab === 'newsletter' && <AdminCustomers mutate={mutate} csrf={data.csrf} initialGroup="newsletter" />}
       {tab === 'overview' && <Overview data={data} />}
@@ -75,6 +77,7 @@ function AdminPage() {
       {tab === 'editions' && <Editions data={data} busy={busy} mutate={mutate} />}
       {tab === 'answers' && <AdminAnswers csrf={data.csrf} />}
       {tab === 'offers' && <AdminOffers offers={data.discounts} busy={busy} mutate={mutate} />}
+      {tab === 'referrals' && <AdminReferrals basisPoints={data.referralSettings.discount_basis_points} busy={busy} mutate={mutate} />}
       {tab === 'pricing' && <><EditionCopyPricing editions={data.editions} busy={busy} mutate={mutate} /><Pricing data={data} busy={busy} mutate={mutate} /></>}
       {tab === 'exports' && <AdminExports />}
       {tab === 'audit' && <Audit rows={data.audits} />}

@@ -20,6 +20,7 @@ type DashboardData = {
   payments: CustomerPayment[]
   fulfilments: CustomerFulfilment[]
   events: CustomerAccountEvent[]
+  referralCode?: string | null
 }
 
 const H1 = 'm-0 font-display text-[clamp(2.3rem,6vw,4.8rem)] font-bold leading-[0.95] tracking-[-0.04em]'
@@ -128,6 +129,7 @@ function AccountPage() {
           <form method="post" action="/api/logout"><button className={CTA_OUTLINE} type="submit">Sign out</button></form>
         </div>
         {notice&&<p role="status" className="mt-6 rounded-xl border border-graphite bg-sun p-4">{notice}</p>}
+        {data.referralCode&&<section className="mt-8 rounded-2xl border border-graphite bg-paper p-5"><p className={EYEBROW}>Share Offscroll Times</p><h2 className="mt-2 text-xl font-bold">Your referral code</h2><p className="mt-2 text-sm text-graphite-soft">Share this with someone new. Their first paid subscription may receive the current referral discount.</p><code className="mt-4 inline-block rounded-lg border border-graphite bg-sun px-4 py-3 font-mono text-lg font-bold">{data.referralCode}</code></section>}
         {data.subscriptions.length === 0 ? <section className="mt-10 rounded-3xl border border-graphite bg-sun/20 p-8">
           <h2 className={H2}>No subscription yet.</h2><p className="mt-3">Choose a duration and your subscription will appear here after checkout starts.</p>
           <a href="/subscription" className={`${CTA} mt-6 inline-flex`}>Choose a subscription</a>

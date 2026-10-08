@@ -4,6 +4,7 @@ import { lifecycleBindings } from '#/lib/lifecycle/env.server'
 import { calculatePricing } from '#/lib/pricing.server'
 import { allowRequest } from '#/lib/rate-limit.server'
 import { json } from '#/lib/http.server'
+import { readSession } from '#/lib/auth.server'
 
 export const Route = createFileRoute('/api/pricing')({
   server: { handlers: { GET: async ({ request }) => {
@@ -20,7 +21,9 @@ export const Route = createFileRoute('/api/pricing')({
     const quantity = Number(url.searchParams.get('quantity'))
     const countryCode = (url.searchParams.get('country') ?? '').trim().toUpperCase().slice(0, 2)
     const discountCode = (url.searchParams.get('code') ?? '').trim().slice(0, 50)
-    const quote = await calculatePricing(db, { durationMonths, quantity, countryCode, discountCode, now: Date.now() })
+    const referralCode = (url.searchParams.get('referral') ?? '').trim().slice(0, 50)
+    const session = await readSession(request)
+    const quote = await calculatePricing(db, { durationMonths, quantity, countryCode, discountCode, referralCode, userId: session?.user.id, now: Date.now() })
     return quote ? json({ quote }) : json({ error: 'This selection cannot be priced.' }, 422)
   } } },
 })

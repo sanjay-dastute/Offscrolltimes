@@ -53,6 +53,18 @@ async function authenticated(request: Request) {
   return session
 }
 
+async function customerReferralCode(db:D1Database, ownerId:string) {
+  const existing=await db.prepare(`SELECT code FROM customer_referral_codes WHERE owner_id=?`).bind(ownerId).first<{code:string}>()
+  if(existing) return existing.code
+  for(let attempt=0;attempt<5;attempt++) {
+    const code=`OFF-${crypto.randomUUID().replace(/-/g,'').slice(0,8).toUpperCase()}`
+    await db.prepare(`INSERT INTO customer_referral_codes(owner_id,code,created_at) VALUES(?,?,?) ON CONFLICT DO NOTHING`).bind(ownerId,code,Date.now()).run()
+    const saved=await db.prepare(`SELECT code FROM customer_referral_codes WHERE owner_id=?`).bind(ownerId).first<{code:string}>()
+    if(saved) return saved.code
+  }
+  return null
+}
+
 export async function getCustomerDashboard(request: Request): Promise<Response> {
   const session = await authenticated(request)
   if (!session) return json({ error: 'Sign in to view your account.' }, 401)
@@ -64,7 +76,8 @@ export async function getCustomerDashboard(request: Request): Promise<Response> 
     : { results: [] }
   const profile=await db.prepare(`SELECT c.display_name,COALESCE(c.email,u.primary_email) email,c.phone,c.whatsapp_number FROM customers c JOIN users u ON u.id=c.user_id WHERE u.owner_id=?`).bind(session.user.id).first()
   const address=await db.prepare(`SELECT a.name,a.line1,a.line2,a.city,a.region,a.postal_code postalCode,a.country FROM addresses a JOIN customers c ON c.id=a.customer_id JOIN users u ON u.id=c.user_id WHERE u.owner_id=? AND a.address_type='delivery' AND a.active_to IS NULL ORDER BY a.version DESC LIMIT 1`).bind(session.user.id).first()
-  return json({ profileComplete: await isCustomerProfileComplete(db,session.user.id), user: session.user, csrf: session.csrf, identities: identities.results, profile, address, ...data })
+  const referralCode=await customerReferralCode(db,session.user.id)
+  return json({ profileComplete: await isCustomerProfileComplete(db,session.user.id), user: session.user, csrf: session.csrf, identities: identities.results, profile, address, referralCode, ...data })
 }
 
 export async function patchCustomerDashboard(request: Request): Promise<Response> {
