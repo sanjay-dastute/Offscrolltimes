@@ -369,16 +369,16 @@ export async function upsertCatalog(db: D1Database, actor: string, kind: string,
       amount_minor=excluded.amount_minor, currency=excluded.currency, active=excluded.active, discount_basis_points=excluded.discount_basis_points, monthly_price_minor=COALESCE(excluded.monthly_price_minor,admin_subscription_options.monthly_price_minor), updated_at=excluded.updated_at`)
       .bind(body.id, body.name, body.durationMonths, body.amountMinor, body.currency, body.active ? 1 : 0, body.discountBasisPoints, body.monthlyPriceMinor??null, now, now).run()
   } else if (kind === 'discount') {
-    await db.prepare(`INSERT INTO admin_discounts (id, code, kind, value, starts_at, ends_at, usage_limit, active,
+    await db.prepare(`INSERT INTO admin_discounts (id, name, code, kind, value, starts_at, ends_at, usage_limit, active,
       eligible_durations_json, eligible_countries_json, per_customer_limit, minimum_duration_months, minimum_order_minor,
       combinable_with_duration_discount, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET code=excluded.code,
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET name=excluded.name,code=excluded.code,
       kind=excluded.kind,value=excluded.value,starts_at=excluded.starts_at,ends_at=excluded.ends_at,usage_limit=excluded.usage_limit,
       active=excluded.active,eligible_durations_json=excluded.eligible_durations_json,eligible_countries_json=excluded.eligible_countries_json,
       per_customer_limit=excluded.per_customer_limit,minimum_duration_months=excluded.minimum_duration_months,
       minimum_order_minor=excluded.minimum_order_minor,combinable_with_duration_discount=excluded.combinable_with_duration_discount,
       updated_at=excluded.updated_at`)
-      .bind(body.id, body.code, body.kind, body.value, body.startsAt, body.endsAt, body.usageLimit, body.active ? 1 : 0,
+      .bind(body.id, body.name, body.code, body.kind, body.value, body.startsAt, body.endsAt, body.usageLimit, body.active ? 1 : 0,
         body.eligibleDurations, body.eligibleCountries, body.perCustomerLimit, body.minimumDurationMonths, body.minimumOrderMinor,
         body.combinable ? 1 : 0, now, now).run()
   } else if (kind === 'shipping') {

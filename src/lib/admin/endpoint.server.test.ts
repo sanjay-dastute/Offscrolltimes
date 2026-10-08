@@ -50,7 +50,7 @@ describe('administrator authorization and fulfilment', () => {
 
   it('creates a valid new discount offer', async () => {
     const now = Date.now()
-    const response = await mutation('admin_1', { action:'catalog.upsert', kind:'discount', id:'offer_dv5', code:'DV5', discountKind:'percentage', value:500, startsAt:new Date(now).toISOString(), endsAt:new Date(now + 86_400_000).toISOString(), eligibleDurations:'1', eligibleCountries:'IN', active:true })
+    const response = await mutation('admin_1', { action:'catalog.upsert', kind:'discount', id:'offer_dv5', name:'Diwali offer', code:'DV5', discountKind:'percentage', value:500, startsAt:new Date(now).toISOString(), endsAt:new Date(now + 86_400_000).toISOString(), eligibleDurations:'1', eligibleCountries:'IN', active:true })
     expect(response.status).toBe(200)
     expect(await db.prepare(`SELECT code,kind,value FROM admin_discounts WHERE id='offer_dv5'`).first()).toMatchObject({code:'DV5',kind:'percentage',value:500})
     expect((await mutation('admin_1',{action:'discount.delete',discountId:'offer_dv5',confirm:true})).status).toBe(200)

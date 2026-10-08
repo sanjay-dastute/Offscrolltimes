@@ -47,6 +47,7 @@ const MIGRATION_FILES = [
   '0039_regional_term_prices.sql',
   '0040_razorpay_recurring_subscriptions.sql',
   '0041_edition_soft_deletion.sql',
+  '0042_discount_offer_name.sql',
 ]
 
 export function createTestD1(): D1Database {

@@ -1,0 +1,1 @@
+ALTER TABLE admin_discounts ADD COLUMN name TEXT NOT NULL DEFAULT '';

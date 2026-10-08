@@ -183,7 +183,7 @@ export async function mutateAdmin(request: Request) {
       const safe = kind === 'product' ? { id:text(body.id), name:text(body.name), description:text(body.description,1000), baseMonthlyMinor:Number(body.baseMonthlyMinor ?? 999), active:body.active!==false } : kind === 'option' ? {
         id: text(body.id), name: text(body.name), durationMonths: Number(body.durationMonths), amountMinor: Number(body.amountMinor), monthlyPriceMinor: optionalNumber(body.monthlyPriceMinor), discountBasisPoints:Number(body.discountBasisPoints ?? 0), currency: text(body.currency, 3).toUpperCase(), active: body.active !== false,
       } : kind === 'discount' ? {
-        id: text(body.id), code: text(body.code, 50).toUpperCase(), kind: text(body.discountKind, 30), value: Number(body.value),
+        id: text(body.id), name: text(body.name, 100), code: text(body.code, 50).toUpperCase(), kind: text(body.discountKind, 30), value: Number(body.value),
         startsAt: body.startsAt ? Date.parse(String(body.startsAt)) : null, endsAt: body.endsAt ? Date.parse(String(body.endsAt)) : null,
         usageLimit: optionalNumber(body.usageLimit), perCustomerLimit: optionalNumber(body.perCustomerLimit),
         minimumDurationMonths: optionalNumber(body.minimumDurationMonths),
@@ -208,7 +208,7 @@ export async function mutateAdmin(request: Request) {
         if((durations&&!durations.split(',').every(value=>/^\d+$/.test(value.trim())&&Number(value)>0&&Number.isSafeInteger(Number(value))))||(countries&&!countries.split(',').every(value=>/^[A-Za-z]{2}$/.test(value.trim()))))return json({error:'Enter positive whole months and two-letter country codes, separated by commas.'},422)
         const nonnegative=(value:unknown)=>Number.isSafeInteger(value)&&Number(value)>=0
         const optionalPositive=(value:unknown)=>value===null||(Number.isSafeInteger(value)&&Number(value)>0)
-        if(!SAFE_ID.test(String(safe.id))||!safe.code||!['percentage','fixed','free_shipping'].includes(String(safe.kind))||!nonnegative(safe.value)||(safe.kind==='percentage'&&Number(safe.value)>10000)||!optionalPositive(safe.usageLimit)||!optionalPositive(safe.perCustomerLimit)||!optionalPositive(safe.minimumDurationMonths)||(safe.minimumOrderMinor!==null&&!nonnegative(safe.minimumOrderMinor))||(safe.startsAt!==null&&!Number.isFinite(safe.startsAt))||(safe.endsAt!==null&&!Number.isFinite(safe.endsAt))||(safe.startsAt!==null&&safe.endsAt!==null&&Number(safe.endsAt)<=Number(safe.startsAt)))return json({error:'Enter valid discount amounts, limits and dates; expiry must follow the start.'},422)
+        if(!SAFE_ID.test(String(safe.id))||!safe.name||!safe.code||!['percentage','fixed','free_shipping'].includes(String(safe.kind))||!nonnegative(safe.value)||(safe.kind==='percentage'&&Number(safe.value)>10000)||!optionalPositive(safe.usageLimit)||!optionalPositive(safe.perCustomerLimit)||!optionalPositive(safe.minimumDurationMonths)||(safe.minimumOrderMinor!==null&&!nonnegative(safe.minimumOrderMinor))||(safe.startsAt!==null&&!Number.isFinite(safe.startsAt))||(safe.endsAt!==null&&!Number.isFinite(safe.endsAt))||(safe.startsAt!==null&&safe.endsAt!==null&&Number(safe.endsAt)<=Number(safe.startsAt)))return json({error:'Enter a valid offer name, discount amounts, limits and dates; expiry must follow the start.'},422)
       }
       if (!await upsertCatalog(database, session.user.id, kind, safe)) return json({ error: 'Invalid catalogue type.' }, 422)
       return json({ ok: true })
