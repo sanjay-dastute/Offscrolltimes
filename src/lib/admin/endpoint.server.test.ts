@@ -34,6 +34,9 @@ describe('administrator authorization and fulfilment', () => {
     expect((await mutation('admin_1',{action:'newsletter.unsubscribe',subscriberId:'signup_test'})).status).toBe(200)
     expect(await db.prepare('SELECT status FROM newsletter_subscribers').first()).toMatchObject({status:'unsubscribed'})
     expect(await db.prepare(`SELECT action FROM admin_audit_log WHERE target_id='signup_test'`).first()).toMatchObject({action:'newsletter.unsubscribed'})
+    await db.prepare(`INSERT INTO newsletter_subscribers(id,email,status,consent_at,consent_text,unsubscribe_token_hash,created_at,updated_at) VALUES('signup_delete','remove@example.com','subscribed',1,'Explicit consent','hash',1,1)`).run()
+    expect((await mutation('admin_1',{action:'newsletter.delete',subscriberId:'signup_delete',confirm:true})).status).toBe(200)
+    expect(await db.prepare(`SELECT id FROM newsletter_subscribers WHERE id='signup_delete'`).first()).toBeNull()
   })
   it('requires administrator authorization and CSRF for customer corrections and offer activation',async()=>{
     expect((await mutation('customer_1',{action:'customer.contact'})).status).toBe(403)
@@ -50,6 +53,8 @@ describe('administrator authorization and fulfilment', () => {
     const response = await mutation('admin_1', { action:'catalog.upsert', kind:'discount', id:'offer_dv5', code:'DV5', discountKind:'percentage', value:500, startsAt:new Date(now).toISOString(), endsAt:new Date(now + 86_400_000).toISOString(), eligibleDurations:'1', eligibleCountries:'IN', active:true })
     expect(response.status).toBe(200)
     expect(await db.prepare(`SELECT code,kind,value FROM admin_discounts WHERE id='offer_dv5'`).first()).toMatchObject({code:'DV5',kind:'percentage',value:500})
+    expect((await mutation('admin_1',{action:'discount.delete',discountId:'offer_dv5',confirm:true})).status).toBe(200)
+    expect(await db.prepare(`SELECT id FROM admin_discounts WHERE id='offer_dv5'`).first()).toBeNull()
   })
 
   it('saves an administrator delivery-address correction and returns it in the refreshed dashboard',async()=>{

@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { CTA, CTA_OUTLINE, FIELD, H2 } from '#/lib/uiKit'
-
+ 
 type Offer=Record<string,any>
 const localDate=(value:unknown)=>{if(!value)return '';const date=new Date(Number(value));return new Date(date.getTime()-date.getTimezoneOffset()*60000).toISOString().slice(0,16)}
 export function AdminOffers({offers,busy,mutate}:{offers:Offer[];busy:boolean;mutate:(payload:Record<string,unknown>)=>Promise<boolean>}) {
@@ -15,11 +15,15 @@ export function AdminOffers({offers,busy,mutate}:{offers:Offer[];busy:boolean;mu
     const value=discountKind==='percentage'?Math.round(enteredValue*100):Math.round(enteredValue)
     if(await mutate({action:'catalog.upsert',kind:'discount',...fields,value,active:fields.active==='on',combinable:fields.combinable==='on'})){setSelected(null);setRevision(value=>value+1)}
   }
+  async function remove(offer:Offer){
+    if(!window.confirm(`Delete ${offer.code}? This cannot be undone if the offer has not been used.`))return
+    if(await mutate({action:'discount.delete',discountId:offer.id,confirm:true})){setSelected(null);setRevision(value=>value+1)}
+  }
   const field=(name:string,label:string,value:unknown,type='text',required=false)=><label key={name}>{label}<input name={name} className={`${FIELD} mt-1`} defaultValue={String(value??'')} type={type} required={required} readOnly={name==='id'&&Boolean(selected)} min={type==='number'?0:undefined} max={name==='value'&&String(selected?.kind??'percentage')==='percentage'?100:undefined} step={name==='value'&&String(selected?.kind??'percentage')==='percentage'?'0.01':undefined}/></label>
   const displayValue=selected?.kind==='percentage'?Number(selected.value??0)/100:selected?.value??0
   const list=(value:unknown)=>{try{return value?(JSON.parse(String(value)) as unknown[]).join(','):''}catch{return ''}}
   return <section><h2 className={H2}>Offers and discounts</h2><p className="mt-3">Create, edit or deactivate saved offers. Enter percentage discounts as normal percentages, for example 10 for 10%. Fixed discounts use paise.</p>
-    <div className="my-6 grid gap-3">{offers.length?offers.map(offer=><article key={offer.id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-graphite p-4"><div><strong>{offer.code}</strong><p className="text-sm">{offer.kind} · {offer.value} · {offer.active?'Active':'Inactive'}{offer.ends_at?` · Expires ${new Date(offer.ends_at).toLocaleString()}`:''}</p></div><div className="flex gap-2"><button disabled={busy} className={CTA_OUTLINE} onClick={()=>{setSelected(offer);setRevision(value=>value+1)}}>Edit</button><button disabled={busy} className={CTA_OUTLINE} onClick={()=>void mutate({action:'discount.toggle',discountId:offer.id,active:!offer.active})}>{offer.active?'Deactivate':'Activate'}</button></div></article>):<p>No offers created yet.</p>}</div>
+    <div className="my-6 grid gap-3">{offers.length?offers.map(offer=><article key={offer.id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-graphite p-4"><div><strong>{offer.code}</strong><p className="text-sm">{offer.kind} · {offer.value} · {offer.active?'Active':'Inactive'}{offer.ends_at?` · Expires ${new Date(offer.ends_at).toLocaleString()}`:''}</p></div><div className="flex flex-wrap gap-2"><button disabled={busy} className={CTA_OUTLINE} onClick={()=>{setSelected(offer);setRevision(value=>value+1)}}>Edit</button><button disabled={busy} className={CTA_OUTLINE} onClick={()=>void mutate({action:'discount.toggle',discountId:offer.id,active:!offer.active})}>{offer.active?'Deactivate':'Activate'}</button><button disabled={busy} className={CTA_OUTLINE} onClick={()=>void remove(offer)}>Delete</button></div></article>):<p>No offers created yet.</p>}</div>
     <form key={revision} onSubmit={save} className="rounded-2xl border border-graphite bg-paper p-5"><h3 className="text-xl font-bold">{selected?'Edit offer':'Create offer'}</h3><div className="mt-4 grid gap-4 sm:grid-cols-2">
       {field('id','Offer ID',selected?.id,'text',true)}{field('code','Discount code',selected?.code,'text',true)}
       <label>Type<select name="discountKind" defaultValue={selected?.kind||'percentage'} className={`${FIELD} mt-1`}><option value="percentage">Percentage</option><option value="fixed">Fixed amount</option><option value="free_shipping">Free delivery</option></select></label>

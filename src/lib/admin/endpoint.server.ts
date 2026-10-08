@@ -58,6 +58,14 @@ export async function mutateAdmin(request: Request) {
       await audit(database,session.user.id,'newsletter.unsubscribed','newsletter',subscriberId,{source:'administrator'})
       return json({ok:true})
     }
+    if(action==='newsletter.delete') {
+      const subscriberId=text(body.subscriberId)
+      if(!SAFE_ID.test(subscriberId)||body.confirm!==true)return json({error:'Confirm the newsletter subscriber deletion.'},422)
+      const result=await database.prepare(`DELETE FROM newsletter_subscribers WHERE id=?`).bind(subscriberId).run()
+      if((result.meta.changes??0)!==1)return json({error:'Email signup not found.'},404)
+      await audit(database,session.user.id,'newsletter.deleted','newsletter',subscriberId,{source:'administrator'})
+      return json({ok:true})
+    }
     if (action === 'customer.contact') {
       const userId=text(body.userId), name=text(body.name,100), email=text(body.email,200).toLowerCase(), phone=text(body.phone,30), whatsapp=text(body.whatsapp,30), reason=text(body.reason,500)||'Administrator contact edit'
       if(!SAFE_ID.test(userId)||!name||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)||(phone&&!/^\+?[0-9 ()-]{7,30}$/.test(phone))||(whatsapp&&!/^\+[1-9][0-9]{7,14}$/.test(whatsapp)))return json({error:'Enter a name, valid email and WhatsApp number with country code (for example +917373050093).'},422)
@@ -69,6 +77,16 @@ export async function mutateAdmin(request: Request) {
       const result=await database.prepare('UPDATE admin_discounts SET active=?,updated_at=? WHERE id=?').bind(body.active?1:0,Date.now(),discountId).run()
       if((result.meta.changes??0)!==1)return json({error:'Offer not found.'},404)
       await audit(database,session.user.id,'discount.activation_changed','discount',discountId,{active:body.active})
+      return json({ok:true})
+    }
+    if (action === 'discount.delete') {
+      const discountId=text(body.discountId)
+      if(!SAFE_ID.test(discountId)||body.confirm!==true)return json({error:'Confirm the offer deletion.'},422)
+      const redeemed=await database.prepare(`SELECT id FROM discount_redemptions WHERE discount_id=? LIMIT 1`).bind(discountId).first()
+      if(redeemed)return json({error:'This offer has already been used and cannot be deleted. Deactivate it instead to preserve order history.'},409)
+      const result=await database.prepare(`DELETE FROM admin_discounts WHERE id=?`).bind(discountId).run()
+      if((result.meta.changes??0)!==1)return json({error:'Offer not found.'},404)
+      await audit(database,session.user.id,'discount.deleted','discount',discountId,{})
       return json({ok:true})
     }
     if (action === 'edition.create') {

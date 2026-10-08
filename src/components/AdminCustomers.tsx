@@ -36,6 +36,11 @@ export function AdminCustomers({mutate,csrf,initialGroup='all'}:{mutate:(payload
     if(!response.ok){setError('Newsletter export could not be downloaded.');return}
     const blob=await response.blob(),url=URL.createObjectURL(blob),link=document.createElement('a');link.href=url;link.download='offscroll-newsletter-subscribers.txt';link.click();URL.revokeObjectURL(url)
   }
+  async function removeNewsletterSubscriber(subscriber:NewsletterSubscriber){
+    if(saving||!window.confirm(`Delete ${subscriber.email} from the newsletter list? This cannot be undone.`))return
+    setSaving(true)
+    try{if(await mutate({action:'newsletter.delete',subscriberId:subscriber.id,confirm:true}))setRevision(value=>value+1)}finally{setSaving(false)}
+  }
   return <section>
     <h2 className={H2}>{status==='newsletter'?'Newsletter subscribers':'Customer directory'}</h2>
     <p className="mt-3 text-sm">{status==='newsletter'?'People who explicitly opted in to Offscroll Times email updates.':'All registered users, including people who have not subscribed. Payment status refers to the latest recorded payment.'}</p>
@@ -45,7 +50,7 @@ export function AdminCustomers({mutate,csrf,initialGroup='all'}:{mutate:(payload
     </div>}
     {error&&<div role="alert" className="my-4"><p>{error}</p><button className={CTA_OUTLINE} onClick={()=>setRevision(value=>value+1)}>Retry</button></div>}
     {loading&&<p role="status">Loading customers…</p>}
-    {!loading&&!error&&data&&<>{status==='newsletter'?<section className="rounded-2xl border border-graphite bg-paper p-5"><div className="flex flex-wrap items-center justify-between gap-3"><div><h3 className="text-xl font-bold">Newsletter subscribers</h3><p className="mt-1 text-sm">{data.newsletterSubscribers.length} active subscribers. Unsubscribed addresses are excluded.</p></div><button className={CTA} onClick={()=>void downloadSubscribers()}>Download emails (.txt)</button></div><div className="mt-5 grid gap-2">{data.newsletterSubscribers.map(subscriber=><p className="rounded-xl border border-rule p-3" key={subscriber.id}>{subscriber.email}</p>)}{!data.newsletterSubscribers.length&&<p>No active newsletter subscribers.</p>}</div></section>:<>
+    {!loading&&!error&&data&&<>{status==='newsletter'?<section className="rounded-2xl border border-graphite bg-paper p-5"><div className="flex flex-wrap items-center justify-between gap-3"><div><h3 className="text-xl font-bold">Newsletter subscribers</h3><p className="mt-1 text-sm">{data.newsletterSubscribers.length} active subscribers. Unsubscribed addresses are excluded.</p></div><button className={CTA} onClick={()=>void downloadSubscribers()}>Download emails (.txt)</button></div><div className="mt-5 grid gap-2">{data.newsletterSubscribers.map(subscriber=><div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-rule p-3" key={subscriber.id}><span>{subscriber.email}</span><button disabled={saving} className={CTA_OUTLINE} onClick={()=>void removeNewsletterSubscriber(subscriber)}>Delete</button></div>)}{!data.newsletterSubscribers.length&&<p>No active newsletter subscribers.</p>}</div></section>:<>
       <p className="mb-4 text-sm">{data.total} users · Page {data.page} of {data.pages}</p>
       {!data.customers.length&&<p>No customers match these filters.</p>}
       <div className="grid gap-4">{data.customers.map(customer=><article key={customer.user_id} className="rounded-2xl border border-graphite bg-paper p-5">
