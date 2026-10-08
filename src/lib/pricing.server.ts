@@ -58,13 +58,14 @@ export async function calculatePricing(db: D1Database, input: { durationMonths: 
   const referral = input.referralCode?.trim().toUpperCase()
   if (referral && input.userId) {
     const [referrer, priorPurchase, priorReferral, settings] = await Promise.all([
-      db.prepare(`SELECT owner_id FROM customer_referral_codes WHERE code=?`).bind(referral).first<{owner_id:string}>(),
+      db.prepare(`SELECT owner_id, NULL discount_basis_points FROM customer_referral_codes WHERE code=? UNION ALL SELECT 'influencer:' || id owner_id,discount_basis_points FROM influencer_referral_codes WHERE code=? LIMIT 1`).bind(referral,referral).first<{owner_id:string;discount_basis_points:number|null}>(),
       db.prepare(`SELECT id FROM customer_subscriptions s WHERE s.owner_id=? AND EXISTS(SELECT 1 FROM customer_payments p WHERE p.subscription_id=s.id AND p.status='paid') LIMIT 1`).bind(input.userId).first(),
       db.prepare(`SELECT id FROM referral_redemptions WHERE referred_owner_id=? LIMIT 1`).bind(input.userId).first(),
       db.prepare(`SELECT discount_basis_points FROM referral_settings WHERE id=1`).first<{discount_basis_points:number}>(),
     ])
-    if (referrer && referrer.owner_id !== input.userId && !priorPurchase && !priorReferral && Number(settings?.discount_basis_points ?? 0) > 0) {
-      referralDiscountMinor = Math.round(subtotalMinor * Number(settings!.discount_basis_points) / 10000)
+    const basisPoints=Number(referrer?.discount_basis_points??settings?.discount_basis_points??0)
+    if (referrer && referrer.owner_id !== input.userId && !priorPurchase && !priorReferral && basisPoints > 0) {
+      referralDiscountMinor = Math.round(subtotalMinor * basisPoints / 10000)
       referralCode = referral
     }
   }

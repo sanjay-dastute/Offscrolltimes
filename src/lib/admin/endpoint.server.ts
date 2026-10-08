@@ -97,6 +97,24 @@ export async function mutateAdmin(request: Request) {
       await audit(database,session.user.id,'referral.settings_updated','referral_settings','1',{basisPoints})
       return json({ok:true})
     }
+    if (action === 'influencer_referral.save') {
+      const referralId=text(body.referralId,160)||crypto.randomUUID(),code=text(body.code,50).toUpperCase(),percentage=Number(body.percentage)
+      if(!/^[A-Z0-9_-]{3,50}$/.test(code)||!Number.isFinite(percentage)||percentage<0||percentage>100)return json({error:'Enter a unique code using letters, numbers, hyphens or underscores, plus a percentage from 0 to 100.'},422)
+      const duplicate=await database.prepare(`SELECT 1 FROM customer_referral_codes WHERE code=?`).bind(code).first()
+      if(duplicate)return json({error:'That code is already used by a customer referral.'},409)
+      const now=Date.now(),basisPoints=Math.round(percentage*100)
+      try { await database.prepare(`INSERT INTO influencer_referral_codes(id,code,discount_basis_points,created_at,updated_at) VALUES(?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET code=excluded.code,discount_basis_points=excluded.discount_basis_points,updated_at=excluded.updated_at`).bind(referralId,code,basisPoints,now,now).run() } catch { return json({error:'That influencer referral code already exists.'},409) }
+      await audit(database,session.user.id,'influencer_referral.saved','influencer_referral',referralId,{code,basisPoints})
+      return json({ok:true})
+    }
+    if (action === 'influencer_referral.delete') {
+      const referralId=text(body.referralId,160)
+      if(!SAFE_ID.test(referralId)||body.confirm!==true)return json({error:'Confirm the influencer referral deletion.'},422)
+      const result=await database.prepare(`DELETE FROM influencer_referral_codes WHERE id=?`).bind(referralId).run()
+      if((result.meta.changes??0)!==1)return json({error:'Influencer referral code not found.'},404)
+      await audit(database,session.user.id,'influencer_referral.deleted','influencer_referral',referralId,{})
+      return json({ok:true})
+    }
     if (action === 'edition.create') {
       const label = text(body.label, 100), issueNumber = Number(body.issueNumber), copiesAvailable=Number(body.copiesAvailable ?? 0), dispatch = body.dispatch?Date.parse(String(body.dispatch)):NaN, cutoff = body.cutoff?Date.parse(String(body.cutoff)):dispatch-24*60*60*1000
       if (!label || !Number.isInteger(issueNumber) || issueNumber < 1 || !Number.isSafeInteger(copiesAvailable) || copiesAvailable < 0 || !Number.isFinite(cutoff) || !Number.isFinite(dispatch) || dispatch <= cutoff) return json({ error: 'Enter a valid edition name, number and copy quantity.' }, 422)

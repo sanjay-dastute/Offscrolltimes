@@ -80,7 +80,7 @@ export async function razorpaySubscriptionCheckout(request: Request) {
         await applyCustomerPaymentSucceeded(db, { id: row.subscription_id, payerUserId: row.owner_id, paymentId, paidAt: Number(payment.created_at) * 1000, now: Date.now() })
         const snapshot=JSON.parse(row.pricing_snapshot_json) as {referralCode?:string|null;referralDiscountMinor?:number}
         if(snapshot.referralCode) {
-          const referrer=await db.prepare(`SELECT owner_id FROM customer_referral_codes WHERE code=?`).bind(snapshot.referralCode).first<{owner_id:string}>()
+          const referrer=await db.prepare(`SELECT owner_id FROM customer_referral_codes WHERE code=? UNION ALL SELECT 'influencer:' || id owner_id FROM influencer_referral_codes WHERE code=? LIMIT 1`).bind(snapshot.referralCode,snapshot.referralCode).first<{owner_id:string}>()
           if(referrer) await db.prepare(`INSERT INTO referral_redemptions(id,referrer_owner_id,referred_owner_id,subscription_id,code,discount_minor,created_at) VALUES(?,?,?,?,?,?,?) ON CONFLICT(referred_owner_id) DO NOTHING`).bind(crypto.randomUUID(),referrer.owner_id,row.owner_id,row.subscription_id,snapshot.referralCode,Number(snapshot.referralDiscountMinor??0),Date.now()).run()
         }
       }

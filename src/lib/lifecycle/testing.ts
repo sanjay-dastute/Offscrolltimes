@@ -49,6 +49,7 @@ const MIGRATION_FILES = [
   '0041_edition_soft_deletion.sql',
   '0042_discount_offer_name.sql',
   '0043_referrals.sql',
+  '0044_influencer_referrals.sql',
 ]
 
 export function createTestD1(): D1Database {

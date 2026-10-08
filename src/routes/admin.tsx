@@ -15,6 +15,7 @@ type AdminData = {
   subscriptions: Row[]; payments: Row[]; fulfilments: Row[]; editions: Row[]; eligibility: Row[]
   products: Row[]; options: Row[]; discounts: Row[]; zones: Row[]; content: Row[]; enquiries: Row[]; audits: Row[]; promotionReports: Row[]
   referralSettings: { discount_basis_points:number; updated_at:number }
+  influencerReferrals: Row[]
   reports: {
     financialByCurrency:Array<{currency:string;revenueMinor:number;refundMinor:number}>
     customers: number; activeSubscriptions: number; activePaidEntitlements: number; entitledCopiesRemaining: number; upcomingExpirations: number; cancellations: number; completedTerms: number; renewals: number; retentionPercent: number
@@ -77,7 +78,7 @@ function AdminPage() {
       {tab === 'editions' && <Editions data={data} busy={busy} mutate={mutate} />}
       {tab === 'answers' && <AdminAnswers csrf={data.csrf} />}
       {tab === 'offers' && <AdminOffers offers={data.discounts} busy={busy} mutate={mutate} />}
-      {tab === 'referrals' && <AdminReferrals basisPoints={data.referralSettings.discount_basis_points} busy={busy} mutate={mutate} />}
+      {tab === 'referrals' && <AdminReferrals basisPoints={data.referralSettings.discount_basis_points} influencerReferrals={data.influencerReferrals as any} busy={busy} mutate={mutate} />}
       {tab === 'pricing' && <><EditionCopyPricing editions={data.editions} busy={busy} mutate={mutate} /><Pricing data={data} busy={busy} mutate={mutate} /></>}
       {tab === 'exports' && <AdminExports />}
       {tab === 'audit' && <Audit rows={data.audits} />}

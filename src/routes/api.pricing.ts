@@ -15,7 +15,9 @@ export const Route = createFileRoute('/api/pricing')({
     if(url.searchParams.get('catalog')==='1'){
       const zones=await db.prepare(`SELECT country_code code,country_name name,currency FROM admin_shipping_zones WHERE active=1 ORDER BY country_name`).all<{code:string;name:string;currency:string}>()
       const detected=(request.headers.get('CF-IPCountry')??'').toUpperCase()
-      return json({countries:zones.results,detectedCountry:zones.results.some(zone=>zone.code===detected)?detected:null})
+      const session=await readSession(request)
+      const referralEligible=session ? await db.prepare(`SELECT NOT EXISTS(SELECT 1 FROM customer_subscriptions s WHERE s.owner_id=? AND EXISTS(SELECT 1 FROM customer_payments p WHERE p.subscription_id=s.id AND p.status='paid')) AND NOT EXISTS(SELECT 1 FROM referral_redemptions WHERE referred_owner_id=?) eligible`).bind(session.user.id,session.user.id).first<{eligible:number}>() : null
+      return json({countries:zones.results,detectedCountry:zones.results.some(zone=>zone.code===detected)?detected:null,referralEligible:session?referralEligible?.eligible===1:null})
     }
     const durationMonths = Number(url.searchParams.get('duration'))
     const quantity = Number(url.searchParams.get('quantity'))
