@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'react'
 import { SiteHeader } from '#/components/SiteHeader'
 import { SiteFooter } from '#/components/Faq'
 import { CTA, H2 } from '#/lib/uiKit'
-
+ 
 declare global {
   interface Window {
     Razorpay?: new (options: Record<string, unknown>) => {
@@ -76,7 +76,7 @@ function RazorpayCheckout() {
     const form = new FormData(event.currentTarget)
     const address = Object.fromEntries(['name', 'line1', 'line2', 'city', 'region', 'postalCode', 'country'].map(key => [key, form.get(key)]))
     try {
-      const order = await send('create', { idempotencyKey: idempotencyKey.current, durationMonths: search.duration, quantity: search.quantity, discountCode: search.code, email: form.get('email'), phone: form.get('phone'), address, acceptTerms: form.get('terms') === 'on' })
+      const order = await send('create', { idempotencyKey: idempotencyKey.current, durationMonths: search.duration, quantity: search.quantity, discountCode: search.code, referralCode: form.get('referralCode'), email: form.get('email'), phone: form.get('phone'), address, acceptTerms: form.get('terms') === 'on' })
       if (!window.Razorpay) throw new Error('Secure payment window did not load. Please retry.')
       setState('paying')
       const checkout = new window.Razorpay({

@@ -39,7 +39,7 @@ export async function razorpaySubscriptionCheckout(request: Request) {
     const idempotencyKey = safe(body.idempotencyKey, 100)
     const period = billingPeriod(durationMonths)
     if (!period || !delivery || !/^\+?[0-9 ()-]{7,30}$/.test(phone) || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || body.acceptTerms !== true || !/^[A-Za-z0-9_-]{16,100}$/.test(idempotencyKey)) return json({ error: 'Complete contact, address and accept the terms.' }, 422)
-    const quote = await calculatePricing(db, { durationMonths, quantity, countryCode: delivery.country, discountCode: safe(body.discountCode, 50), userId: session.user.id, now: Date.now() })
+    const quote = await calculatePricing(db, { durationMonths, quantity, countryCode: delivery.country, discountCode: safe(body.discountCode, 50), referralCode: safe(body.referralCode, 50), userId: session.user.id, now: Date.now() })
     if (!quote || quote.totalMinor < 100) return json({ error: 'This selection cannot be priced.' }, 422)
     const previous = await db.prepare(`SELECT r.razorpay_order_id,r.amount_minor,r.currency,r.pricing_snapshot_json FROM razorpay_orders r WHERE r.owner_id=? AND r.idempotency_key=?`).bind(session.user.id, idempotencyKey).first<{ razorpay_order_id: string; amount_minor: number; currency: string; pricing_snapshot_json: string }>()
     if (previous) return json({ ok: true, keyId: razorpayPublicKey(), subscriptionId: previous.razorpay_order_id, amount: previous.amount_minor, currency: previous.currency, quote: JSON.parse(previous.pricing_snapshot_json), reused: true })
@@ -70,13 +70,20 @@ export async function razorpaySubscriptionCheckout(request: Request) {
     const paymentId = safe(body.razorpay_payment_id)
     const signature = safe(body.razorpay_signature, 300)
     if (!providerSubscriptionId || !paymentId || !signature) return json({ error: 'Missing payment verification details.' }, 400)
-    const row = await db.prepare(`SELECT r.subscription_id,r.owner_id,r.amount_minor,r.currency FROM razorpay_orders r WHERE r.razorpay_order_id=? AND r.owner_id=?`).bind(providerSubscriptionId, session.user.id).first<{ subscription_id: string; owner_id: string; amount_minor: number; currency: string }>()
+    const row = await db.prepare(`SELECT r.subscription_id,r.owner_id,r.amount_minor,r.currency,r.pricing_snapshot_json FROM razorpay_orders r WHERE r.razorpay_order_id=? AND r.owner_id=?`).bind(providerSubscriptionId, session.user.id).first<{ subscription_id: string; owner_id: string; amount_minor: number; currency: string; pricing_snapshot_json:string }>()
     if (!row || !verifySubscriptionSignature(providerSubscriptionId, paymentId, signature)) return json({ error: 'Payment verification failed.' }, 400)
     try {
       const payment = await retrieveRazorpayPayment(paymentId)
       if (payment.subscription_id !== providerSubscriptionId || payment.amount !== row.amount_minor || payment.currency !== row.currency) return json({ error: 'Payment does not match this subscription.' }, 409)
       await db.prepare(`UPDATE razorpay_orders SET razorpay_payment_id=?,status=?,updated_at=? WHERE razorpay_order_id=?`).bind(paymentId, payment.status === 'captured' ? 'captured' : 'verified', Date.now(), providerSubscriptionId).run()
-      if (payment.status === 'captured') await applyCustomerPaymentSucceeded(db, { id: row.subscription_id, payerUserId: row.owner_id, paymentId, paidAt: Number(payment.created_at) * 1000, now: Date.now() })
+      if (payment.status === 'captured') {
+        await applyCustomerPaymentSucceeded(db, { id: row.subscription_id, payerUserId: row.owner_id, paymentId, paidAt: Number(payment.created_at) * 1000, now: Date.now() })
+        const snapshot=JSON.parse(row.pricing_snapshot_json) as {referralCode?:string|null;referralDiscountMinor?:number}
+        if(snapshot.referralCode) {
+          const referrer=await db.prepare(`SELECT owner_id FROM customer_referral_codes WHERE code=?`).bind(snapshot.referralCode).first<{owner_id:string}>()
+          if(referrer) await db.prepare(`INSERT INTO referral_redemptions(id,referrer_owner_id,referred_owner_id,subscription_id,code,discount_minor,created_at) VALUES(?,?,?,?,?,?,?) ON CONFLICT(referred_owner_id) DO NOTHING`).bind(crypto.randomUUID(),referrer.owner_id,row.owner_id,row.subscription_id,snapshot.referralCode,Number(snapshot.referralDiscountMinor??0),Date.now()).run()
+        }
+      }
       return json({ ok: true, status: payment.status })
     } catch (error) {
       if (error instanceof RazorpayApiError) return json({ error: error.status === 401 ? 'Razorpay credentials were rejected.' : 'Payment verification is temporarily unavailable.' }, error.status === 401 ? 401 : 500)

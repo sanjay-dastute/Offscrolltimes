@@ -6,12 +6,14 @@ export type PricingQuote = {
   subtotalMinor: number
   durationDiscountMinor: number
   offerDiscountMinor: number
+  referralDiscountMinor: number
   shippingMinor: number
   taxBasisPoints: number
   taxMinor: number
   totalMinor: number
   discountId: string | null
   promotion: { id: string; code: string; kind: string; value: number; combinable: boolean } | null
+  referralCode: string | null
   countryCode: string
 }
 
@@ -23,7 +25,7 @@ type DiscountRow = { id: string; code: string; kind: 'percentage'|'fixed'|'free_
 function includesJsonNumber(value: string | null, expected: number) { if (!value) return true; try { return (JSON.parse(value) as unknown[]).map(Number).includes(expected) } catch { return false } }
 function includesJsonString(value: string | null, expected: string) { if (!value) return true; try { return (JSON.parse(value) as unknown[]).map(String).includes(expected) } catch { return false } }
 
-export async function calculatePricing(db: D1Database, input: { durationMonths: number; quantity: number; countryCode: string; discountCode?: string; userId?: string; includeInactiveDiscount?: boolean; now: number }): Promise<PricingQuote | null> {
+export async function calculatePricing(db: D1Database, input: { durationMonths: number; quantity: number; countryCode: string; discountCode?: string; referralCode?: string; userId?: string; includeInactiveDiscount?: boolean; now: number }): Promise<PricingQuote | null> {
   if (!Number.isSafeInteger(input.quantity) || input.quantity < 1) return null
   const option = await db.prepare(`SELECT o.id, o.duration_months, o.discount_basis_points, o.currency, p.base_monthly_minor,
       COALESCE(o.monthly_price_minor,p.base_monthly_minor) plan_monthly_minor
@@ -49,8 +51,23 @@ export async function calculatePricing(db: D1Database, input: { durationMonths: 
   if (durationDiscountMinor === 0 && option.discount_basis_points > 0) durationDiscountMinor = Math.round(subtotalMinor * option.discount_basis_points / 10000)
   let shippingMinor = shippingMinorBase
   let offerDiscountMinor = 0
+  let referralDiscountMinor = 0
   let discountId: string | null = null
   let promotion: PricingQuote['promotion'] = null
+  let referralCode: string | null = null
+  const referral = input.referralCode?.trim().toUpperCase()
+  if (referral && input.userId) {
+    const [referrer, priorPurchase, priorReferral, settings] = await Promise.all([
+      db.prepare(`SELECT owner_id FROM customer_referral_codes WHERE code=?`).bind(referral).first<{owner_id:string}>(),
+      db.prepare(`SELECT id FROM customer_subscriptions s WHERE s.owner_id=? AND EXISTS(SELECT 1 FROM customer_payments p WHERE p.subscription_id=s.id AND p.status='paid') LIMIT 1`).bind(input.userId).first(),
+      db.prepare(`SELECT id FROM referral_redemptions WHERE referred_owner_id=? LIMIT 1`).bind(input.userId).first(),
+      db.prepare(`SELECT discount_basis_points FROM referral_settings WHERE id=1`).first<{discount_basis_points:number}>(),
+    ])
+    if (referrer && referrer.owner_id !== input.userId && !priorPurchase && !priorReferral && Number(settings?.discount_basis_points ?? 0) > 0) {
+      referralDiscountMinor = Math.round(subtotalMinor * Number(settings!.discount_basis_points) / 10000)
+      referralCode = referral
+    }
+  }
   const code = input.discountCode?.trim().toUpperCase()
   if (code) {
     const discount = await db.prepare(`SELECT d.id,d.code,d.kind,d.value,d.usage_limit,d.eligible_durations_json,d.eligible_countries_json,
@@ -76,7 +93,8 @@ export async function calculatePricing(db: D1Database, input: { durationMonths: 
       promotion = { id: discount.id, code: discount.code, kind: discount.kind, value: discount.value, combinable }
     }
   }
-  const taxableMinor = Math.max(0, subtotalMinor-durationDiscountMinor-offerDiscountMinor+shippingMinor)
+  if (referralCode) { offerDiscountMinor = 0; promotion = null }
+  const taxableMinor = Math.max(0, subtotalMinor-durationDiscountMinor-offerDiscountMinor-referralDiscountMinor+shippingMinor)
   const taxMinor = Math.round(taxableMinor * zone.tax_rate_basis_points / 10000)
-  return { currency: zone.currency, monthlyPriceMinor, durationMonths: option.duration_months, quantity: input.quantity, subtotalMinor, durationDiscountMinor, offerDiscountMinor, shippingMinor, taxBasisPoints: zone.tax_rate_basis_points, taxMinor, totalMinor: taxableMinor+taxMinor, discountId, promotion, countryCode: zone.country_code }
+  return { currency: zone.currency, monthlyPriceMinor, durationMonths: option.duration_months, quantity: input.quantity, subtotalMinor, durationDiscountMinor, offerDiscountMinor, referralDiscountMinor, shippingMinor, taxBasisPoints: zone.tax_rate_basis_points, taxMinor, totalMinor: taxableMinor+taxMinor, discountId, promotion, referralCode, countryCode: zone.country_code }
 }
