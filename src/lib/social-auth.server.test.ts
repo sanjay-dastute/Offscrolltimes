@@ -99,4 +99,5 @@ describe('social authentication and role boundaries', () => {
     expect(identities.results.map(row=>row.provider)).toEqual(['google','microsoft'])
     expect(await db.prepare(`SELECT action FROM identity_security_events WHERE actor_user_id=?`).bind(first.userId).first<{action:string}>()).toMatchObject({action:'identity_linked'})
   })
+
 })

@@ -306,8 +306,15 @@ async function stableUserId(ownerId: string): Promise<string> {
 async function persistSocialIdentity(provider: SocialProvider, subject: string, email: string | undefined, linkUserId?: string, verifiedClaims:Record<string,unknown>={}) {
   const db = lifecycleBindings().db
   const providerOwnerId = `${provider}:${subject}`
-  const existing = await db.prepare(`SELECT user_id FROM auth_identities WHERE provider=? AND provider_subject=?`)
+  let existing = await db.prepare(`SELECT user_id FROM auth_identities WHERE provider=? AND provider_subject=?`)
     .bind(provider,subject).first<{user_id:string}>()
+  // A pre-launch data reset can remove user rows while leaving the provider
+  // identity record. Remove that orphan so the same Google account can sign
+  // in again as a new customer instead of being redirected in a loop.
+  if (existing && !linkUserId) {
+    const linkedUser=await db.prepare(`SELECT id FROM users WHERE id=?`).bind(existing.user_id).first<{id:string}>()
+    if (!linkedUser) { await db.prepare(`DELETE FROM auth_identities WHERE provider=? AND provider_subject=?`).bind(provider,subject).run(); existing=null }
+  }
   if (linkUserId && existing && existing.user_id !== linkUserId) throw new Error('identity_already_linked')
   const userId = linkUserId ?? existing?.user_id ?? await stableUserId(providerOwnerId)
   const now = Date.now()

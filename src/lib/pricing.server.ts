@@ -52,6 +52,7 @@ export async function calculatePricing(db: D1Database, input: { durationMonths: 
   let shippingMinor = shippingMinorBase
   let offerDiscountMinor = 0
   let referralDiscountMinor = 0
+  let referralBasisPoints = 0
   let discountId: string | null = null
   let promotion: PricingQuote['promotion'] = null
   let referralCode: string | null = null
@@ -65,14 +66,14 @@ export async function calculatePricing(db: D1Database, input: { durationMonths: 
     ])
     const basisPoints=Number(referrer?.discount_basis_points??settings?.discount_basis_points??0)
     if (referrer && referrer.owner_id !== input.userId && !priorPurchase && !priorReferral && basisPoints > 0) {
-      referralDiscountMinor = Math.round(subtotalMinor * basisPoints / 10000)
+      referralBasisPoints = basisPoints
       referralCode = referral
     }
   }
   const code = input.discountCode?.trim().toUpperCase()
-  // A valid referral replaces a promotion entirely, including its effect on
-  // the term discount, so customers receive exactly one incentive.
-  if (code && !referralCode) {
+  // Launch offers, plan savings and referral discounts stack. Referral codes
+  // are a separate acquisition incentive, not an alternative offer.
+  if (code) {
     const discount = await db.prepare(`SELECT d.id,d.code,d.kind,d.value,d.usage_limit,d.eligible_durations_json,d.eligible_countries_json,
       d.per_customer_limit,d.minimum_duration_months,d.minimum_order_minor,d.combinable_with_duration_discount,
       (SELECT COUNT(*) FROM discount_redemptions r WHERE r.discount_id=d.id) redemptions,
@@ -88,14 +89,14 @@ export async function calculatePricing(db: D1Database, input: { durationMonths: 
       includesJsonString(discount.eligible_countries_json, input.countryCode)
     if (discount && eligible) {
       discountId = discount.id
-      const combinable = discount.combinable_with_duration_discount === 1
-      if (!combinable) durationDiscountMinor = 0
+      const combinable = true
       if (discount.kind === 'percentage') offerDiscountMinor = Math.round((subtotalMinor-durationDiscountMinor) * Math.min(discount.value,10000) / 10000)
       if (discount.kind === 'fixed') offerDiscountMinor = Math.min(discount.value, subtotalMinor-durationDiscountMinor)
       if (discount.kind === 'free_shipping') shippingMinor = 0
       promotion = { id: discount.id, code: discount.code, kind: discount.kind, value: discount.value, combinable }
     }
   }
+  if (referralBasisPoints > 0) referralDiscountMinor = Math.round(Math.max(0, subtotalMinor-durationDiscountMinor-offerDiscountMinor) * referralBasisPoints / 10000)
   const taxableMinor = Math.max(0, subtotalMinor-durationDiscountMinor-offerDiscountMinor-referralDiscountMinor+shippingMinor)
   const taxMinor = Math.round(taxableMinor * zone.tax_rate_basis_points / 10000)
   return { currency: zone.currency, monthlyPriceMinor, durationMonths: option.duration_months, quantity: input.quantity, subtotalMinor, durationDiscountMinor, offerDiscountMinor, referralDiscountMinor, shippingMinor, taxBasisPoints: zone.tax_rate_basis_points, taxMinor, totalMinor: taxableMinor+taxMinor, discountId, promotion, referralCode, countryCode: zone.country_code }

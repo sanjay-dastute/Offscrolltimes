@@ -49,10 +49,21 @@ describe('server-owned pricing', () => {
     expect((await calculatePricing(db,{durationMonths:3,quantity:1,countryCode:'GB',discountCode:'RULES',userId:'u1',now}))?.discountId).toBeNull()
     const eligible=await calculatePricing(db,{durationMonths:3,quantity:1,countryCode:'IN',discountCode:'RULES',userId:'u1',now})
     expect(eligible?.discountId).toBe('rules')
-    expect(eligible?.durationDiscountMinor).toBe(0)
+    expect(eligible?.durationDiscountMinor).toBeGreaterThan(0)
     await db.prepare(`INSERT INTO customer_subscriptions(id,owner_id,plan_id,plan_name,duration_months,quantity,status,currency,amount_minor,copies_total,renewal_enabled,created_at,updated_at) VALUES('s1','u1','p','P',1,1,'upcoming','USD',1,1,0,?,?)`).bind(now,now).run()
     await db.prepare(`INSERT INTO discount_redemptions(id,discount_id,subscription_id,owner_id,created_at) VALUES('r1','rules','s1','u1',?)`).bind(now).run()
     expect((await calculatePricing(db,{durationMonths:3,quantity:1,countryCode:'IN',discountCode:'RULES',userId:'u1',now}))?.discountId).toBeNull()
+  })
+
+  it('stacks an influencer referral with the plan and launch discounts', async () => {
+    const db=createTestD1(),now=Date.now()
+    await db.prepare(`INSERT INTO influencer_referral_codes(id,code,discount_basis_points,created_at,updated_at) VALUES('creator','CREATOR20',2000,?,?)`).bind(now,now).run()
+    await db.prepare(`INSERT INTO admin_discounts(id,code,kind,value,active,created_at,updated_at) VALUES('launch','LAUNCH','percentage',1000,1,?,?)`).bind(now,now).run()
+    const quote=await calculatePricing(db,{durationMonths:3,quantity:1,countryCode:'IN',discountCode:'LAUNCH',referralCode:'CREATOR20',userId:'new-customer',now})
+    expect(quote?.durationDiscountMinor).toBeGreaterThan(0)
+    expect(quote?.offerDiscountMinor).toBeGreaterThan(0)
+    expect(quote?.referralDiscountMinor).toBeGreaterThan(0)
+    expect(quote?.referralCode).toBe('CREATOR20')
   })
 
   it('prevents a historical commercial order from being rewritten or deleted', async () => {
