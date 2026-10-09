@@ -120,7 +120,6 @@ function AccountPage() {
         <div className="mt-7 flex flex-wrap justify-center gap-3">
           <a className={CTA} href="/login?returnTo=/account">Sign in to my profile</a>
           <a className={CTA_OUTLINE} href="/register?returnTo=/account">Create account</a>
-          <a className="w-full text-sm underline" href="/login">Trouble signing in? Choose Google</a>
         </div>
       </section>}
       {data && <>

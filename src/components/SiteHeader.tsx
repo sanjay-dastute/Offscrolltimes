@@ -43,6 +43,11 @@ export function SiteHeader() {
           <a
             href="/"
             aria-label={`${BRAND_NAME}, home`}
+            onClick={event => {
+              if (window.location.pathname !== '/') return
+              event.preventDefault()
+              window.scrollTo({ top: 0, behavior: 'smooth' })
+            }}
             className="col-start-1 row-start-1 flex w-fit items-center gap-2.5 rounded-sm no-underline outline-none focus-visible:ring-2 focus-visible:ring-founder-deep focus-visible:ring-offset-2 focus-visible:ring-offset-paper"
           >
             <Mark />
