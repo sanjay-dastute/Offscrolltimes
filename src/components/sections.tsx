@@ -18,7 +18,7 @@ function IssueMockup() {
   return (
     <div className="interactive-newspaper overflow-hidden border border-graphite bg-paper-raised shadow-[8px_8px_0_rgba(23,21,18,0.14)]">
       <video
-        className="block aspect-[4/5] w-full object-cover"
+        className="block aspect-[4/5] w-full bg-sun object-cover"
         autoPlay
         loop
         muted
@@ -30,7 +30,7 @@ function IssueMockup() {
           void currentTarget.play();
         }}
       >
-        <source src="/images/IMG_8051.MOV" type="video/quicktime" />
+        <source src="/images/IMG_8051.mp4" type="video/mp4" />
         Your browser does not support this video.
       </video>
     </div>
