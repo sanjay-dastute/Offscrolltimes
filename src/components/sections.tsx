@@ -16,36 +16,24 @@ import { CTA, CTA_OUTLINE, EYEBROW, H2, SHELL, scallop } from '#/lib/uiKit';
 
 function IssueMockup() {
   return (
-    <div className="interactive-newspaper border border-graphite bg-paper-raised shadow-[8px_8px_0_rgba(23,21,18,0.14)]">
-      <div className="flex items-center justify-between border-b-2 border-graphite px-4 py-3">
-        <span className="font-mono text-[10.5px] tracking-[0.14em] text-graphite-mute uppercase">
-          All puzzles &amp; games
-        </span>
-        <span className="bg-founder px-1.5 py-[3px] font-mono text-[10.5px] font-bold tracking-[0.12em] text-graphite uppercase">
-          Issue No. 01
-        </span>
-      </div>
-      <div className="px-4 py-6 text-center">
-        <p className="m-0 font-display text-[2rem] leading-[0.95] font-bold tracking-[-0.02em] sm:text-[2.6rem]">
-          THE
-          <br />
-          OFFSCROLL
-          <br />
-          TIMES
-        </p>
-      </div>
-      <div className="grid grid-cols-3 gap-px border-t-2 border-graphite bg-graphite">
-        {["Crossword", "Sudoku", "Trivia", "Word search", "Maze", "Fun facts"].map((tile) => (
-          <div key={tile} className="bg-paper px-2 py-3.5 text-center">
-            <span className="font-mono text-[9.5px] font-semibold tracking-[0.06em] text-graphite-soft uppercase">
-              {tile}
-            </span>
-          </div>
-        ))}
-      </div>
-      <p className="m-0 border-t border-graphite px-4 py-2.5 text-center font-mono text-[10px] tracking-[0.08em] text-graphite-mute uppercase">
-        Mockup. Puzzles inside are the real thing.
-      </p>
+    <div className="interactive-newspaper overflow-hidden border border-graphite bg-paper-raised shadow-[8px_8px_0_rgba(23,21,18,0.14)]">
+      <video
+        className="block aspect-[4/5] w-full object-cover"
+        autoPlay
+        loop
+        muted
+        playsInline
+        preload="metadata"
+        poster="/images/IMG_8090.PNG"
+        aria-label="Offscroll Times newspaper preview"
+        onEnded={({ currentTarget }) => {
+          currentTarget.currentTime = 0;
+          void currentTarget.play();
+        }}
+      >
+        <source src="/images/IMG_8051.MOV" type="video/quicktime" />
+        Your browser does not support this video.
+      </video>
     </div>
   );
 }
