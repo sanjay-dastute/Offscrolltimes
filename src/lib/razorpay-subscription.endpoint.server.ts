@@ -10,7 +10,7 @@ import { allowRequest } from '#/lib/rate-limit.server'
 
 const safe = (value: unknown, length = 160) => typeof value === 'string' ? value.trim().slice(0, length) : ''
 const database = () => { try { return lifecycleBindings().db } catch { return null } }
-const billingSchedule = (months: number): {period:'monthly'|'quarterly'|'yearly';interval:number;recordPeriod:'monthly'|'quarterly'|'yearly'} | null => months === 1 ? {period:'monthly',interval:1,recordPeriod:'monthly'} : months === 3 ? {period:'quarterly',interval:1,recordPeriod:'quarterly'} : months === 12 ? {period:'yearly',interval:1,recordPeriod:'yearly'} : null
+const billingSchedule = (months: number): {period:'monthly'|'quarterly'|'yearly';interval:number;recordPeriod:'monthly'|'quarterly'|'yearly'} | null => months === 1 ? {period:'monthly',interval:1,recordPeriod:'monthly'} : months === 3 ? {period:'monthly',interval:3,recordPeriod:'quarterly'} : months === 12 ? {period:'yearly',interval:1,recordPeriod:'yearly'} : null
 // Razorpay allows a subscription to run for at most ten years.
 const recurringCycleCount = (durationMonths: number) => Math.max(1, Math.floor(120 / durationMonths))
 
@@ -37,13 +37,14 @@ export async function razorpaySubscriptionCheckout(request: Request) {
     const durationMonths = Number(body.durationMonths)
     const quantity = Number(body.quantity)
     const delivery = parseAddress(body.address)
+    const selectedCountry = safe(body.countryCode, 2).toUpperCase()
     const email = safe(body.email, 200).toLowerCase()
     const phone = safe(body.phone, 30)
     const idempotencyKey = safe(body.idempotencyKey, 100)
     const schedule = billingSchedule(durationMonths)
-    if (!schedule || !delivery || !/^\+?[0-9 ()-]{7,30}$/.test(phone) || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || body.acceptTerms !== true || !/^[A-Za-z0-9_-]{16,100}$/.test(idempotencyKey)) return json({ error: 'Complete contact, address and accept the terms.' }, 422)
+    if (!schedule || !delivery || selectedCountry !== delivery.country || !/^\+?[0-9 ()-]{7,30}$/.test(phone) || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || body.acceptTerms !== true || !/^[A-Za-z0-9_-]{16,100}$/.test(idempotencyKey)) return json({ error: 'Choose your delivery country again, then complete contact, address and accept the terms.' }, 422)
     checkoutStage = 'calculating the price'
-    const quote = await calculatePricing(db, { durationMonths, quantity, countryCode: delivery.country, discountCode: safe(body.discountCode, 50), referralCode: safe(body.referralCode, 50), userId: session.user.id, now: Date.now() })
+    const quote = await calculatePricing(db, { durationMonths, quantity, countryCode: selectedCountry, discountCode: safe(body.discountCode, 50), referralCode: safe(body.referralCode, 50), userId: session.user.id, now: Date.now() })
     if (!quote || quote.totalMinor < 100) return json({ error: 'This selection cannot be priced.' }, 422)
     checkoutStage = 'checking for an existing checkout'
     const previous = await db.prepare(`SELECT r.razorpay_order_id,r.amount_minor,r.currency,r.pricing_snapshot_json FROM razorpay_orders r WHERE r.owner_id=? AND r.idempotency_key=?`).bind(session.user.id, idempotencyKey).first<{ razorpay_order_id: string; amount_minor: number; currency: string; pricing_snapshot_json: string }>()

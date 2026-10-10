@@ -104,6 +104,9 @@ function Checkout() {
     setState('creating')
     setError('')
     const form = new FormData(event.currentTarget)
+    // Read the country from the submitted form so the customer's final checkout
+    // selection always overrides any region selected on the previous page.
+    const finalCountry = String(form.get('country') ?? '').toUpperCase()
     const address = Object.fromEntries(['name', 'line1', 'line2', 'city', 'region', 'postalCode', 'country'].map(key => [key, form.get(key)]))
     try {
       // Avoid creating an unused Razorpay subscription if its checkout script is unavailable.
@@ -112,6 +115,7 @@ function Checkout() {
         idempotencyKey: idempotency.current,
         durationMonths: search.duration,
         quantity: search.quantity,
+        countryCode: finalCountry,
         discountCode: search.code,
         referralCode: referral,
         email: form.get('email'),
