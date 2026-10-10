@@ -31,6 +31,8 @@ export async function razorpaySubscriptionCheckout(request: Request) {
   if (!await allowRequest(request, 'razorpay_subscription_checkout', 12, 10 * 60 * 1000, session.user.id)) return json({ error: 'Too many checkout attempts. Try again shortly.' }, 429)
 
   if (body.action === 'create') {
+    let checkoutStage = 'validating checkout details'
+    try {
     const durationMonths = Number(body.durationMonths)
     const quantity = Number(body.quantity)
     const delivery = parseAddress(body.address)
@@ -39,20 +41,26 @@ export async function razorpaySubscriptionCheckout(request: Request) {
     const idempotencyKey = safe(body.idempotencyKey, 100)
     const schedule = billingSchedule(durationMonths)
     if (!schedule || !delivery || !/^\+?[0-9 ()-]{7,30}$/.test(phone) || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || body.acceptTerms !== true || !/^[A-Za-z0-9_-]{16,100}$/.test(idempotencyKey)) return json({ error: 'Complete contact, address and accept the terms.' }, 422)
+    checkoutStage = 'calculating the price'
     const quote = await calculatePricing(db, { durationMonths, quantity, countryCode: delivery.country, discountCode: safe(body.discountCode, 50), referralCode: safe(body.referralCode, 50), userId: session.user.id, now: Date.now() })
     if (!quote || quote.totalMinor < 100) return json({ error: 'This selection cannot be priced.' }, 422)
+    checkoutStage = 'checking for an existing checkout'
     const previous = await db.prepare(`SELECT r.razorpay_order_id,r.amount_minor,r.currency,r.pricing_snapshot_json FROM razorpay_orders r WHERE r.owner_id=? AND r.idempotency_key=?`).bind(session.user.id, idempotencyKey).first<{ razorpay_order_id: string; amount_minor: number; currency: string; pricing_snapshot_json: string }>()
     if (previous) return json({ ok: true, keyId: razorpayPublicKey(), subscriptionId: previous.razorpay_order_id, amount: previous.amount_minor, currency: previous.currency, quote: JSON.parse(previous.pricing_snapshot_json), reused: true })
 
     const localSubscriptionId = `rzp_${idempotencyKey}`
     const now = Date.now()
+    checkoutStage = 'saving your subscription details'
     await registerCustomerCheckout(db, { id: localSubscriptionId, userId: session.user.id, planId: `razorpay_${durationMonths}`, planName: `${durationMonths} month`, durationMonths, quantity, currency: quote.currency, amountMinor: quote.totalMinor, pricingSnapshot: quote, now })
     await saveCustomerCheckoutDetails(db, { id: localSubscriptionId, userId: session.user.id, email, address: delivery, now })
     await db.prepare(`UPDATE customer_subscriptions SET contact_phone=?,renewal_enabled=1,renewal_at=?,renewal_amount_minor=? WHERE id=?`).bind(phone, now + durationMonths * 2629800000, quote.totalMinor, localSubscriptionId).run()
     try {
+      checkoutStage = 'creating the Razorpay payment plan'
       const plan = await createRazorpayPlan({ ...schedule, amount: quote.totalMinor, currency: quote.currency, name: `Offscroll Times ${durationMonths}-month subscription`, description: `${quantity} copy/copies per edition, billed every ${durationMonths} month(s).`, notes: { local_subscription_id: localSubscriptionId, duration_months: String(durationMonths) } })
+      checkoutStage = 'creating the Razorpay payment session'
       const provider = await createRazorpaySubscription({ planId: String(plan.id), totalCount: recurringCycleCount, notes: { local_subscription_id: localSubscriptionId, user_id: session.user.id } })
       if (typeof provider.id !== 'string' || typeof plan.id !== 'string') return json({ error: 'Payment service returned an invalid subscription.' }, 502)
+      checkoutStage = 'saving the Razorpay payment session'
       await db.batch([
         db.prepare(`INSERT INTO razorpay_orders(id,subscription_id,owner_id,razorpay_order_id,status,amount_minor,currency,pricing_snapshot_json,terms_accepted_at,created_at,updated_at,idempotency_key) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)`).bind(crypto.randomUUID(), localSubscriptionId, session.user.id, provider.id, 'created', quote.totalMinor, quote.currency, JSON.stringify(quote), now, now, now, idempotencyKey),
         db.prepare(`INSERT INTO razorpay_recurring_subscriptions(id,subscription_id,owner_id,razorpay_subscription_id,razorpay_plan_id,status,billing_period,cycle_amount_minor,currency,total_count,next_charge_at,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)`).bind(crypto.randomUUID(), localSubscriptionId, session.user.id, provider.id, plan.id, schedule.recordPeriod, quote.totalMinor, quote.currency, recurringCycleCount, Number(provider.charge_at ?? 0) * 1000 || null, now, now),
@@ -60,6 +68,7 @@ export async function razorpaySubscriptionCheckout(request: Request) {
       // The operational subscription and payment records above are the checkout source
       // of truth. A failure to write the additional canonical reporting record must not
       // prevent the customer from opening an already-created Razorpay checkout session.
+      checkoutStage = 'saving the order record'
       try {
         await recordCustomerOrder(db, { userId: session.user.id, email, phone, subscriptionId: localSubscriptionId, providerOrderId: provider.id, currency: quote.currency, amountMinor: quote.totalMinor, pricingSnapshot: quote, address: delivery, termsAcceptedAt: now })
       } catch (error) {
@@ -69,6 +78,10 @@ export async function razorpaySubscriptionCheckout(request: Request) {
     } catch (error) {
       if (error instanceof RazorpayApiError) return json({ error: error.status === 401 ? 'Razorpay credentials were rejected.' : 'Payment service is unavailable. Please try again.' }, error.status === 401 ? 401 : 500)
       throw error
+    }
+    } catch (error) {
+      console.error('razorpay_checkout_create_failed', { stage: checkoutStage, name: error instanceof Error ? error.name : 'UnknownError', message: error instanceof Error ? error.message : String(error), stack: error instanceof Error ? error.stack : undefined })
+      return json({ error: `Payment setup failed while ${checkoutStage}. Please retry.` }, 500)
     }
   }
 

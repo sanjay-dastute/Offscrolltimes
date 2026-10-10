@@ -14,9 +14,15 @@ export function razorpayPublicKey(){ return credentials().keyId }
 
 async function api(path:string,init:RequestInit={}) {
   const {keyId,keySecret}=credentials()
-  const response=await fetch(`https://api.razorpay.com/v1${path}`,{...init,headers:{Authorization:`Basic ${Buffer.from(`${keyId}:${keySecret}`).toString('base64')}`,'Content-Type':'application/json',...(init.headers??{})}})
-  if(!response.ok) throw new RazorpayApiError(response.status)
-  return response.json() as Promise<Record<string,any>>
+  try {
+    const response=await fetch(`https://api.razorpay.com/v1${path}`,{...init,headers:{Authorization:`Basic ${Buffer.from(`${keyId}:${keySecret}`).toString('base64')}`,'Content-Type':'application/json',...(init.headers??{})}})
+    if(!response.ok) throw new RazorpayApiError(response.status)
+    return response.json() as Promise<Record<string,any>>
+  } catch (error) {
+    if (error instanceof RazorpayApiError) throw error
+    console.error('razorpay_api_transport_failed', { path, name: error instanceof Error ? error.name : 'UnknownError', message: error instanceof Error ? error.message : String(error), stack: error instanceof Error ? error.stack : undefined })
+    throw new RazorpayApiError(502)
+  }
 }
 
 export async function createRazorpayOrder(input:{amount:number;currency:string;receipt:string;notes:Record<string,string>}) {
