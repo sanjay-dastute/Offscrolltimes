@@ -124,6 +124,8 @@ function Checkout() {
       const checkout = new window.Razorpay({
         key: order.keyId,
         subscription_id: order.subscriptionId,
+        currency: order.currency,
+        amount: order.amount,
         name: 'Offscroll Times',
         description: `${search.duration}-month subscription · ${search.quantity} copies`,
         prefill: { name: form.get('name'), email: form.get('email'), contact: form.get('phone') },

@@ -10,8 +10,9 @@ import { allowRequest } from '#/lib/rate-limit.server'
 
 const safe = (value: unknown, length = 160) => typeof value === 'string' ? value.trim().slice(0, length) : ''
 const database = () => { try { return lifecycleBindings().db } catch { return null } }
-const billingSchedule = (months: number): {period:'monthly'|'yearly';interval:number;recordPeriod:'monthly'|'quarterly'|'yearly'} | null => months === 1 ? {period:'monthly',interval:1,recordPeriod:'monthly'} : months === 3 ? {period:'monthly',interval:3,recordPeriod:'quarterly'} : months === 12 ? {period:'yearly',interval:1,recordPeriod:'yearly'} : null
-const recurringCycleCount = 120
+const billingSchedule = (months: number): {period:'monthly'|'quarterly'|'yearly';interval:number;recordPeriod:'monthly'|'quarterly'|'yearly'} | null => months === 1 ? {period:'monthly',interval:1,recordPeriod:'monthly'} : months === 3 ? {period:'quarterly',interval:1,recordPeriod:'quarterly'} : months === 12 ? {period:'yearly',interval:1,recordPeriod:'yearly'} : null
+// Razorpay allows a subscription to run for at most ten years.
+const recurringCycleCount = (durationMonths: number) => Math.max(1, Math.floor(120 / durationMonths))
 
 function parseAddress(value: unknown): CustomerAddress | null {
   if (!value || typeof value !== 'object') return null
@@ -58,13 +59,19 @@ export async function razorpaySubscriptionCheckout(request: Request) {
       checkoutStage = 'creating the Razorpay payment plan'
       const plan = await createRazorpayPlan({ ...schedule, amount: quote.totalMinor, currency: quote.currency, name: `Offscroll Times ${durationMonths}-month subscription`, description: `${quantity} copy/copies per edition, billed every ${durationMonths} month(s).`, notes: { local_subscription_id: localSubscriptionId, duration_months: String(durationMonths) } })
       checkoutStage = 'creating the Razorpay payment session'
-      const provider = await createRazorpaySubscription({ planId: String(plan.id), totalCount: recurringCycleCount, notes: { local_subscription_id: localSubscriptionId, user_id: session.user.id } })
+      const cycleCount = recurringCycleCount(durationMonths)
+      const provider = await createRazorpaySubscription({ planId: String(plan.id), totalCount: cycleCount, notes: { local_subscription_id: localSubscriptionId, user_id: session.user.id } })
       if (typeof provider.id !== 'string' || typeof plan.id !== 'string') return json({ error: 'Payment service returned an invalid subscription.' }, 502)
       checkoutStage = 'saving the Razorpay payment session'
-      await db.batch([
-        db.prepare(`INSERT INTO razorpay_orders(id,subscription_id,owner_id,razorpay_order_id,status,amount_minor,currency,pricing_snapshot_json,terms_accepted_at,created_at,updated_at,idempotency_key) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)`).bind(crypto.randomUUID(), localSubscriptionId, session.user.id, provider.id, 'created', quote.totalMinor, quote.currency, JSON.stringify(quote), now, now, now, idempotencyKey),
-        db.prepare(`INSERT INTO razorpay_recurring_subscriptions(id,subscription_id,owner_id,razorpay_subscription_id,razorpay_plan_id,status,billing_period,cycle_amount_minor,currency,total_count,next_charge_at,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)`).bind(crypto.randomUUID(), localSubscriptionId, session.user.id, provider.id, plan.id, schedule.recordPeriod, quote.totalMinor, quote.currency, recurringCycleCount, Number(provider.charge_at ?? 0) * 1000 || null, now, now),
-      ])
+      await db.prepare(`INSERT INTO razorpay_orders(id,subscription_id,owner_id,razorpay_order_id,status,amount_minor,currency,pricing_snapshot_json,terms_accepted_at,created_at,updated_at,idempotency_key) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)`).bind(crypto.randomUUID(), localSubscriptionId, session.user.id, provider.id, 'created', quote.totalMinor, quote.currency, JSON.stringify(quote), now, now, now, idempotencyKey).run()
+      // Payment verification is based on razorpay_orders. Keep the recurring
+      // reporting record best-effort so a secondary tracking constraint never
+      // blocks a customer from completing the Razorpay mandate.
+      try {
+        await db.prepare(`INSERT INTO razorpay_recurring_subscriptions(id,subscription_id,owner_id,razorpay_subscription_id,razorpay_plan_id,status,billing_period,cycle_amount_minor,currency,total_count,next_charge_at,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)`).bind(crypto.randomUUID(), localSubscriptionId, session.user.id, provider.id, plan.id, 'created', schedule.recordPeriod, quote.totalMinor, quote.currency, cycleCount, Number(provider.charge_at ?? 0) * 1000 || null, now, now).run()
+      } catch (error) {
+        console.error('razorpay_recurring_record_failed', { subscriptionId: localSubscriptionId, error: error instanceof Error ? error.message : String(error) })
+      }
       // The operational subscription and payment records above are the checkout source
       // of truth. A failure to write the additional canonical reporting record must not
       // prevent the customer from opening an already-created Razorpay checkout session.
