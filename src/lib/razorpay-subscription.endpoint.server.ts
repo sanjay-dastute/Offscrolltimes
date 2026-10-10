@@ -57,7 +57,14 @@ export async function razorpaySubscriptionCheckout(request: Request) {
         db.prepare(`INSERT INTO razorpay_orders(id,subscription_id,owner_id,razorpay_order_id,status,amount_minor,currency,pricing_snapshot_json,terms_accepted_at,created_at,updated_at,idempotency_key) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)`).bind(crypto.randomUUID(), localSubscriptionId, session.user.id, provider.id, 'created', quote.totalMinor, quote.currency, JSON.stringify(quote), now, now, now, idempotencyKey),
         db.prepare(`INSERT INTO razorpay_recurring_subscriptions(id,subscription_id,owner_id,razorpay_subscription_id,razorpay_plan_id,status,billing_period,cycle_amount_minor,currency,total_count,next_charge_at,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)`).bind(crypto.randomUUID(), localSubscriptionId, session.user.id, provider.id, plan.id, schedule.recordPeriod, quote.totalMinor, quote.currency, recurringCycleCount, Number(provider.charge_at ?? 0) * 1000 || null, now, now),
       ])
-      await recordCustomerOrder(db, { userId: session.user.id, email, phone, subscriptionId: localSubscriptionId, providerOrderId: provider.id, currency: quote.currency, amountMinor: quote.totalMinor, pricingSnapshot: quote, address: delivery, termsAcceptedAt: now })
+      // The operational subscription and payment records above are the checkout source
+      // of truth. A failure to write the additional canonical reporting record must not
+      // prevent the customer from opening an already-created Razorpay checkout session.
+      try {
+        await recordCustomerOrder(db, { userId: session.user.id, email, phone, subscriptionId: localSubscriptionId, providerOrderId: provider.id, currency: quote.currency, amountMinor: quote.totalMinor, pricingSnapshot: quote, address: delivery, termsAcceptedAt: now })
+      } catch (error) {
+        console.error('canonical_order_record_failed', { subscriptionId: localSubscriptionId, error: error instanceof Error ? error.message : String(error) })
+      }
       return json({ ok: true, keyId: razorpayPublicKey(), subscriptionId: provider.id, amount: quote.totalMinor, currency: quote.currency, quote })
     } catch (error) {
       if (error instanceof RazorpayApiError) return json({ error: error.status === 401 ? 'Razorpay credentials were rejected.' : 'Payment service is unavailable. Please try again.' }, error.status === 401 ? 401 : 500)
