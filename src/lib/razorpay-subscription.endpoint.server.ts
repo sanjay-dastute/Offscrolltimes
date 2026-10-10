@@ -10,7 +10,7 @@ import { allowRequest } from '#/lib/rate-limit.server'
 
 const safe = (value: unknown, length = 160) => typeof value === 'string' ? value.trim().slice(0, length) : ''
 const database = () => { try { return lifecycleBindings().db } catch { return null } }
-const billingPeriod = (months: number): 'monthly' | 'quarterly' | 'yearly' | null => months === 1 ? 'monthly' : months === 3 ? 'quarterly' : months === 12 ? 'yearly' : null
+const billingSchedule = (months: number): {period:'monthly'|'yearly';interval:number} | null => months === 1 ? {period:'monthly',interval:1} : months === 3 ? {period:'monthly',interval:3} : months === 12 ? {period:'yearly',interval:1} : null
 const recurringCycleCount = 120
 
 function parseAddress(value: unknown): CustomerAddress | null {
@@ -37,8 +37,8 @@ export async function razorpaySubscriptionCheckout(request: Request) {
     const email = safe(body.email, 200).toLowerCase()
     const phone = safe(body.phone, 30)
     const idempotencyKey = safe(body.idempotencyKey, 100)
-    const period = billingPeriod(durationMonths)
-    if (!period || !delivery || !/^\+?[0-9 ()-]{7,30}$/.test(phone) || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || body.acceptTerms !== true || !/^[A-Za-z0-9_-]{16,100}$/.test(idempotencyKey)) return json({ error: 'Complete contact, address and accept the terms.' }, 422)
+    const schedule = billingSchedule(durationMonths)
+    if (!schedule || !delivery || !/^\+?[0-9 ()-]{7,30}$/.test(phone) || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || body.acceptTerms !== true || !/^[A-Za-z0-9_-]{16,100}$/.test(idempotencyKey)) return json({ error: 'Complete contact, address and accept the terms.' }, 422)
     const quote = await calculatePricing(db, { durationMonths, quantity, countryCode: delivery.country, discountCode: safe(body.discountCode, 50), referralCode: safe(body.referralCode, 50), userId: session.user.id, now: Date.now() })
     if (!quote || quote.totalMinor < 100) return json({ error: 'This selection cannot be priced.' }, 422)
     const previous = await db.prepare(`SELECT r.razorpay_order_id,r.amount_minor,r.currency,r.pricing_snapshot_json FROM razorpay_orders r WHERE r.owner_id=? AND r.idempotency_key=?`).bind(session.user.id, idempotencyKey).first<{ razorpay_order_id: string; amount_minor: number; currency: string; pricing_snapshot_json: string }>()
@@ -50,12 +50,12 @@ export async function razorpaySubscriptionCheckout(request: Request) {
     await saveCustomerCheckoutDetails(db, { id: localSubscriptionId, userId: session.user.id, email, address: delivery, now })
     await db.prepare(`UPDATE customer_subscriptions SET contact_phone=?,renewal_enabled=1,renewal_at=?,renewal_amount_minor=? WHERE id=?`).bind(phone, now + durationMonths * 2629800000, quote.totalMinor, localSubscriptionId).run()
     try {
-      const plan = await createRazorpayPlan({ period, amount: quote.totalMinor, currency: quote.currency, name: `Offscroll Times ${durationMonths}-month subscription`, description: `${quantity} copy/copies per edition, billed every ${durationMonths} month(s).`, notes: { local_subscription_id: localSubscriptionId, duration_months: String(durationMonths) } })
+      const plan = await createRazorpayPlan({ ...schedule, amount: quote.totalMinor, currency: quote.currency, name: `Offscroll Times ${durationMonths}-month subscription`, description: `${quantity} copy/copies per edition, billed every ${durationMonths} month(s).`, notes: { local_subscription_id: localSubscriptionId, duration_months: String(durationMonths) } })
       const provider = await createRazorpaySubscription({ planId: String(plan.id), totalCount: recurringCycleCount, notes: { local_subscription_id: localSubscriptionId, user_id: session.user.id } })
       if (typeof provider.id !== 'string' || typeof plan.id !== 'string') return json({ error: 'Payment service returned an invalid subscription.' }, 502)
       await db.batch([
         db.prepare(`INSERT INTO razorpay_orders(id,subscription_id,owner_id,razorpay_order_id,status,amount_minor,currency,pricing_snapshot_json,terms_accepted_at,created_at,updated_at,idempotency_key) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)`).bind(crypto.randomUUID(), localSubscriptionId, session.user.id, provider.id, 'created', quote.totalMinor, quote.currency, JSON.stringify(quote), now, now, now, idempotencyKey),
-        db.prepare(`INSERT INTO razorpay_recurring_subscriptions(id,subscription_id,owner_id,razorpay_subscription_id,razorpay_plan_id,status,billing_period,cycle_amount_minor,currency,total_count,next_charge_at,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)`).bind(crypto.randomUUID(), localSubscriptionId, session.user.id, provider.id, plan.id, String(provider.status ?? 'created'), period, quote.totalMinor, quote.currency, recurringCycleCount, Number(provider.charge_at ?? 0) * 1000 || null, now, now),
+        db.prepare(`INSERT INTO razorpay_recurring_subscriptions(id,subscription_id,owner_id,razorpay_subscription_id,razorpay_plan_id,status,billing_period,cycle_amount_minor,currency,total_count,next_charge_at,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)`).bind(crypto.randomUUID(), localSubscriptionId, session.user.id, provider.id, plan.id, `${schedule.period}:${schedule.interval}`, quote.totalMinor, quote.currency, recurringCycleCount, Number(provider.charge_at ?? 0) * 1000 || null, now, now),
       ])
       await recordCustomerOrder(db, { userId: session.user.id, email, phone, subscriptionId: localSubscriptionId, providerOrderId: provider.id, currency: quote.currency, amountMinor: quote.totalMinor, pricingSnapshot: quote, address: delivery, termsAcceptedAt: now })
       return json({ ok: true, keyId: razorpayPublicKey(), subscriptionId: provider.id, amount: quote.totalMinor, currency: quote.currency, quote })

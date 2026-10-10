@@ -24,9 +24,10 @@ export async function createRazorpayOrder(input:{amount:number;currency:string;r
   return api('/orders',{method:'POST',body:JSON.stringify(input)})
 }
 
-export async function createRazorpayPlan(input:{period:'monthly'|'quarterly'|'yearly';amount:number;currency:string;name:string;description:string;notes:Record<string,string>}) {
+export async function createRazorpayPlan(input:{period:'monthly'|'yearly';interval:number;amount:number;currency:string;name:string;description:string;notes:Record<string,string>}) {
   if(!Number.isSafeInteger(input.amount)||input.amount<100) throw new RangeError('Subscription amount must be at least 100 in the smallest currency unit.')
-  return api('/plans',{method:'POST',body:JSON.stringify({period:input.period,interval:1,item:{name:input.name,amount:input.amount,currency:input.currency,description:input.description},notes:input.notes})})
+  if(!Number.isSafeInteger(input.interval)||input.interval<1) throw new RangeError('A valid billing interval is required.')
+  return api('/plans',{method:'POST',body:JSON.stringify({period:input.period,interval:input.interval,item:{name:input.name,amount:input.amount,currency:input.currency,description:input.description},notes:input.notes})})
 }
 
 export async function createRazorpaySubscription(input:{planId:string;totalCount:number;notes:Record<string,string>}) {
