@@ -10,7 +10,7 @@ import { allowRequest } from '#/lib/rate-limit.server'
 
 const safe = (value: unknown, length = 160) => typeof value === 'string' ? value.trim().slice(0, length) : ''
 const database = () => { try { return lifecycleBindings().db } catch { return null } }
-const billingSchedule = (months: number): {period:'monthly'|'yearly';interval:number} | null => months === 1 ? {period:'monthly',interval:1} : months === 3 ? {period:'monthly',interval:3} : months === 12 ? {period:'yearly',interval:1} : null
+const billingSchedule = (months: number): {period:'monthly'|'yearly';interval:number;recordPeriod:'monthly'|'quarterly'|'yearly'} | null => months === 1 ? {period:'monthly',interval:1,recordPeriod:'monthly'} : months === 3 ? {period:'monthly',interval:3,recordPeriod:'quarterly'} : months === 12 ? {period:'yearly',interval:1,recordPeriod:'yearly'} : null
 const recurringCycleCount = 120
 
 function parseAddress(value: unknown): CustomerAddress | null {
@@ -55,7 +55,7 @@ export async function razorpaySubscriptionCheckout(request: Request) {
       if (typeof provider.id !== 'string' || typeof plan.id !== 'string') return json({ error: 'Payment service returned an invalid subscription.' }, 502)
       await db.batch([
         db.prepare(`INSERT INTO razorpay_orders(id,subscription_id,owner_id,razorpay_order_id,status,amount_minor,currency,pricing_snapshot_json,terms_accepted_at,created_at,updated_at,idempotency_key) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)`).bind(crypto.randomUUID(), localSubscriptionId, session.user.id, provider.id, 'created', quote.totalMinor, quote.currency, JSON.stringify(quote), now, now, now, idempotencyKey),
-        db.prepare(`INSERT INTO razorpay_recurring_subscriptions(id,subscription_id,owner_id,razorpay_subscription_id,razorpay_plan_id,status,billing_period,cycle_amount_minor,currency,total_count,next_charge_at,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)`).bind(crypto.randomUUID(), localSubscriptionId, session.user.id, provider.id, plan.id, `${schedule.period}:${schedule.interval}`, quote.totalMinor, quote.currency, recurringCycleCount, Number(provider.charge_at ?? 0) * 1000 || null, now, now),
+        db.prepare(`INSERT INTO razorpay_recurring_subscriptions(id,subscription_id,owner_id,razorpay_subscription_id,razorpay_plan_id,status,billing_period,cycle_amount_minor,currency,total_count,next_charge_at,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)`).bind(crypto.randomUUID(), localSubscriptionId, session.user.id, provider.id, plan.id, schedule.recordPeriod, quote.totalMinor, quote.currency, recurringCycleCount, Number(provider.charge_at ?? 0) * 1000 || null, now, now),
       ])
       await recordCustomerOrder(db, { userId: session.user.id, email, phone, subscriptionId: localSubscriptionId, providerOrderId: provider.id, currency: quote.currency, amountMinor: quote.totalMinor, pricingSnapshot: quote, address: delivery, termsAcceptedAt: now })
       return json({ ok: true, keyId: razorpayPublicKey(), subscriptionId: provider.id, amount: quote.totalMinor, currency: quote.currency, quote })
