@@ -24,7 +24,6 @@ function IssueMockup() {
         muted
         playsInline
         preload="metadata"
-        poster="/images/IMG_8090.PNG"
         aria-label="Offscroll Times newspaper preview"
         onEnded={({ currentTarget }) => {
           currentTarget.currentTime = 0;
