@@ -4,8 +4,8 @@ export const BRAND_TAGLINE = "A monthly puzzle newspaper. No screens required.";
 // Placeholder contact channel — update to the real business WhatsApp number
 // before publishing. Format: https://wa.me/<countrycode><number> with no
 // punctuation.
-export const WHATSAPP_NUMBER = "+91 73730 50093";
-export const WHATSAPP_URL = `https://wa.me/917373050093?text=${encodeURIComponent(
+export const WHATSAPP_NUMBER = "+91 79049 51430";
+export const WHATSAPP_URL = `https://wa.me/917904951430?text=${encodeURIComponent(
   "Hi, I'm interested in an Offscroll Times subscription. Please share the available plans and delivery details for my country.",
 )}`;
 
