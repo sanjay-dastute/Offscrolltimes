@@ -12,6 +12,7 @@ import { AdminReferrals } from "#/components/AdminReferrals";
 
 type Row = Record<string, any>;
 type AdminData = {
+  visitorLocations: Array<{country:string|null;state:string|null;stateCode:string|null;viewers:number}>;
   deletionRequests: number;
   user: { id: string; name?: string };
   csrf: string;
@@ -467,7 +468,8 @@ function Overview({ data }: { data: AdminData }) {
       </section>
       <section>
         <p className={EYEBROW}>First-party funnel</p>
-        <h2 className="text-2xl font-bold">Anonymous consented activity</h2>
+        <h2 className="text-2xl font-bold">Unique consented activity</h2>
+        <p className="mt-2 text-sm text-graphite-soft">Each viewer is counted once per activity. Refreshes do not add views. Unique visitor tracking starts with this update.</p>
         <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
           {Object.entries(data.reports.funnel).map(([label, value]) => (
             <Metric
@@ -476,6 +478,12 @@ function Overview({ data }: { data: AdminData }) {
               value={value}
             />
           ))}
+        </div>
+        <div className="mt-6 overflow-x-auto rounded-xl border border-graphite p-4">
+          <h3 className="font-display text-xl font-bold">Viewers by country and state</h3>
+          <table className="mt-3 w-full text-left text-sm"><thead><tr className="border-b border-graphite"><th className="py-2">Country / region</th><th>State</th><th>Unique viewers</th></tr></thead><tbody>{data.visitorLocations.map((location,index)=><tr className="border-b border-rule" key={index}><td className="py-2">{location.country ? new Intl.DisplayNames(['en'],{type:'region'}).of(location.country) : 'Unknown'}</td><td>{location.state ?? location.stateCode ?? 'Unknown'}{location.state && location.stateCode ? ` (${location.stateCode})` : ''}</td><td>{location.viewers}</td></tr>)}</tbody></table>
+          {!data.visitorLocations.length&&<p className="mt-3 text-sm">No unique viewer locations recorded yet.</p>}
+          <p className="mt-3 text-xs text-graphite-soft">Location is approximate, based on the connection. Each viewer appears once at their first recorded location.</p>
         </div>
       </section>
       <section>

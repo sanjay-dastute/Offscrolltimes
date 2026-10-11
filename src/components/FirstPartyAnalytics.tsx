@@ -5,8 +5,13 @@ type Choice = 'accepted'|'declined'|null
 const key = 'offscroll_analytics_choice'
 
 function send(event: string, path: string, value?: string) {
+  let visitorId: string;
+  try {
+    visitorId = localStorage.getItem('offscroll_analytics_visitor') || crypto.randomUUID();
+    localStorage.setItem('offscroll_analytics_visitor', visitorId);
+  } catch { return; }
   void fetch('/api/analytics', { method: 'POST', headers: { 'Content-Type': 'application/json' }, keepalive: true,
-    body: JSON.stringify({ event, path, value, consent: true }) })
+    body: JSON.stringify({ event, path, value, visitorId, consent: true }) })
 }
 
 export function FirstPartyAnalytics() {
@@ -23,5 +28,5 @@ export function FirstPartyAnalytics() {
   }, [choice, location.pathname])
   const decide = (next: Exclude<Choice,null>) => { try { localStorage.setItem(key, next) } catch { /* Respect the choice for this visit when storage is blocked. */ } setChoice(next) }
   if (choice) return null
-  return <aside role="dialog" aria-label="Analytics preference" className="fixed inset-x-3 bottom-3 z-[80] mx-auto max-w-2xl rounded-2xl border-2 border-graphite bg-paper-raised p-4 shadow-xl"><p className="m-0 text-sm"><strong>Help us improve?</strong> Allow anonymous, first-party page and subscription-funnel measurement. No advertising trackers, coupon codes or personal details are collected. Essential operational reporting continues either way. <a href="/policies/cookies">Cookie details</a></p><div className="mt-3 flex gap-2"><button onClick={()=>decide('accepted')} className="rounded-full bg-graphite px-4 py-2 text-sm text-paper">Allow analytics</button><button onClick={()=>decide('declined')} className="rounded-full border border-graphite px-4 py-2 text-sm">Decline</button></div></aside>
+  return <aside role="dialog" aria-label="Analytics preference" className="fixed inset-x-3 bottom-3 z-[80] mx-auto max-w-2xl rounded-2xl border-2 border-graphite bg-paper-raised p-4 shadow-xl"><p className="m-0 text-sm"><strong>Help us improve?</strong> Allow first-party unique-visitor and subscription-funnel measurement, including approximate country and state. No advertising trackers, coupon codes or payment details are collected. Essential operational reporting continues either way. <a href="/policies/cookies">Cookie details</a></p><div className="mt-3 flex gap-2"><button onClick={()=>decide('accepted')} className="rounded-full bg-graphite px-4 py-2 text-sm text-paper">Allow analytics</button><button onClick={()=>decide('declined')} className="rounded-full border border-graphite px-4 py-2 text-sm">Decline</button></div></aside>
 }

@@ -54,6 +54,7 @@ const MIGRATION_FILES = [
   '0045_homepage_poll.sql',
   '0046_homepage_upload_storage_category.sql',
   '0047_refund_attempts.sql',
+  '0048_unique_analytics.sql',
 ]
 
 export function createTestD1(): D1Database {

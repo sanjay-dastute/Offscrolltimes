@@ -47,11 +47,11 @@ export async function getAdminDashboard(db: D1Database) {
       FROM admin_discounts d LEFT JOIN discount_redemptions r ON r.discount_id=d.id
       LEFT JOIN customer_subscriptions s ON s.id=r.subscription_id LEFT JOIN customer_payments p ON p.subscription_id=s.id
       GROUP BY d.id,d.code ORDER BY redemptions DESC`).all(),
-    db.prepare(`SELECT event_name,COUNT(*) total FROM first_party_analytics_events GROUP BY event_name`).all(),
+    db.prepare(`SELECT e.event_name,COUNT(DISTINCT COALESCE(v.account_key,v.device_key)) total FROM first_party_analytics_events e JOIN analytics_visitors v ON v.device_key=e.visitor_key GROUP BY e.event_name`).all(),
   ])
   const [referralSettings,influencerReferrals]=await Promise.all([db.prepare(`SELECT discount_basis_points,updated_at FROM referral_settings WHERE id=1`).first<{discount_basis_points:number;updated_at:number}>(),db.prepare(`SELECT * FROM influencer_referral_codes ORDER BY created_at DESC`).all()])
   const rows = subscriptions.results as Array<Record<string, unknown>>
-  const paymentRows = payments.results as Array<{ status: string; amount_minor: number; currency:string }>
+  const paymentRows = payments.results as Array<{ status: string; amount_minor: number; currency:string; customer_id:string }>
   const fulfilmentRows = fulfilments.results as Array<{ subscription_id: string; edition_label: string; status: string }>
   const editionRows = editions.results as Array<{ label: string; dispatch_at: number; eligibility_cutoff_at: number; status: string; copies_available:number }>
   const now = Date.now()
@@ -93,6 +93,7 @@ export async function getAdminDashboard(db: D1Database) {
     if (country) dispatchedByCountry.set(country, (dispatchedByCountry.get(country) ?? 0) + Number(subscription?.quantity ?? 1))
   }
   return {
+    visitorLocations: (await db.prepare(`WITH ranked AS (SELECT v.country_code,v.region_name,v.region_code,ROW_NUMBER() OVER (PARTITION BY COALESCE(v.account_key,v.device_key) ORDER BY v.created_at,v.device_key) position FROM analytics_visitors v WHERE EXISTS (SELECT 1 FROM first_party_analytics_events e WHERE e.visitor_key=v.device_key AND e.event_name='page_view')) SELECT country_code country,region_name state,region_code stateCode,COUNT(*) viewers FROM ranked WHERE position=1 GROUP BY country_code,region_name,region_code ORDER BY viewers DESC,country_code,region_name`).all()).results,
     deletionRequests: (await db.prepare("SELECT COUNT(*) total FROM customer_privacy_requests WHERE request_type='deletion' AND status IN ('received','reviewing')").first<{total:number}>())?.total ?? 0,
     referralSettings: referralSettings ?? { discount_basis_points: 0, updated_at: 0 },
     influencerReferrals: influencerReferrals.results,
@@ -149,7 +150,7 @@ export async function getAdminDashboard(db: D1Database) {
       } : null,
       countryDistribution: Array.from(countryCounts, ([country, totals]) => ({ country, ...totals })).sort((a, b) => b.subscriptions - a.subscriptions),
       fulfilmentByCountry: Array.from(countryCounts, ([country, totals]) => ({ country, required: totals.copies, dispatched: dispatchedByCountry.get(country) ?? 0 })),
-      funnel: { pageViews: analytics.page_view ?? 0, durationSelections: analytics.duration_selected ?? 0, checkoutStarts: analytics.checkout_started ?? 0, successfulPurchases: paymentRows.filter(row=>row.status==='paid').length, paymentFailures: paymentRows.filter(row=>row.status==='failed').length },
+      funnel: { pageViews: analytics.page_view ?? 0, durationSelections: analytics.duration_selected ?? 0, checkoutStarts: analytics.checkout_started ?? 0, successfulPurchases: new Set(paymentRows.filter(row=>['paid','refunded'].includes(row.status)).map(row=>row.customer_id)).size, paymentFailures: new Set(paymentRows.filter(row=>row.status==='failed').map(row=>row.customer_id)).size },
     },
   }
 }
