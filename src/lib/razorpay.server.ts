@@ -51,9 +51,9 @@ export async function updateRazorpaySubscriptionStart(subscriptionId:string,star
   return api(`/subscriptions/${encodeURIComponent(subscriptionId)}`,{method:'PATCH',body:JSON.stringify({start_at:startAt,schedule_change_at:'now',customer_notify:true})})
 }
 
-export async function cancelRazorpaySubscription(subscriptionId:string) {
+export async function cancelRazorpaySubscription(subscriptionId:string, immediately=false) {
   if(!subscriptionId) throw new RangeError('A Razorpay subscription id is required.')
-  return api(`/subscriptions/${encodeURIComponent(subscriptionId)}/cancel`,{method:'POST',body:JSON.stringify({cancel_at_cycle_end:1})})
+  return api(`/subscriptions/${encodeURIComponent(subscriptionId)}/cancel`,{method:'POST',body:JSON.stringify({cancel_at_cycle_end:immediately?0:1})})
 }
 
 export async function retrieveRazorpayPayment(id:string){ return api(`/payments/${encodeURIComponent(id)}`) }

@@ -93,6 +93,7 @@ export async function getAdminDashboard(db: D1Database) {
     if (country) dispatchedByCountry.set(country, (dispatchedByCountry.get(country) ?? 0) + Number(subscription?.quantity ?? 1))
   }
   return {
+    deletionRequests: (await db.prepare("SELECT COUNT(*) total FROM customer_privacy_requests WHERE request_type='deletion' AND status IN ('received','reviewing')").first<{total:number}>())?.total ?? 0,
     referralSettings: referralSettings ?? { discount_basis_points: 0, updated_at: 0 },
     influencerReferrals: influencerReferrals.results,
     subscriptions: rows.map(row => ({

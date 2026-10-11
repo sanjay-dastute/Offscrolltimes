@@ -55,7 +55,6 @@ export function nextIssueSchedule(now=Date.now()) {
   // has closed.
   const launchDeadline=zonedTime(2026,11,20,23,'Asia/Kolkata')+(59*60*1000)+(59*1000)+999
   if(now<=launchDeadline){
-    const dispatch=zonedTime(2026,12,25,10,'Asia/Kolkata')
     return {deadline:launchDeadline,issue:'December 2026',issueMonth:'December',cutoff:'November 20, 2026'}
   }
   const firstRecurringDeadline=zonedTime(2026,12,25,23,'Asia/Kolkata')+(59*60*1000)+(59*1000)+999

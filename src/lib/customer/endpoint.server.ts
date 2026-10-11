@@ -159,6 +159,10 @@ export async function patchCustomerDashboard(request: Request): Promise<Response
   }
   if (body.action === 'pause' || body.action === 'resume')return json({error:'Pausing is not available.'},422)
   if (body.action === 'cancel') {
+    const paid=await db.prepare("SELECT paid_at FROM customer_payments WHERE subscription_id=? AND owner_id=? AND status='paid' ORDER BY paid_at DESC LIMIT 1").bind(subscriptionId,session.user.id).first<{paid_at:number|null}>()
+    if(paid?.paid_at&&Date.now()-paid.paid_at<48*60*60*1000){
+      try{const result=await requestFullRazorpayRefund(db,{subscriptionId,ownerId:session.user.id,actorId:session.user.id,source:'customer'});return json({ok:true,message:result.status==='processed'?'Subscription cancelled and full refund processed.':'Subscription cancelled and full refund submitted to Razorpay.'})}catch(error){if(error instanceof RefundRequestError)return json({error:error.message},error.status);return json({error:'Cancellation refund could not be completed. Please retry.'},502)}
+    }
     const provider=await db.prepare(`SELECT razorpay_subscription_id FROM razorpay_recurring_subscriptions WHERE subscription_id=? AND owner_id=?`).bind(subscriptionId,session.user.id).first<{razorpay_subscription_id:string}>()
     if(provider){
       try{await cancelRazorpaySubscription(provider.razorpay_subscription_id)}catch(error){

@@ -12,6 +12,7 @@ import { AdminReferrals } from "#/components/AdminReferrals";
 
 type Row = Record<string, any>;
 type AdminData = {
+  deletionRequests: number;
   user: { id: string; name?: string };
   csrf: string;
   subscriptions: Row[];
@@ -123,6 +124,8 @@ function AdminPage() {
   }
   useEffect(() => {
     void load();
+    const timer = window.setInterval(() => { void load(); }, 30000);
+    return () => window.clearInterval(timer);
   }, []);
 
   async function mutate(payload: Record<string, unknown>) {
@@ -230,6 +233,7 @@ function AdminPage() {
             {tab === "customers" && (
               <AdminCustomers mutate={mutate} csrf={data.csrf} />
             )}
+            {data.deletionRequests > 0 && <p role="status" className="my-4 rounded-xl border border-red-700 bg-red-50 p-4">{data.deletionRequests} account deletion request(s) awaiting approval. Open Customers and choose “Deletion requested” to review and delete.</p>}
             {tab === "newsletter" && (
               <AdminCustomers
                 mutate={mutate}
@@ -664,13 +668,18 @@ function Subscriptions({
   }
   const correctAddress = editDetails;
   const changeStatus = (_row: Row, _next: string) => undefined;
+  async function cancelWithRefund(row: Row) {
+    const payment = [...data.payments].filter(p => p.subscription_id === row.id && p.status === 'paid').sort((a,b) => Number(b.paid_at)-Number(a.paid_at))[0];
+    if (!payment) { window.alert('No paid payment is available to refund.'); return; }
+    const value = window.prompt(`Cancel subscription and refund the latest payment in ${payment.currency}. Enter ${(Number(payment.amount_minor)/100).toFixed(2)} for a full refund, or a smaller amount for a partial refund.`, (Number(payment.amount_minor)/100).toFixed(2));
+    if (value === null) return;
+    const amountMinor = Math.round(Number(value)*100);
+    if (!value.trim() || !Number.isSafeInteger(amountMinor) || amountMinor <= 0 || amountMinor > Number(payment.amount_minor)) { window.alert('Enter a valid amount up to the paid amount.'); return; }
+    if (!window.confirm(`Cancel this customer's subscription and refund ${payment.currency} ${(amountMinor/100).toFixed(2)} through Razorpay?`)) return;
+    if (await mutate({action:'subscription.cancel_refund',subscriptionId:row.id,amountMinor,confirm:true})) window.alert('Subscription cancelled and refund submitted to Razorpay.');
+  }
   function refund(payment?: Row, row?: Row) {
     if (!payment || !row) return;
-    const paidAt = Number(payment.paid_at || payment.created_at || 0);
-    if (!paidAt || Date.now() - paidAt > 48 * 60 * 60 * 1000) {
-      window.alert("The 48-hour full-refund window has closed.");
-      return;
-    }
     if (
       !window.confirm(
         `Issue a full ${payment.currency} ${(Number(payment.amount_minor) / 100).toFixed(2)} refund through Razorpay?`,
@@ -832,6 +841,7 @@ function Subscriptions({
                   </p>
                 </div>
                 <div className="flex flex-wrap items-start gap-2">
+                  <button disabled={busy} className={CTA_OUTLINE} onClick={() => void cancelWithRefund(row)}>Cancel subscription</button>
                   <button
                     disabled={busy}
                     className={CTA_OUTLINE}

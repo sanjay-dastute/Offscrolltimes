@@ -155,11 +155,11 @@ function AccountPage() {
     };
   }, []);
 
-  async function action(subscriptionId: string, actionName: "refund") {
+  async function action(subscriptionId: string, actionName: "refund" | "cancel") {
     if (!data || busy) return;
     if (
       !window.confirm(
-        "Request a full refund to the original payment method? This is available only within 48 hours of payment.",
+        actionName === 'cancel' ? 'Cancel this subscription? Within 48 hours of payment, a full refund is automatically requested. After 48 hours, only future renewal is stopped.' : "Cancel this subscription and request a full refund to the original payment method? This is available only within 48 hours of payment.",
       )
     )
       return;
@@ -357,10 +357,11 @@ function AccountPage() {
                     .sort((a, b) => (b.paidAt ?? 0) - (a.paidAt ?? 0))[0];
                   const canRefund =
                     latestPayment?.status === "paid" &&
+                    !['requested','processing','processed'].includes(latestPayment.refundStatus ?? '') &&
                     subscription.status !== "refunded" &&
                     Boolean(
                       latestPayment.paidAt &&
-                      Date.now() - latestPayment.paidAt <= 48 * 60 * 60 * 1000,
+                      Date.now() - latestPayment.paidAt < 48 * 60 * 60 * 1000,
                     );
                   const daysRemaining = subscription.paidThroughAt
                     ? Math.ceil(
@@ -535,6 +536,7 @@ function AccountPage() {
                             </p>
                           )}
                         <div className="w-full">
+                          <button disabled={busy || ['cancelled','refunded','completed'].includes(subscription.status)} className={`${CTA_OUTLINE} mr-3 disabled:opacity-40`} onClick={() => void action(subscription.id, 'cancel')}>Cancel subscription</button>
                           <button
                             disabled={busy || !canRefund}
                             className={`${CTA_OUTLINE} disabled:cursor-not-allowed disabled:opacity-40`}

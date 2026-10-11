@@ -212,13 +212,14 @@ export async function mutateAdmin(request: Request) {
       if (!SAFE_ID.test(subscriptionId) || !address || !address.name || !address.line1 || !address.city || !address.postalCode || !/^[A-Z]{2}$/.test(address.country) || reason.length < 5 || (email&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) || (phone&&!/^\+?[0-9 ()-]{7,30}$/.test(phone))) return json({ error: 'Enter complete delivery details, a valid email/phone and a correction reason.' }, 422)
       return await updateAdminAddress(database, session.user.id, subscriptionId, address, reason,{email,phone}) ? json({ ok:true }) : json({ error:'Subscription not found.' },404)
     }
-    if (action === 'payment.refund') {
+    if (action === 'payment.refund' || action === 'subscription.cancel_refund') {
       const subscriptionId=text(body.subscriptionId)
       if(!SAFE_ID.test(subscriptionId))return json({error:'Invalid subscription.'},422)
       try {
-        const result=await requestFullRazorpayRefund(database,{subscriptionId,actorId:session.user.id,source:'administrator'})
+        if(action==='subscription.cancel_refund'&&body.confirm!==true)return json({error:'Confirm cancellation and refund.'},422)
+        const result=await requestFullRazorpayRefund(database,{subscriptionId,actorId:session.user.id,source:'administrator',amountMinor:body.amountMinor===undefined?undefined:Number(body.amountMinor)})
         await audit(database,session.user.id,'payment.refund_requested','subscription',subscriptionId,{status:result.status,refundId:result.refundId})
-        return json({ok:true,message:result.status==='processed'?'Full refund processed.':'Full refund requested from Razorpay.'})
+        return json({ok:true,message:`Subscription cancelled. ${result.currency} ${(result.amountMinor/100).toFixed(2)} refund ${result.status==='processed'?'processed':'submitted to Razorpay'}.`})
       } catch(error) {
         if(error instanceof RefundRequestError)return json({error:error.message},error.status)
         console.error('admin_refund_failed')

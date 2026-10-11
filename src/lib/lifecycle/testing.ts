@@ -44,12 +44,16 @@ const MIGRATION_FILES = [
   '0036_edition_inventory.sql',
   '0037_regional_pricing.sql',
   '0038_answer_sheets.sql',
+  '0039_homepage_uploads.sql',
   '0039_regional_term_prices.sql',
   '0040_razorpay_recurring_subscriptions.sql',
   '0041_edition_soft_deletion.sql',
   '0042_discount_offer_name.sql',
   '0043_referrals.sql',
   '0044_influencer_referrals.sql',
+  '0045_homepage_poll.sql',
+  '0046_homepage_upload_storage_category.sql',
+  '0047_refund_attempts.sql',
 ]
 
 export function createTestD1(): D1Database {
