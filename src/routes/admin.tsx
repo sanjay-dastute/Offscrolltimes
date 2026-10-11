@@ -1,228 +1,2432 @@
-import { createFileRoute } from '@tanstack/react-router'
-import { useEffect, useState } from 'react'
-import { SiteHeader } from '#/components/SiteHeader'
-import { CTA, CTA_OUTLINE, EYEBROW, H2 } from '#/lib/uiKit'
-import { AdminCustomers } from '#/components/AdminCustomers'
-import { AdminOffers } from '#/components/AdminOffers'
-import { AdminExports } from '#/components/AdminExports'
-import { AdminLogin } from '#/components/AdminLogin'
-import { AdminAnswers } from '#/components/AdminAnswers'
-import { AdminReferrals } from '#/components/AdminReferrals'
+import { createFileRoute } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
+import { SiteHeader } from "#/components/SiteHeader";
+import { CTA, CTA_OUTLINE, EYEBROW, H2 } from "#/lib/uiKit";
+import { AdminCustomers } from "#/components/AdminCustomers";
+import { AdminOffers } from "#/components/AdminOffers";
+import { AdminExports } from "#/components/AdminExports";
+import { AdminLogin } from "#/components/AdminLogin";
+import { AdminAnswers } from "#/components/AdminAnswers";
+import { AdminReferrals } from "#/components/AdminReferrals";
 
-type Row = Record<string, any>
+type Row = Record<string, any>;
 type AdminData = {
-  user: { id: string; name?: string }; csrf: string
-  subscriptions: Row[]; payments: Row[]; fulfilments: Row[]; editions: Row[]; eligibility: Row[]
-  products: Row[]; options: Row[]; discounts: Row[]; zones: Row[]; content: Row[]; enquiries: Row[]; audits: Row[]; promotionReports: Row[]
-  referralSettings: { discount_basis_points:number; updated_at:number }
-  influencerReferrals: Row[]
+  user: { id: string; name?: string };
+  csrf: string;
+  subscriptions: Row[];
+  payments: Row[];
+  fulfilments: Row[];
+  editions: Row[];
+  eligibility: Row[];
+  products: Row[];
+  options: Row[];
+  discounts: Row[];
+  zones: Row[];
+  content: Row[];
+  enquiries: Row[];
+  audits: Row[];
+  promotionReports: Row[];
+  referralSettings: { discount_basis_points: number; updated_at: number };
+  influencerReferrals: Row[];
   reports: {
-    financialByCurrency:Array<{currency:string;revenueMinor:number;refundMinor:number}>
-    customers: number; activeSubscriptions: number; activePaidEntitlements: number; entitledCopiesRemaining: number; upcomingExpirations: number; cancellations: number; completedTerms: number; renewals: number; retentionPercent: number
-    addressExceptions: number; paymentExceptions: number; fulfilmentExceptions: number; deliveryExceptions: number
-    paidRevenueMinor: number; refundedPayments: number; refundedMinor: number; discountRedemptions: number; discountCostMinor: number
-    nextEdition: { label: string; dispatchAt: number; copiesRequired: number; copiesAvailable:number; eligibilityGenerated: boolean } | null
-    countryDistribution: Array<{ country: string; subscriptions: number; copies: number }>
-    fulfilmentByCountry: Array<{ country: string; required: number; dispatched: number }>
-    funnel: { pageViews:number; durationSelections:number; checkoutStarts:number; successfulPurchases:number; paymentFailures:number }
-  }
-}
+    financialByCurrency: Array<{
+      currency: string;
+      revenueMinor: number;
+      refundMinor: number;
+    }>;
+    customers: number;
+    activeSubscriptions: number;
+    activePaidEntitlements: number;
+    entitledCopiesRemaining: number;
+    upcomingExpirations: number;
+    cancellations: number;
+    completedTerms: number;
+    renewals: number;
+    retentionPercent: number;
+    addressExceptions: number;
+    paymentExceptions: number;
+    fulfilmentExceptions: number;
+    deliveryExceptions: number;
+    paidRevenueMinor: number;
+    refundedPayments: number;
+    refundedMinor: number;
+    discountRedemptions: number;
+    discountCostMinor: number;
+    nextEdition: {
+      label: string;
+      dispatchAt: number;
+      copiesRequired: number;
+      copiesAvailable: number;
+      eligibilityGenerated: boolean;
+    } | null;
+    countryDistribution: Array<{
+      country: string;
+      subscriptions: number;
+      copies: number;
+    }>;
+    fulfilmentByCountry: Array<{
+      country: string;
+      required: number;
+      dispatched: number;
+    }>;
+    funnel: {
+      pageViews: number;
+      durationSelections: number;
+      checkoutStarts: number;
+      successfulPurchases: number;
+      paymentFailures: number;
+    };
+  };
+};
 
-export const Route = createFileRoute('/admin')({
-  head: () => ({ meta: [{ title: 'Administrator | Offscroll Times' }, { name: 'robots', content: 'noindex, nofollow' }] }),
+export const Route = createFileRoute("/admin")({
+  head: () => ({
+    meta: [
+      { title: "Administrator | Offscroll Times" },
+      { name: "robots", content: "noindex, nofollow" },
+    ],
+  }),
   component: AdminPage,
-})
+});
 
-const input = 'w-full rounded-xl border border-graphite bg-white px-3 py-2 text-sm'
-const card = 'rounded-2xl border border-graphite bg-paper p-5'
+const input =
+  "w-full rounded-xl border border-graphite bg-white px-3 py-2 text-sm";
+const card = "rounded-2xl border border-graphite bg-paper p-5";
 
 function AdminPage() {
-  const [data, setData] = useState<AdminData | null>(null)
-  const [state, setState] = useState<'loading'|'denied'|'ready'|'error'>('loading')
-  const [error, setError] = useState('')
-  const [tab, setTab] = useState('overview')
-  const [busy, setBusy] = useState(false)
+  const [data, setData] = useState<AdminData | null>(null);
+  const [state, setState] = useState<"loading" | "denied" | "ready" | "error">(
+    "loading",
+  );
+  const [error, setError] = useState("");
+  const [tab, setTab] = useState("overview");
+  const [busy, setBusy] = useState(false);
 
   async function load() {
-    const response = await fetch('/api/admin', { headers: { Accept: 'application/json' } })
-    if (response.status === 403) { setData(null); setState('denied'); return }
-    const result = await response.json() as AdminData & { error?: string }
-    if (!response.ok) { setError(result.error ?? 'Admin data could not be loaded.'); setState('error'); return }
-    setData(result); setState('ready')
+    const response = await fetch("/api/admin", {
+      headers: { Accept: "application/json" },
+    });
+    if (response.status === 403) {
+      setData(null);
+      setState("denied");
+      return;
+    }
+    const result = (await response.json()) as AdminData & { error?: string };
+    if (!response.ok) {
+      setError(result.error ?? "Admin data could not be loaded.");
+      setState("error");
+      return;
+    }
+    setData(result);
+    setState("ready");
   }
-  useEffect(() => { void load() }, [])
+  useEffect(() => {
+    void load();
+  }, []);
 
   async function mutate(payload: Record<string, unknown>) {
-    if (!data || busy) return false
-    setBusy(true); setError('')
+    if (!data || busy) return false;
+    setBusy(true);
+    setError("");
     try {
-    const response = await fetch('/api/admin', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ csrf: data.csrf, ...payload }) })
-    const result = await response.json() as { error?: string }
-    if (!response.ok) { setError(result.error ?? 'Update failed.'); setBusy(false); return false }
-    await load(); return true
-    } catch { setError('The update could not be completed. Check your connection and retry.'); return false }
-    finally { setBusy(false) }
+      const response = await fetch("/api/admin", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ csrf: data.csrf, ...payload }),
+      });
+      const result = (await response.json()) as { error?: string };
+      if (!response.ok) {
+        setError(result.error ?? "Update failed.");
+        setBusy(false);
+        return false;
+      }
+      await load();
+      return true;
+    } catch {
+      setError(
+        "The update could not be completed. Check your connection and retry.",
+      );
+      return false;
+    } finally {
+      setBusy(false);
+    }
   }
 
-  return <><SiteHeader /><main className="mx-auto min-h-[70vh] max-w-[1400px] px-4 py-12 sm:px-6 lg:px-10">
-    {state === 'loading' && <p className={EYEBROW}>Checking administrator access…</p>}
-    {state === 'denied' && <AdminLogin onSuccess={load} />}
-    {error && <p role="alert" className="mb-6 rounded-xl border border-red-700 bg-red-50 p-4 text-red-900">{error}</p>}
-    {data && <>
-      <header className="flex flex-wrap items-end justify-between gap-5 border-b border-graphite pb-7"><div><p className={EYEBROW}>Administrator</p><h1 className="m-0 font-display text-5xl font-bold tracking-tight">Business control room</h1><p className="mt-3 text-graphite-soft">Signed in as {data.user.name ?? data.user.id}</p></div><button className={CTA_OUTLINE} onClick={async()=>{const response=await fetch('/api/admin/login',{method:'DELETE',headers:{'Content-Type':'application/json'},body:JSON.stringify({csrf:data.csrf})});if(response.ok){setData(null);setState('denied')}else{setError('Sign-out failed. Please retry.')}}}>Sign out</button></header>
-      <nav className="my-7 flex flex-wrap gap-2" aria-label="Admin sections">{['overview','customers','newsletter','subscriptions','editions','answers','offers','referrals','pricing','exports','audit'].map(item => <button key={item} onClick={() => setTab(item)} className={`rounded-full border border-graphite px-4 py-2 font-mono text-xs uppercase ${tab === item ? 'bg-graphite text-paper' : 'bg-paper'}`}>{item}</button>)}</nav>
-      {tab === 'customers' && <AdminCustomers mutate={mutate} csrf={data.csrf} />}
-      {tab === 'newsletter' && <AdminCustomers mutate={mutate} csrf={data.csrf} initialGroup="newsletter" />}
-      {tab === 'overview' && <Overview data={data} />}
-      {tab === 'subscriptions' && <Subscriptions data={data} busy={busy} mutate={mutate} />}
-      {tab === 'editions' && <Editions data={data} busy={busy} mutate={mutate} />}
-      {tab === 'answers' && <AdminAnswers csrf={data.csrf} />}
-      {tab === 'offers' && <AdminOffers offers={data.discounts} busy={busy} mutate={mutate} />}
-      {tab === 'referrals' && <AdminReferrals basisPoints={data.referralSettings.discount_basis_points} influencerReferrals={data.influencerReferrals as any} busy={busy} mutate={mutate} />}
-      {tab === 'pricing' && <><EditionCopyPricing editions={data.editions} busy={busy} mutate={mutate} /><Pricing data={data} busy={busy} mutate={mutate} /></>}
-      {tab === 'exports' && <AdminExports />}
-      {tab === 'audit' && <Audit rows={data.audits} />}
-    </>}
-  </main></>
+  return (
+    <>
+      <SiteHeader />
+      <main className="mx-auto min-h-[70vh] max-w-[1400px] px-4 py-12 sm:px-6 lg:px-10">
+        {state === "loading" && (
+          <p className={EYEBROW}>Checking administrator access…</p>
+        )}
+        {state === "denied" && <AdminLogin onSuccess={load} />}
+        {error && (
+          <p
+            role="alert"
+            className="mb-6 rounded-xl border border-red-700 bg-red-50 p-4 text-red-900"
+          >
+            {error}
+          </p>
+        )}
+        {data && (
+          <>
+            <header className="flex flex-wrap items-end justify-between gap-5 border-b border-graphite pb-7">
+              <div>
+                <p className={EYEBROW}>Administrator</p>
+                <h1 className="m-0 font-display text-5xl font-bold tracking-tight">
+                  Business control room
+                </h1>
+                <p className="mt-3 text-graphite-soft">
+                  Signed in as {data.user.name ?? data.user.id}
+                </p>
+              </div>
+              <button
+                className={CTA_OUTLINE}
+                onClick={async () => {
+                  const response = await fetch("/api/admin/login", {
+                    method: "DELETE",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ csrf: data.csrf }),
+                  });
+                  if (response.ok) {
+                    setData(null);
+                    setState("denied");
+                  } else {
+                    setError("Sign-out failed. Please retry.");
+                  }
+                }}
+              >
+                Sign out
+              </button>
+            </header>
+            <nav
+              className="my-7 flex flex-wrap gap-2"
+              aria-label="Admin sections"
+            >
+              {[
+                "overview",
+                "customers",
+                "newsletter",
+                "subscriptions",
+                "editions",
+                "answers",
+                "offers",
+                "referrals",
+                "pricing",
+                "exports",
+                "audit",
+              ].map((item) => (
+                <button
+                  key={item}
+                  onClick={() => setTab(item)}
+                  className={`rounded-full border border-graphite px-4 py-2 font-mono text-xs uppercase ${tab === item ? "bg-graphite text-paper" : "bg-paper"}`}
+                >
+                  {item}
+                </button>
+              ))}
+            </nav>
+            {tab === "customers" && (
+              <AdminCustomers mutate={mutate} csrf={data.csrf} />
+            )}
+            {tab === "newsletter" && (
+              <AdminCustomers
+                mutate={mutate}
+                csrf={data.csrf}
+                initialGroup="newsletter"
+              />
+            )}
+            {tab === "overview" && <Overview data={data} />}
+            {tab === "subscriptions" && (
+              <Subscriptions data={data} busy={busy} mutate={mutate} />
+            )}
+            {tab === "editions" && (
+              <Editions data={data} busy={busy} mutate={mutate} />
+            )}
+            {tab === "answers" && <AdminAnswers csrf={data.csrf} />}
+            {tab === "offers" && (
+              <AdminOffers
+                offers={data.discounts}
+                busy={busy}
+                mutate={mutate}
+              />
+            )}
+            {tab === "referrals" && (
+              <AdminReferrals
+                basisPoints={data.referralSettings.discount_basis_points}
+                influencerReferrals={data.influencerReferrals as any}
+                busy={busy}
+                mutate={mutate}
+              />
+            )}
+            {tab === "pricing" && (
+              <>
+                <EditionCopyPricing
+                  editions={data.editions}
+                  busy={busy}
+                  mutate={mutate}
+                />
+                <Pricing data={data} busy={busy} mutate={mutate} />
+              </>
+            )}
+            {tab === "exports" && <AdminExports />}
+            {tab === "audit" && <Audit rows={data.audits} />}
+          </>
+        )}
+      </main>
+    </>
+  );
 }
 
-export function Enquiries({ rows, busy, mutate }: { rows: Row[]; busy: boolean; mutate: (p: Record<string,unknown>) => Promise<boolean> }) {
-  return <section><h2 className={H2}>Contact enquiries</h2><div className="mt-6 grid gap-4">{rows.length === 0 && <p>No enquiries yet.</p>}{rows.map(row => <article className={card} key={row.id}><div className="flex flex-wrap items-start justify-between gap-3"><div><p className="m-0 font-mono text-xs font-bold uppercase">{row.reference} · {row.enquiry_type}</p><h3 className="mt-2 text-xl font-bold">{row.name}</h3><a href={`mailto:${row.email}`}>{row.email}</a>{row.country && <span> · {row.country}</span>}</div><select disabled={busy} value={row.status} className={`${input} w-auto`} onChange={event=>void mutate({action:'enquiry.update',enquiryId:row.id,status:event.target.value,staffNotes:row.staff_notes})}>{['new','in_progress','waiting_customer','resolved','closed'].map(status=><option key={status}>{status}</option>)}</select></div>{row.detail && <p className="mt-3 text-sm"><strong>Detail:</strong> {row.detail}</p>}<p className="mt-3 whitespace-pre-wrap text-sm">{row.message}</p><label className="mt-4 block text-sm font-bold">Private staff notes<textarea defaultValue={row.staff_notes} className={`${input} mt-1 min-h-24`} onBlur={event=>void mutate({action:'enquiry.update',enquiryId:row.id,status:row.status,staffNotes:event.target.value})}/></label></article>)}</div></section>
+export function Enquiries({
+  rows,
+  busy,
+  mutate,
+}: {
+  rows: Row[];
+  busy: boolean;
+  mutate: (p: Record<string, unknown>) => Promise<boolean>;
+}) {
+  return (
+    <section>
+      <h2 className={H2}>Contact enquiries</h2>
+      <div className="mt-6 grid gap-4">
+        {rows.length === 0 && <p>No enquiries yet.</p>}
+        {rows.map((row) => (
+          <article className={card} key={row.id}>
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <p className="m-0 font-mono text-xs font-bold uppercase">
+                  {row.reference} · {row.enquiry_type}
+                </p>
+                <h3 className="mt-2 text-xl font-bold">{row.name}</h3>
+                <a href={`mailto:${row.email}`}>{row.email}</a>
+                {row.country && <span> · {row.country}</span>}
+              </div>
+              <select
+                disabled={busy}
+                value={row.status}
+                className={`${input} w-auto`}
+                onChange={(event) =>
+                  void mutate({
+                    action: "enquiry.update",
+                    enquiryId: row.id,
+                    status: event.target.value,
+                    staffNotes: row.staff_notes,
+                  })
+                }
+              >
+                {[
+                  "new",
+                  "in_progress",
+                  "waiting_customer",
+                  "resolved",
+                  "closed",
+                ].map((status) => (
+                  <option key={status}>{status}</option>
+                ))}
+              </select>
+            </div>
+            {row.detail && (
+              <p className="mt-3 text-sm">
+                <strong>Detail:</strong> {row.detail}
+              </p>
+            )}
+            <p className="mt-3 whitespace-pre-wrap text-sm">{row.message}</p>
+            <label className="mt-4 block text-sm font-bold">
+              Private staff notes
+              <textarea
+                defaultValue={row.staff_notes}
+                className={`${input} mt-1 min-h-24`}
+                onBlur={(event) =>
+                  void mutate({
+                    action: "enquiry.update",
+                    enquiryId: row.id,
+                    status: row.status,
+                    staffNotes: event.target.value,
+                  })
+                }
+              />
+            </label>
+          </article>
+        ))}
+      </div>
+    </section>
+  );
 }
 
 function Overview({ data }: { data: AdminData }) {
-  const money = (minor: number) => new Intl.NumberFormat('en-IN', { style:'currency', currency:'INR' }).format(minor / 100)
-  const statusStats = [['Paid entitlements',data.reports.activePaidEntitlements],['Copies remaining',data.reports.entitledCopiesRemaining],['Cancelled',data.reports.cancellations],['Completed terms',data.reports.completedTerms]]
-  const exceptions = [['Payment',data.reports.paymentExceptions],['Address',data.reports.addressExceptions],['Fulfilment',data.reports.fulfilmentExceptions],['Delivery',data.reports.deliveryExceptions]]
-  const commercial = [['Revenue',money(data.reports.paidRevenueMinor)],['Refunds',money(data.reports.refundedMinor)],['Discount uses',data.reports.discountRedemptions],['Discount cost',money(data.reports.discountCostMinor)]]
-  return <div className="grid gap-7">
-    <section><div className="flex items-end justify-between gap-4"><div><p className={EYEBROW}>Subscription health</p><h2 className="text-2xl font-bold">Customer terms</h2></div><p className="font-mono text-xs uppercase">{data.reports.customers} customers</p></div><div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">{statusStats.map(([label,value]) => <Metric key={String(label)} label={String(label)} value={value} />)}</div></section>
-    <section className="grid gap-4 lg:grid-cols-[1.2fr_2fr]">
-      <article className="rounded-2xl border border-graphite bg-sun p-6"><p className={EYEBROW}>Next edition</p>{data.reports.nextEdition ? <><h2 className="mt-2 text-3xl font-bold">{data.reports.nextEdition.label}</h2><strong className="mt-6 block text-5xl">{data.reports.nextEdition.copiesAvailable}</strong><p className="mt-1">copies available after sales</p><p className="mt-3 text-sm">{data.reports.nextEdition.copiesRequired} copies currently required for fulfilment</p><p className="mt-5 text-sm">Dispatch: {new Date(data.reports.nextEdition.dispatchAt).toLocaleDateString()}</p>{!data.reports.nextEdition.eligibilityGenerated && <p className="mt-3 rounded-lg border border-graphite bg-paper/70 p-3 text-sm">Generate the edition eligibility list to calculate its print quantity.</p>}</> : <><h2 className="mt-2 text-3xl font-bold">No edition scheduled</h2><p className="mt-4">Create the next edition to prepare its dispatch list.</p></>}</article>
-      <div><p className={EYEBROW}>Needs attention</p><h2 className="text-2xl font-bold">Operational exceptions</h2><div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">{exceptions.map(([label,value]) => <Metric key={String(label)} label={`${label} exceptions`} value={value} alert={Number(value) > 0} />)}</div></div>
-    </section>
-    <section><p className={EYEBROW}>Commercial summary</p><h2 className="text-2xl font-bold">Revenue, refunds and promotions</h2><div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">{commercial.map(([label,value]) => <Metric key={String(label)} label={String(label)} value={value} />)}</div></section>
-    <section><p className={EYEBROW}>First-party funnel</p><h2 className="text-2xl font-bold">Anonymous consented activity</h2><div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">{Object.entries(data.reports.funnel).map(([label,value])=><Metric key={label} label={label.replace(/([A-Z])/g,' $1')} value={value}/>)}</div></section>
-    <section><p className={EYEBROW}>Lifecycle</p><h2 className="text-2xl font-bold">Completion and retention</h2><div className="mt-4 grid gap-4 sm:grid-cols-3"><Metric label="Renewals" value={data.reports.renewals}/><Metric label="Retention" value={`${data.reports.retentionPercent}%`}/><Metric label="Refunds" value={data.reports.refundedPayments}/></div></section>
-    <section className={card}><p className={EYEBROW}>Delivery footprint</p><h2 className="text-2xl font-bold">Country distribution</h2>{data.reports.countryDistribution.length ? <div className="mt-5 overflow-x-auto"><table className="w-full text-left text-sm"><thead><tr className="border-b border-graphite"><th className="py-3">Country</th><th>Subscriptions</th><th>Monthly copies</th></tr></thead><tbody>{data.reports.countryDistribution.map(row => <tr className="border-b border-rule last:border-0" key={row.country}><th className="py-3">{row.country}</th><td>{row.subscriptions}</td><td>{row.copies}</td></tr>)}</tbody></table></div> : <p className="mt-4 text-graphite-soft">Country data will appear after customers add delivery addresses.</p>}</section>
-    <section className={card}><p className={EYEBROW}>Fulfilment by country</p><h2 className="text-2xl font-bold">Required and dispatched copies</h2><div className="mt-5 overflow-x-auto"><table className="w-full text-left text-sm"><thead><tr><th>Country</th><th>Required</th><th>Dispatched</th></tr></thead><tbody>{data.reports.fulfilmentByCountry.map(row=><tr className="border-t border-rule" key={row.country}><th className="py-3">{row.country}</th><td>{row.required}</td><td>{row.dispatched}</td></tr>)}</tbody></table></div></section>
-  </div>
+  const money = (minor: number) =>
+    new Intl.NumberFormat("en-IN", {
+      style: "currency",
+      currency: "INR",
+    }).format(minor / 100);
+  const statusStats = [
+    ["Paid entitlements", data.reports.activePaidEntitlements],
+    ["Copies remaining", data.reports.entitledCopiesRemaining],
+    ["Cancelled", data.reports.cancellations],
+    ["Completed terms", data.reports.completedTerms],
+  ];
+  const exceptions = [
+    ["Payment", data.reports.paymentExceptions],
+    ["Address", data.reports.addressExceptions],
+    ["Fulfilment", data.reports.fulfilmentExceptions],
+    ["Delivery", data.reports.deliveryExceptions],
+  ];
+  const commercial = [
+    ["Revenue", money(data.reports.paidRevenueMinor)],
+    ["Refunds", money(data.reports.refundedMinor)],
+    ["Discount uses", data.reports.discountRedemptions],
+    ["Discount cost", money(data.reports.discountCostMinor)],
+  ];
+  return (
+    <div className="grid gap-7">
+      <section>
+        <div className="flex items-end justify-between gap-4">
+          <div>
+            <p className={EYEBROW}>Subscription health</p>
+            <h2 className="text-2xl font-bold">Customer terms</h2>
+          </div>
+          <p className="font-mono text-xs uppercase">
+            {data.reports.customers} customers
+          </p>
+        </div>
+        <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {statusStats.map(([label, value]) => (
+            <Metric key={String(label)} label={String(label)} value={value} />
+          ))}
+        </div>
+      </section>
+      <section className="grid gap-4 lg:grid-cols-[1.2fr_2fr]">
+        <article className="rounded-2xl border border-graphite bg-sun p-6">
+          <p className={EYEBROW}>Next edition</p>
+          {data.reports.nextEdition ? (
+            <>
+              <h2 className="mt-2 text-3xl font-bold">
+                {data.reports.nextEdition.label}
+              </h2>
+              <strong className="mt-6 block text-5xl">
+                {data.reports.nextEdition.copiesAvailable}
+              </strong>
+              <p className="mt-1">copies available after sales</p>
+              <p className="mt-3 text-sm">
+                {data.reports.nextEdition.copiesRequired} copies currently
+                required for fulfilment
+              </p>
+              <p className="mt-5 text-sm">
+                Dispatch:{" "}
+                {new Date(
+                  data.reports.nextEdition.dispatchAt,
+                ).toLocaleDateString()}
+              </p>
+              {!data.reports.nextEdition.eligibilityGenerated && (
+                <p className="mt-3 rounded-lg border border-graphite bg-paper/70 p-3 text-sm">
+                  Generate the edition eligibility list to calculate its print
+                  quantity.
+                </p>
+              )}
+            </>
+          ) : (
+            <>
+              <h2 className="mt-2 text-3xl font-bold">No edition scheduled</h2>
+              <p className="mt-4">
+                Create the next edition to prepare its dispatch list.
+              </p>
+            </>
+          )}
+        </article>
+        <div>
+          <p className={EYEBROW}>Needs attention</p>
+          <h2 className="text-2xl font-bold">Operational exceptions</h2>
+          <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {exceptions.map(([label, value]) => (
+              <Metric
+                key={String(label)}
+                label={`${label} exceptions`}
+                value={value}
+                alert={Number(value) > 0}
+              />
+            ))}
+          </div>
+        </div>
+      </section>
+      <section>
+        <p className={EYEBROW}>Commercial summary</p>
+        <h2 className="text-2xl font-bold">Revenue, refunds and promotions</h2>
+        <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {commercial.map(([label, value]) => (
+            <Metric key={String(label)} label={String(label)} value={value} />
+          ))}
+        </div>
+      </section>
+      <section>
+        <p className={EYEBROW}>First-party funnel</p>
+        <h2 className="text-2xl font-bold">Anonymous consented activity</h2>
+        <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+          {Object.entries(data.reports.funnel).map(([label, value]) => (
+            <Metric
+              key={label}
+              label={label.replace(/([A-Z])/g, " $1")}
+              value={value}
+            />
+          ))}
+        </div>
+      </section>
+      <section>
+        <p className={EYEBROW}>Lifecycle</p>
+        <h2 className="text-2xl font-bold">Completion and retention</h2>
+        <div className="mt-4 grid gap-4 sm:grid-cols-3">
+          <Metric label="Renewals" value={data.reports.renewals} />
+          <Metric
+            label="Retention"
+            value={`${data.reports.retentionPercent}%`}
+          />
+          <Metric label="Refunds" value={data.reports.refundedPayments} />
+        </div>
+      </section>
+      <section className={card}>
+        <p className={EYEBROW}>Delivery footprint</p>
+        <h2 className="text-2xl font-bold">Country distribution</h2>
+        {data.reports.countryDistribution.length ? (
+          <div className="mt-5 overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <thead>
+                <tr className="border-b border-graphite">
+                  <th className="py-3">Country</th>
+                  <th>Subscriptions</th>
+                  <th>Monthly copies</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.reports.countryDistribution.map((row) => (
+                  <tr
+                    className="border-b border-rule last:border-0"
+                    key={row.country}
+                  >
+                    <th className="py-3">{row.country}</th>
+                    <td>{row.subscriptions}</td>
+                    <td>{row.copies}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <p className="mt-4 text-graphite-soft">
+            Country data will appear after customers add delivery addresses.
+          </p>
+        )}
+      </section>
+      <section className={card}>
+        <p className={EYEBROW}>Fulfilment by country</p>
+        <h2 className="text-2xl font-bold">Required and dispatched copies</h2>
+        <div className="mt-5 overflow-x-auto">
+          <table className="w-full text-left text-sm">
+            <thead>
+              <tr>
+                <th>Country</th>
+                <th>Required</th>
+                <th>Dispatched</th>
+              </tr>
+            </thead>
+            <tbody>
+              {data.reports.fulfilmentByCountry.map((row) => (
+                <tr className="border-t border-rule" key={row.country}>
+                  <th className="py-3">{row.country}</th>
+                  <td>{row.required}</td>
+                  <td>{row.dispatched}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+  );
 }
 
-function Metric({ label, value, alert = false }: { label: string; value: React.ReactNode; alert?: boolean }) {
-  return <article className={`${card} ${alert ? 'border-red-700 bg-red-50' : ''}`}><p className="font-mono text-xs uppercase text-graphite-soft">{label}</p><strong className="mt-3 block text-3xl">{value}</strong></article>
+function Metric({
+  label,
+  value,
+  alert = false,
+}: {
+  label: string;
+  value: React.ReactNode;
+  alert?: boolean;
+}) {
+  return (
+    <article className={`${card} ${alert ? "border-red-700 bg-red-50" : ""}`}>
+      <p className="font-mono text-xs uppercase text-graphite-soft">{label}</p>
+      <strong className="mt-3 block text-3xl">{value}</strong>
+    </article>
+  );
 }
 
-function Subscriptions({ data, busy, mutate }: { data: AdminData; busy: boolean; mutate: (p: Record<string,unknown>) => Promise<boolean> }) {
-  const [query,setQuery]=useState(''),[country,setCountry]=useState('all'),[duration,setDuration]=useState('all'),[page,setPage]=useState(1)
-  useEffect(()=>setPage(1),[query,country,duration])
-  const availableCountries=Array.from(new Set(data.subscriptions.map(row=>row.delivery_address?.country).filter(Boolean))).sort()
-  const paidSubscriptions=data.subscriptions.filter(row=>data.payments.some(payment=>payment.subscription_id===row.id&&payment.status==='paid'))
-  const rows=paidSubscriptions.filter(row=>{const haystack=`${row.customer_id} ${row.contact_email??''} ${row.contact_phone??''} ${row.delivery_address?.name??''}`.toLowerCase();return haystack.includes(query.toLowerCase())&&(country==='all'||row.delivery_address?.country===country)&&(duration==='all'||String(row.duration_months)===duration)})
-  const pages=Math.max(1,Math.ceil(rows.length/25)),currentPage=Math.min(page,pages),visibleRows=rows.slice((currentPage-1)*25,currentPage*25)
-  const transitions:Record<string,string[]>={}
-  const date=(value:unknown)=>value?new Date(Number(value)).toLocaleDateString('en-GB',{timeZone:'Asia/Kolkata'}):'—'
-  async function editDetails(row: Row) { const old=row.delivery_address??{}; const name=window.prompt('Recipient name',old.name??''); if(!name)return; const email=window.prompt('Email address',row.contact_email??''); if(email===null)return; const phone=window.prompt('Phone number',row.contact_phone??''); if(phone===null)return; const line1=window.prompt('Address line 1',old.line1??''); if(!line1)return; const line2=window.prompt('Address line 2 (optional)',old.line2??''); if(line2===null)return; const city=window.prompt('City',old.city??''); if(!city)return; const region=window.prompt('State / region (optional)',old.region??''); if(region===null)return; const postalCode=window.prompt('Postal code',old.postalCode??''); if(!postalCode)return; const countryCode=window.prompt('Two-letter country code',old.country??'IN'); if(!countryCode)return; const reason=window.prompt('Reason for this edit (optional)','Administrator address correction')||'Administrator address correction'; if(!window.confirm(`Save these customer details for ${row.contact_email??row.customer_id}?`))return; const saved=await mutate({action:'subscription.address',subscriptionId:row.id,email,phone,reason,address:{name,line1,line2,city,region,postalCode,country:countryCode}}); if(saved)window.alert('Customer details saved.') }
-  const correctAddress=editDetails
-  const changeStatus=(_row:Row,_next:string)=>undefined
-  function refund(payment?:Row,row?:Row){
-    if(!payment||!row)return
-    const paidAt=Number(payment.paid_at||payment.created_at||0)
-    if(!paidAt||Date.now()-paidAt>48*60*60*1000){window.alert('The 48-hour full-refund window has closed.');return}
-    if(!window.confirm(`Issue a full ${payment.currency} ${(Number(payment.amount_minor)/100).toFixed(2)} refund through Razorpay?`))return
-    void mutate({action:'payment.refund',subscriptionId:row.id})
+function Subscriptions({
+  data,
+  busy,
+  mutate,
+}: {
+  data: AdminData;
+  busy: boolean;
+  mutate: (p: Record<string, unknown>) => Promise<boolean>;
+}) {
+  const [query, setQuery] = useState(""),
+    [country, setCountry] = useState("all"),
+    [duration, setDuration] = useState("all"),
+    [page, setPage] = useState(1);
+  useEffect(() => setPage(1), [query, country, duration]);
+  const availableCountries = Array.from(
+    new Set(
+      data.subscriptions
+        .map((row) => row.delivery_address?.country)
+        .filter(Boolean),
+    ),
+  ).sort();
+  const paidSubscriptions = data.subscriptions.filter((row) =>
+    data.payments.some(
+      (payment) =>
+        payment.subscription_id === row.id && payment.status === "paid",
+    ),
+  );
+  const rows = paidSubscriptions.filter((row) => {
+    const haystack =
+      `${row.customer_id} ${row.contact_email ?? ""} ${row.contact_phone ?? ""} ${row.delivery_address?.name ?? ""}`.toLowerCase();
+    return (
+      haystack.includes(query.toLowerCase()) &&
+      (country === "all" || row.delivery_address?.country === country) &&
+      (duration === "all" || String(row.duration_months) === duration)
+    );
+  });
+  const pages = Math.max(1, Math.ceil(rows.length / 25)),
+    currentPage = Math.min(page, pages),
+    visibleRows = rows.slice((currentPage - 1) * 25, currentPage * 25);
+  const transitions: Record<string, string[]> = {};
+  const date = (value: unknown) =>
+    value
+      ? new Date(Number(value)).toLocaleDateString("en-GB", {
+          timeZone: "Asia/Kolkata",
+        })
+      : "—";
+  async function editDetails(row: Row) {
+    const old = row.delivery_address ?? {};
+    const name = window.prompt("Recipient name", old.name ?? "");
+    if (!name) return;
+    const email = window.prompt("Email address", row.contact_email ?? "");
+    if (email === null) return;
+    const phone = window.prompt("Phone number", row.contact_phone ?? "");
+    if (phone === null) return;
+    const line1 = window.prompt("Address line 1", old.line1 ?? "");
+    if (!line1) return;
+    const line2 = window.prompt("Address line 2 (optional)", old.line2 ?? "");
+    if (line2 === null) return;
+    const city = window.prompt("City", old.city ?? "");
+    if (!city) return;
+    const region = window.prompt("State / region (optional)", old.region ?? "");
+    if (region === null) return;
+    const postalCode = window.prompt("Postal code", old.postalCode ?? "");
+    if (!postalCode) return;
+    const countryCode = window.prompt(
+      "Two-letter country code",
+      old.country ?? "IN",
+    );
+    if (!countryCode) return;
+    const reason =
+      window.prompt(
+        "Reason for this edit (optional)",
+        "Administrator address correction",
+      ) || "Administrator address correction";
+    if (
+      !window.confirm(
+        `Save these customer details for ${row.contact_email ?? row.customer_id}?`,
+      )
+    )
+      return;
+    const saved = await mutate({
+      action: "subscription.address",
+      subscriptionId: row.id,
+      email,
+      phone,
+      reason,
+      address: {
+        name,
+        line1,
+        line2,
+        city,
+        region,
+        postalCode,
+        country: countryCode,
+      },
+    });
+    if (saved) window.alert("Customer details saved.");
+  }
+  const correctAddress = editDetails;
+  const changeStatus = (_row: Row, _next: string) => undefined;
+  function refund(payment?: Row, row?: Row) {
+    if (!payment || !row) return;
+    const paidAt = Number(payment.paid_at || payment.created_at || 0);
+    if (!paidAt || Date.now() - paidAt > 48 * 60 * 60 * 1000) {
+      window.alert("The 48-hour full-refund window has closed.");
+      return;
+    }
+    if (
+      !window.confirm(
+        `Issue a full ${payment.currency} ${(Number(payment.amount_minor) / 100).toFixed(2)} refund through Razorpay?`,
+      )
+    )
+      return;
+    void mutate({ action: "payment.refund", subscriptionId: row.id });
   }
   async function syncRazorpay() {
-    if (!window.confirm('Fetch paid Razorpay subscription invoices, then align eligible future renewal dates to the Offscroll Times subscription calendar? Pending, mismatched and unsupported UPI AutoPay subscriptions will not be changed.')) return
-    const synced = await mutate({ action: 'razorpay.reconcile', alignSchedules:true })
-    if (synced) window.alert('Razorpay payment records and eligible renewal schedules have been synchronised.')
+    if (
+      !window.confirm(
+        "Fetch paid Razorpay subscription invoices, then align eligible future renewal dates to the Offscroll Times subscription calendar? Pending, mismatched and unsupported UPI AutoPay subscriptions will not be changed.",
+      )
+    )
+      return;
+    const synced = await mutate({
+      action: "razorpay.reconcile",
+      alignSchedules: true,
+    });
+    if (synced)
+      window.alert(
+        "Razorpay payment records and eligible renewal schedules have been synchronised.",
+      );
   }
-  return <section><div className="flex flex-wrap items-end justify-between gap-4"><div><h2 className={H2}>Customers and subscriptions</h2><p className="mt-2 text-sm text-graphite-soft">Confirmed paid subscriptions only. Search paid entitlement and fulfilment history, or apply audited corrections.</p></div><div className="flex items-center gap-3"><p className="font-mono text-xs uppercase">{rows.length} of {paidSubscriptions.length} records</p><button disabled={busy} className={CTA_OUTLINE} onClick={()=>void syncRazorpay()}>{busy ? 'Syncing…' : 'Sync Razorpay payments'}</button></div></div>
-    <div className={`${card} mt-6 grid gap-3 md:grid-cols-3`} aria-label="Subscription filters"><label className="text-sm font-bold">Customer, email or phone<input className={`${input} mt-1`} type="search" value={query} onChange={e=>setQuery(e.target.value)} placeholder="Search…"/></label><label className="text-sm font-bold">Country<select className={`${input} mt-1`} value={country} onChange={e=>setCountry(e.target.value)}><option value="all">All countries</option>{availableCountries.map(v=><option key={v}>{v}</option>)}</select></label><label className="text-sm font-bold">Plan duration<select className={`${input} mt-1`} value={duration} onChange={e=>setDuration(e.target.value)}><option value="all">All durations</option>{Array.from(new Set(data.subscriptions.map(row=>row.duration_months))).sort((a,b)=>a-b).map(v=><option key={v} value={v}>{v} months</option>)}</select></label></div>
-    <div className="mt-6 grid gap-4">{rows.length===0&&<p className={card}>No subscriptions match these filters.</p>}{visibleRows.map(row=>{const payments=data.payments.filter(p=>p.subscription_id===row.id),history=data.fulfilments.filter(f=>f.subscription_id===row.id),audits=data.audits.filter(a=>a.target_type==='subscription'&&a.target_id===row.id);return <article className={card} key={row.id}><div className="grid gap-5 lg:grid-cols-[1.2fr_1fr_1fr_auto]"><div><p className="font-mono text-xs uppercase">{row.customer_id}</p><h3 className="mt-2 text-xl font-bold">{row.delivery_address?.name||'Name not provided'}</h3><p className="mt-1 text-sm">{row.contact_email||'Email pending'}</p><p className="mt-1 text-sm">{row.contact_phone||'Phone not recorded'} · {row.delivery_address?`${row.delivery_address.city}, ${row.delivery_address.country}`:'Address missing'}</p></div><dl className="grid grid-cols-2 gap-2 text-sm"><div><dt className="text-graphite-soft">Status</dt><dd className="font-bold capitalize">{row.status}</dd></div><div><dt className="text-graphite-soft">Entitlement</dt><dd className="font-bold capitalize">{row.entitlement_status||'pending'}</dd></div><div><dt className="text-graphite-soft">Starts</dt><dd>{date(row.starts_at)}</dd></div><div><dt className="text-graphite-soft">Paid through</dt><dd>{date(row.paid_through_at||row.ends_at)}</dd></div></dl><div><p className="text-sm text-graphite-soft">{row.plan_name} · {row.duration_months} months</p><strong className="mt-2 block text-2xl">{Math.max(0,row.copies_total-row.copies_fulfilled)} remaining</strong><p className="text-sm">{row.copies_fulfilled} fulfilled of {row.copies_total}</p></div><div className="flex flex-wrap items-start gap-2"><button disabled={busy} className={CTA_OUTLINE} onClick={()=>correctAddress(row)}>Correct address</button>{transitions[row.status]?.map(next=><button disabled={busy} className={CTA_OUTLINE} key={next} onClick={()=>changeStatus(row,next)}>{next}</button>)}</div></div>
-      <address className="mt-4 not-italic text-sm">{row.delivery_address ? [row.delivery_address.name,row.delivery_address.line1,row.delivery_address.line2,row.delivery_address.city,row.delivery_address.region,row.delivery_address.postalCode,row.delivery_address.country].filter(Boolean).join(', ') : 'Delivery address not provided'}</address><details className="mt-5 border-t border-rule pt-4"><summary className="cursor-pointer font-bold">Pricing, payments, fulfilment and audit history</summary><div className="mt-4 grid gap-5 lg:grid-cols-4"><section><h4 className="font-mono text-xs font-bold uppercase">Purchase pricing</h4>{row.pricing_snapshot?<dl className="mt-2 grid grid-cols-2 gap-1 text-sm"><dt>Subtotal</dt><dd>{row.currency} {(Number(row.pricing_snapshot.subtotalMinor??0)/100).toFixed(2)}</dd><dt>Discounts</dt><dd>-{row.currency} {((Number(row.pricing_snapshot.durationDiscountMinor??0)+Number(row.pricing_snapshot.offerDiscountMinor??0))/100).toFixed(2)}</dd><dt>Shipping</dt><dd>{row.currency} {(Number(row.pricing_snapshot.shippingMinor??0)/100).toFixed(2)}</dd><dt>Tax</dt><dd>{row.currency} {(Number(row.pricing_snapshot.taxMinor??0)/100).toFixed(2)}</dd><dt className="font-bold">Total</dt><dd className="font-bold">{row.currency} {(Number(row.pricing_snapshot.totalMinor??row.amount_minor)/100).toFixed(2)}</dd></dl>:<p className="mt-2 text-sm">Legacy pricing snapshot unavailable.</p>}</section><section><h4 className="font-mono text-xs font-bold uppercase">Payments</h4>{payments.length?payments.map(payment=><div className="mt-2 text-sm" key={payment.id}><span className="capitalize">{payment.status}{payment.refund_status?` | Refund: ${payment.refund_status}`:''}</span> · {payment.currency} {(payment.amount_minor/100).toFixed(2)} · {date(payment.paid_at||payment.created_at)}{payment.status==='paid'&&<button className="ml-2 underline" onClick={()=>refund(payment,row)}>Refund instructions</button>}</div>):<p className="mt-2 text-sm">No payment record.</p>}</section><section><h4 className="font-mono text-xs font-bold uppercase">Fulfilment</h4>{history.length?history.map(item=><p className="mt-2 text-sm" key={item.id}>{item.edition_label} · <span className="capitalize">{item.status}</span> · {date(item.dispatched_at||item.created_at)}</p>):<p className="mt-2 text-sm">No editions assigned.</p>}</section><section><h4 className="font-mono text-xs font-bold uppercase">Audit trail</h4>{audits.length?audits.map(item=><p className="mt-2 text-sm" key={item.id}>{item.action} · {date(item.created_at)} · {item.actor_user_id}</p>):<p className="mt-2 text-sm">No administrative changes.</p>}</section></div></details></article>})}</div><nav aria-label="Subscription pages" className="mt-6 flex flex-wrap items-center gap-3"><button disabled={currentPage<=1} className={CTA_OUTLINE} onClick={()=>setPage(currentPage-1)}>Previous</button><span>Page {currentPage} of {pages}</span><button disabled={currentPage>=pages} className={CTA_OUTLINE} onClick={()=>setPage(currentPage+1)}>Next</button></nav></section>
+  return (
+    <section>
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <h2 className={H2}>Customers and subscriptions</h2>
+          <p className="mt-2 text-sm text-graphite-soft">
+            Confirmed paid subscriptions only. Search paid entitlement and
+            fulfilment history, or apply audited corrections.
+          </p>
+        </div>
+        <div className="flex items-center gap-3">
+          <p className="font-mono text-xs uppercase">
+            {rows.length} of {paidSubscriptions.length} records
+          </p>
+          <button
+            disabled={busy}
+            className={CTA_OUTLINE}
+            onClick={() => void syncRazorpay()}
+          >
+            {busy ? "Syncing…" : "Sync Razorpay payments"}
+          </button>
+        </div>
+      </div>
+      <div
+        className={`${card} mt-6 grid gap-3 md:grid-cols-3`}
+        aria-label="Subscription filters"
+      >
+        <label className="text-sm font-bold">
+          Customer, email or phone
+          <input
+            className={`${input} mt-1`}
+            type="search"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search…"
+          />
+        </label>
+        <label className="text-sm font-bold">
+          Country
+          <select
+            className={`${input} mt-1`}
+            value={country}
+            onChange={(e) => setCountry(e.target.value)}
+          >
+            <option value="all">All countries</option>
+            {availableCountries.map((v) => (
+              <option key={v}>{v}</option>
+            ))}
+          </select>
+        </label>
+        <label className="text-sm font-bold">
+          Plan duration
+          <select
+            className={`${input} mt-1`}
+            value={duration}
+            onChange={(e) => setDuration(e.target.value)}
+          >
+            <option value="all">All durations</option>
+            {Array.from(
+              new Set(data.subscriptions.map((row) => row.duration_months)),
+            )
+              .sort((a, b) => a - b)
+              .map((v) => (
+                <option key={v} value={v}>
+                  {v} months
+                </option>
+              ))}
+          </select>
+        </label>
+      </div>
+      <div className="mt-6 grid gap-4">
+        {rows.length === 0 && (
+          <p className={card}>No subscriptions match these filters.</p>
+        )}
+        {visibleRows.map((row) => {
+          const payments = data.payments.filter(
+              (p) => p.subscription_id === row.id,
+            ),
+            history = data.fulfilments.filter(
+              (f) => f.subscription_id === row.id,
+            ),
+            audits = data.audits.filter(
+              (a) => a.target_type === "subscription" && a.target_id === row.id,
+            );
+          return (
+            <article className={card} key={row.id}>
+              <div className="grid gap-5 lg:grid-cols-[1.2fr_1fr_1fr_auto]">
+                <div>
+                  <p className="font-mono text-xs uppercase">
+                    {row.customer_id}
+                  </p>
+                  <h3 className="mt-2 text-xl font-bold">
+                    {row.delivery_address?.name || "Name not provided"}
+                  </h3>
+                  <p className="mt-1 text-sm">
+                    {row.contact_email || "Email pending"}
+                  </p>
+                  <p className="mt-1 text-sm">
+                    {row.contact_phone || "Phone not recorded"} ·{" "}
+                    {row.delivery_address
+                      ? `${row.delivery_address.city}, ${row.delivery_address.country}`
+                      : "Address missing"}
+                  </p>
+                </div>
+                <dl className="grid grid-cols-2 gap-2 text-sm">
+                  <div>
+                    <dt className="text-graphite-soft">Status</dt>
+                    <dd className="font-bold capitalize">{row.status}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-graphite-soft">Entitlement</dt>
+                    <dd className="font-bold capitalize">
+                      {row.entitlement_status || "pending"}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-graphite-soft">Subscription start date</dt>
+                    <dd>{date(row.starts_at)}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-graphite-soft">Subscription end date</dt>
+                    <dd>{date(row.ends_at || row.paid_through_at)}</dd>
+                  </div>
+                </dl>
+                <div>
+                  <p className="text-sm text-graphite-soft">
+                    {row.plan_name} · {row.duration_months} months
+                  </p>
+                  <strong className="mt-2 block text-2xl">
+                    {Math.max(0, row.copies_total - row.copies_fulfilled)}{" "}
+                    remaining
+                  </strong>
+                  <p className="text-sm">
+                    {row.copies_fulfilled} fulfilled of {row.copies_total}
+                  </p>
+                </div>
+                <div className="flex flex-wrap items-start gap-2">
+                  <button
+                    disabled={busy}
+                    className={CTA_OUTLINE}
+                    onClick={() => correctAddress(row)}
+                  >
+                    Correct address
+                  </button>
+                  {transitions[row.status]?.map((next) => (
+                    <button
+                      disabled={busy}
+                      className={CTA_OUTLINE}
+                      key={next}
+                      onClick={() => changeStatus(row, next)}
+                    >
+                      {next}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <address className="mt-4 not-italic text-sm">
+                {row.delivery_address
+                  ? [
+                      row.delivery_address.name,
+                      row.delivery_address.line1,
+                      row.delivery_address.line2,
+                      row.delivery_address.city,
+                      row.delivery_address.region,
+                      row.delivery_address.postalCode,
+                      row.delivery_address.country,
+                    ]
+                      .filter(Boolean)
+                      .join(", ")
+                  : "Delivery address not provided"}
+              </address>
+              <details className="mt-5 border-t border-rule pt-4">
+                <summary className="cursor-pointer font-bold">
+                  Pricing, payments, fulfilment and audit history
+                </summary>
+                <div className="mt-4 grid gap-5 lg:grid-cols-4">
+                  <section>
+                    <h4 className="font-mono text-xs font-bold uppercase">
+                      Purchase pricing
+                    </h4>
+                    {row.pricing_snapshot ? (
+                      <dl className="mt-2 grid grid-cols-2 gap-1 text-sm">
+                        <dt>Subtotal</dt>
+                        <dd>
+                          {row.currency}{" "}
+                          {(
+                            Number(row.pricing_snapshot.subtotalMinor ?? 0) /
+                            100
+                          ).toFixed(2)}
+                        </dd>
+                        <dt>Discounts</dt>
+                        <dd>
+                          -{row.currency}{" "}
+                          {(
+                            (Number(
+                              row.pricing_snapshot.durationDiscountMinor ?? 0,
+                            ) +
+                              Number(
+                                row.pricing_snapshot.offerDiscountMinor ?? 0,
+                              )) /
+                            100
+                          ).toFixed(2)}
+                        </dd>
+                        <dt>Shipping</dt>
+                        <dd>
+                          {row.currency}{" "}
+                          {(
+                            Number(row.pricing_snapshot.shippingMinor ?? 0) /
+                            100
+                          ).toFixed(2)}
+                        </dd>
+                        <dt>Tax</dt>
+                        <dd>
+                          {row.currency}{" "}
+                          {(
+                            Number(row.pricing_snapshot.taxMinor ?? 0) / 100
+                          ).toFixed(2)}
+                        </dd>
+                        <dt className="font-bold">Total</dt>
+                        <dd className="font-bold">
+                          {row.currency}{" "}
+                          {(
+                            Number(
+                              row.pricing_snapshot.totalMinor ??
+                                row.amount_minor,
+                            ) / 100
+                          ).toFixed(2)}
+                        </dd>
+                      </dl>
+                    ) : (
+                      <p className="mt-2 text-sm">
+                        Legacy pricing snapshot unavailable.
+                      </p>
+                    )}
+                  </section>
+                  <section>
+                    <h4 className="font-mono text-xs font-bold uppercase">
+                      Payments
+                    </h4>
+                    {payments.length ? (
+                      payments.map((payment) => (
+                        <div className="mt-2 text-sm" key={payment.id}>
+                          <span className="block text-graphite-soft">
+                            Paid on: {date(payment.paid_at || payment.created_at)}
+                          </span>
+                          <span className="capitalize">
+                            {payment.status}
+                            {payment.refund_status
+                              ? ` | Refund: ${payment.refund_status}`
+                              : ""}
+                          </span>{" "}
+                          · {payment.currency}{" "}
+                          {(payment.amount_minor / 100).toFixed(2)} ·{" "}
+                          {date(payment.paid_at || payment.created_at)}
+                          {payment.status === "paid" && (
+                            <button
+                              className="ml-2 underline"
+                              onClick={() => refund(payment, row)}
+                            >
+                              Refund instructions
+                            </button>
+                          )}
+                        </div>
+                      ))
+                    ) : (
+                      <p className="mt-2 text-sm">No payment record.</p>
+                    )}
+                  </section>
+                  <section>
+                    <h4 className="font-mono text-xs font-bold uppercase">
+                      Fulfilment
+                    </h4>
+                    {history.length ? (
+                      history.map((item) => (
+                        <p className="mt-2 text-sm" key={item.id}>
+                          {item.edition_label} ·{" "}
+                          <span className="capitalize">{item.status}</span> ·{" "}
+                          {date(item.dispatched_at || item.created_at)}
+                        </p>
+                      ))
+                    ) : (
+                      <p className="mt-2 text-sm">No editions assigned.</p>
+                    )}
+                  </section>
+                  <section>
+                    <h4 className="font-mono text-xs font-bold uppercase">
+                      Audit trail
+                    </h4>
+                    {audits.length ? (
+                      audits.map((item) => (
+                        <p className="mt-2 text-sm" key={item.id}>
+                          {item.action} · {date(item.created_at)} ·{" "}
+                          {item.actor_user_id}
+                        </p>
+                      ))
+                    ) : (
+                      <p className="mt-2 text-sm">No administrative changes.</p>
+                    )}
+                  </section>
+                </div>
+              </details>
+            </article>
+          );
+        })}
+      </div>
+      <nav
+        aria-label="Subscription pages"
+        className="mt-6 flex flex-wrap items-center gap-3"
+      >
+        <button
+          disabled={currentPage <= 1}
+          className={CTA_OUTLINE}
+          onClick={() => setPage(currentPage - 1)}
+        >
+          Previous
+        </button>
+        <span>
+          Page {currentPage} of {pages}
+        </span>
+        <button
+          disabled={currentPage >= pages}
+          className={CTA_OUTLINE}
+          onClick={() => setPage(currentPage + 1)}
+        >
+          Next
+        </button>
+      </nav>
+    </section>
+  );
 }
 
-function Editions({ data, busy, mutate }: { data: AdminData; busy: boolean; mutate: (p: Record<string,unknown>) => Promise<boolean> }) {
-  async function create(event: React.FormEvent<HTMLFormElement>) { event.preventDefault(); const form=event.currentTarget; const f = new FormData(form); const copiesAvailable=Number(f.get('copiesAvailable')??0); if (await mutate({action:'edition.create',label:f.get('label'),issueNumber:Number(f.get('issue')),copiesAvailable,cutoff:f.get('cutoff'),dispatch:f.get('dispatch')})) form.reset() }
-  return <SimpleEditionManager data={data} busy={busy} mutate={mutate} create={create}/>
+function Editions({
+  data,
+  busy,
+  mutate,
+}: {
+  data: AdminData;
+  busy: boolean;
+  mutate: (p: Record<string, unknown>) => Promise<boolean>;
+}) {
+  async function create(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const f = new FormData(form);
+    const copiesAvailable = Number(f.get("copiesAvailable") ?? 0);
+    if (
+      await mutate({
+        action: "edition.create",
+        label: f.get("label"),
+        issueNumber: Number(f.get("issue")),
+        copiesAvailable,
+        cutoff: f.get("cutoff"),
+        dispatch: f.get("dispatch"),
+      })
+    )
+      form.reset();
+  }
+  return (
+    <SimpleEditionManager
+      data={data}
+      busy={busy}
+      mutate={mutate}
+      create={create}
+    />
+  );
   // Kept temporarily as a compact fallback while the richer manager remains API-compatible.
-  return <div className="grid gap-7 lg:grid-cols-[360px_1fr]"><form className={card} onSubmit={create}><h2 className="text-2xl font-bold">Create edition</h2>{[['label','Edition label','text'],['issue','Issue number','number'],['cutoff','Eligibility cut-off','datetime-local'],['dispatch','Dispatch date','datetime-local']].map(([name,label,type]) => <label className="mt-4 block" key={name}><span className="mb-1 block text-sm">{label}</span><input className={input} required name={name} type={type}/></label>)}<button disabled={busy} className={`${CTA} mt-5`} type="submit">Create edition</button></form><section><h2 className={H2}>Editions and dispatch</h2><div className="mt-5 grid gap-4">{data.editions.map(e => <article className={card} key={e.id}><div className="flex flex-wrap justify-between gap-3"><div><strong>{e.label}</strong><p className="mt-1 text-sm capitalize">Issue {e.issue_number} · {e.status}</p></div><div className="flex gap-2"><button disabled={busy} className={CTA_OUTLINE} onClick={() => void mutate({action:'edition.generate',editionId:e.id})}>Generate list</button><a className={CTA_OUTLINE} href={`/api/admin/dispatch?edition=${encodeURIComponent(e.id)}`}>Export CSV</a></div></div><div className="mt-4 overflow-x-auto"><table className="w-full text-sm"><tbody>{data.fulfilments.filter(f => f.edition_label === e.label).map(f => <tr key={f.id}><td className="py-2">{f.subscription_id}</td><td className="py-2"><select className={input} value={f.status} onChange={event => void mutate({action:'fulfilment.status',fulfilmentId:f.id,status:event.target.value})}>{['scheduled','prepared','dispatched','delivered','delayed','returned','replacement'].map(s => <option key={s}>{s}</option>)}</select></td></tr>)}</tbody></table></div></article>)}</div></section></div>
+  return (
+    <div className="grid gap-7 lg:grid-cols-[360px_1fr]">
+      <form className={card} onSubmit={create}>
+        <h2 className="text-2xl font-bold">Create edition</h2>
+        {[
+          ["label", "Edition label", "text"],
+          ["issue", "Issue number", "number"],
+          ["cutoff", "Eligibility cut-off", "datetime-local"],
+          ["dispatch", "Dispatch date", "datetime-local"],
+        ].map(([name, label, type]) => (
+          <label className="mt-4 block" key={name}>
+            <span className="mb-1 block text-sm">{label}</span>
+            <input className={input} required name={name} type={type} />
+          </label>
+        ))}
+        <button disabled={busy} className={`${CTA} mt-5`} type="submit">
+          Create edition
+        </button>
+      </form>
+      <section>
+        <h2 className={H2}>Editions and dispatch</h2>
+        <div className="mt-5 grid gap-4">
+          {data.editions.map((e) => (
+            <article className={card} key={e.id}>
+              <div className="flex flex-wrap justify-between gap-3">
+                <div>
+                  <strong>{e.label}</strong>
+                  <p className="mt-1 text-sm capitalize">
+                    Issue {e.issue_number} · {e.status}
+                  </p>
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    disabled={busy}
+                    className={CTA_OUTLINE}
+                    onClick={() =>
+                      void mutate({
+                        action: "edition.generate",
+                        editionId: e.id,
+                      })
+                    }
+                  >
+                    Generate list
+                  </button>
+                  <a
+                    className={CTA_OUTLINE}
+                    href={`/api/admin/dispatch?edition=${encodeURIComponent(e.id)}`}
+                  >
+                    Export CSV
+                  </a>
+                </div>
+              </div>
+              <div className="mt-4 overflow-x-auto">
+                <table className="w-full text-sm">
+                  <tbody>
+                    {data.fulfilments
+                      .filter((f) => f.edition_label === e.label)
+                      .map((f) => (
+                        <tr key={f.id}>
+                          <td className="py-2">{f.subscription_id}</td>
+                          <td className="py-2">
+                            <select
+                              className={input}
+                              value={f.status}
+                              onChange={(event) =>
+                                void mutate({
+                                  action: "fulfilment.status",
+                                  fulfilmentId: f.id,
+                                  status: event.target.value,
+                                })
+                              }
+                            >
+                              {[
+                                "scheduled",
+                                "prepared",
+                                "dispatched",
+                                "delivered",
+                                "delayed",
+                                "returned",
+                                "replacement",
+                              ].map((s) => (
+                                <option key={s}>{s}</option>
+                              ))}
+                            </select>
+                          </td>
+                        </tr>
+                      ))}
+                  </tbody>
+                </table>
+              </div>
+            </article>
+          ))}
+        </div>
+      </section>
+    </div>
+  );
 }
 
-function SimpleEditionManager({data,busy,mutate,create}:{data:AdminData;busy:boolean;mutate:(p:Record<string,unknown>)=>Promise<boolean>;create:(event:React.FormEvent<HTMLFormElement>)=>Promise<void>}){
-  const displayDate=(value:unknown)=>value?new Date(Number(value)).toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric'}):'Not set'
-  const dateValue=(value:unknown)=>value?new Date(Number(value)).toISOString().slice(0,10):''
-  async function edit(edition:Row){
-    const label=window.prompt('Edition name',String(edition.label??'')); if(!label?.trim())return
-    const issueNumber=window.prompt('Edition number',String(edition.issue_number??'')); if(issueNumber===null)return
-    const copiesAvailable=window.prompt('Total copies to print',String(edition.copies_available??0)); if(copiesAvailable===null)return
-    const dispatch=window.prompt('Dispatch date (YYYY-MM-DD)',dateValue(edition.dispatch_at)); if(!dispatch)return
-    if(!window.confirm(`Save changes to ${edition.label}? A locked edition keeps its audit record.`))return
-    const saved=await mutate({action:'edition.update',editionId:edition.id,label,issueNumber:Number(issueNumber),copiesAvailable:Number(copiesAvailable),dispatch})
-    if(saved)window.alert('Edition details saved.')
+function SimpleEditionManager({
+  data,
+  busy,
+  mutate,
+  create,
+}: {
+  data: AdminData;
+  busy: boolean;
+  mutate: (p: Record<string, unknown>) => Promise<boolean>;
+  create: (event: React.FormEvent<HTMLFormElement>) => Promise<void>;
+}) {
+  const displayDate = (value: unknown) =>
+    value
+      ? new Date(Number(value)).toLocaleDateString("en-GB", {
+          day: "numeric",
+          month: "long",
+          year: "numeric",
+        })
+      : "Not set";
+  const dateValue = (value: unknown) =>
+    value ? new Date(Number(value)).toISOString().slice(0, 10) : "";
+  async function edit(edition: Row) {
+    const label = window.prompt("Edition name", String(edition.label ?? ""));
+    if (!label?.trim()) return;
+    const issueNumber = window.prompt(
+      "Edition number",
+      String(edition.issue_number ?? ""),
+    );
+    if (issueNumber === null) return;
+    const copiesAvailable = window.prompt(
+      "Total copies to print",
+      String(edition.copies_available ?? 0),
+    );
+    if (copiesAvailable === null) return;
+    const dispatch = window.prompt(
+      "Dispatch date (YYYY-MM-DD)",
+      dateValue(edition.dispatch_at),
+    );
+    if (!dispatch) return;
+    if (
+      !window.confirm(
+        `Save changes to ${edition.label}? A locked edition keeps its audit record.`,
+      )
+    )
+      return;
+    const saved = await mutate({
+      action: "edition.update",
+      editionId: edition.id,
+      label,
+      issueNumber: Number(issueNumber),
+      copiesAvailable: Number(copiesAvailable),
+      dispatch,
+    });
+    if (saved) window.alert("Edition details saved.");
   }
-  async function remove(edition:Row){
-    if(!window.confirm(`Remove ${edition.label} from the working list? Its locked audit record will be retained.`))return
-    if(await mutate({action:'edition.delete',editionId:edition.id,confirm:true}))window.alert('Edition deleted.')
+  async function remove(edition: Row) {
+    if (
+      !window.confirm(
+        `Remove ${edition.label} from the working list? Its locked audit record will be retained.`,
+      )
+    )
+      return;
+    if (
+      await mutate({
+        action: "edition.delete",
+        editionId: edition.id,
+        confirm: true,
+      })
+    )
+      window.alert("Edition deleted.");
   }
-  return <div className="grid gap-7 lg:grid-cols-[360px_1fr]"><form className={`${card} self-start lg:sticky lg:top-24`} onSubmit={event=>void create(event)}><p className={EYEBROW}>Monthly workflow</p><h2 className="text-2xl font-bold">Create edition</h2><label className="mt-4 block"><span className="mb-1 block text-sm font-bold">Edition name</span><input className={input} required name="label" type="text"/></label><label className="mt-4 block"><span className="mb-1 block text-sm font-bold">Edition number</span><input className={input} required min="1" name="issue" type="number"/></label><label className="mt-4 block"><span className="mb-1 block text-sm font-bold">Total copies to print</span><input className={input} required min="0" name="copiesAvailable" type="number"/></label><label className="mt-4 block"><span className="mb-1 block text-sm font-bold">Dispatch date</span><input className={input} required name="dispatch" type="date"/></label><button disabled={busy} className={`${CTA} mt-5`} type="submit">Create edition</button><p className="mt-4 text-xs text-graphite-soft">Paid subscriptions reserve their copy automatically; the remaining quantity is shown below.</p></form><section><h2 className={H2}>Edition inventory and fulfilment</h2><div className="mt-5 grid gap-5">{data.editions.length===0&&<p className={card}>No editions created yet.</p>}{data.editions.map(edition=>{const snapshots=data.eligibility.filter(item=>item.edition_id===edition.id),included=snapshots.filter(item=>['included','override_included'].includes(item.decision)),excluded=snapshots.filter(item=>['excluded','override_excluded'].includes(item.decision)),fulfilments=data.fulfilments.filter(item=>item.edition_label===edition.label),locked=['locked','dispatched','completed'].includes(edition.status),canManage=['draft','eligibility_generated','locked'].includes(String(edition.status))&&!fulfilments.some(item=>item.status!=='scheduled');return <article className={card} key={edition.id}><header className="flex flex-wrap items-start justify-between gap-4"><div><p className={EYEBROW}>Edition {edition.issue_number} · {String(edition.status).replace('_',' ')}</p><h3 className="text-2xl font-bold">{edition.label}</h3><p className="mt-2 text-sm">Dispatch date: <strong>{displayDate(edition.dispatch_at)}</strong></p><p className="mt-1 text-sm"><strong>{edition.copies_available}</strong> copies available after paid reservations.</p></div><div className="flex flex-wrap gap-2">{canManage&&<><button disabled={busy} className={CTA_OUTLINE} onClick={()=>void edit(edition)}>Edit</button><button disabled={busy} className={CTA_OUTLINE} onClick={()=>void remove(edition)}>Delete</button></>}{!locked&&<button disabled={busy} className={CTA_OUTLINE} onClick={()=>void mutate({action:'edition.generate',editionId:edition.id})}>{snapshots.length?'List generated':'Generate delivery list'}</button>}{edition.status==='eligibility_generated'&&<button disabled={busy} className={CTA} onClick={()=>{const reason=window.prompt('Approval note for this delivery list (required)');if(reason&&reason.trim().length>=5)void mutate({action:'edition.lock',editionId:edition.id,reason})}}>Approve & lock</button>}{locked&&<a className={CTA_OUTLINE} href={`/api/admin/dispatch?edition=${encodeURIComponent(edition.id)}&format=pdf`}>Print address labels</a>}</div></header>{snapshots.length>0&&<div className="mt-5 grid gap-3 sm:grid-cols-3"><Metric label="Included" value={included.length}/><Metric label="Excluded" value={excluded.length}/><Metric label="Copies for delivery" value={fulfilments.filter(item=>item.status!=='returned').reduce((sum,item)=>sum+Number(data.subscriptions.find(subscription=>subscription.id===item.subscription_id)?.quantity??1),0)}/></div>}<div className="mt-5 grid gap-2">{fulfilments.map(item=><div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-rule p-3" key={item.id}><span className="font-mono text-xs">{item.subscription_id}</span><strong className="capitalize">{item.status}</strong></div>)}</div></article>})}</div></section></div>
+  return (
+    <div className="grid gap-7 lg:grid-cols-[360px_1fr]">
+      <form
+        className={`${card} self-start lg:sticky lg:top-24`}
+        onSubmit={(event) => void create(event)}
+      >
+        <p className={EYEBROW}>Monthly workflow</p>
+        <h2 className="text-2xl font-bold">Create edition</h2>
+        <label className="mt-4 block">
+          <span className="mb-1 block text-sm font-bold">Edition name</span>
+          <input className={input} required name="label" type="text" />
+        </label>
+        <label className="mt-4 block">
+          <span className="mb-1 block text-sm font-bold">Edition number</span>
+          <input
+            className={input}
+            required
+            min="1"
+            name="issue"
+            type="number"
+          />
+        </label>
+        <label className="mt-4 block">
+          <span className="mb-1 block text-sm font-bold">
+            Total copies to print
+          </span>
+          <input
+            className={input}
+            required
+            min="0"
+            name="copiesAvailable"
+            type="number"
+          />
+        </label>
+        <label className="mt-4 block">
+          <span className="mb-1 block text-sm font-bold">Dispatch date</span>
+          <input className={input} required name="dispatch" type="date" />
+        </label>
+        <button disabled={busy} className={`${CTA} mt-5`} type="submit">
+          Create edition
+        </button>
+        <p className="mt-4 text-xs text-graphite-soft">
+          Paid subscriptions reserve their copy automatically; the remaining
+          quantity is shown below.
+        </p>
+      </form>
+      <section>
+        <h2 className={H2}>Edition inventory and fulfilment</h2>
+        <div className="mt-5 grid gap-5">
+          {data.editions.length === 0 && (
+            <p className={card}>No editions created yet.</p>
+          )}
+          {data.editions.map((edition) => {
+            const snapshots = data.eligibility.filter(
+                (item) => item.edition_id === edition.id,
+              ),
+              included = snapshots.filter((item) =>
+                ["included", "override_included"].includes(item.decision),
+              ),
+              excluded = snapshots.filter((item) =>
+                ["excluded", "override_excluded"].includes(item.decision),
+              ),
+              fulfilments = data.fulfilments.filter(
+                (item) => item.edition_label === edition.label,
+              ),
+              locked = ["locked", "dispatched", "completed"].includes(
+                edition.status,
+              ),
+              canManage =
+                ["draft", "eligibility_generated", "locked"].includes(
+                  String(edition.status),
+                ) && !fulfilments.some((item) => item.status !== "scheduled");
+            return (
+              <article className={card} key={edition.id}>
+                <header className="flex flex-wrap items-start justify-between gap-4">
+                  <div>
+                    <p className={EYEBROW}>
+                      Edition {edition.issue_number} ·{" "}
+                      {String(edition.status).replace("_", " ")}
+                    </p>
+                    <h3 className="text-2xl font-bold">{edition.label}</h3>
+                    <p className="mt-2 text-sm">
+                      Dispatch date:{" "}
+                      <strong>{displayDate(edition.dispatch_at)}</strong>
+                    </p>
+                    <p className="mt-1 text-sm">
+                      <strong>{edition.copies_available}</strong> copies
+                      available after paid reservations.
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {canManage && (
+                      <>
+                        <button
+                          disabled={busy}
+                          className={CTA_OUTLINE}
+                          onClick={() => void edit(edition)}
+                        >
+                          Edit
+                        </button>
+                        <button
+                          disabled={busy}
+                          className={CTA_OUTLINE}
+                          onClick={() => void remove(edition)}
+                        >
+                          Delete
+                        </button>
+                      </>
+                    )}
+                    {!locked && (
+                      <button
+                        disabled={busy}
+                        className={CTA_OUTLINE}
+                        onClick={() =>
+                          void mutate({
+                            action: "edition.generate",
+                            editionId: edition.id,
+                          })
+                        }
+                      >
+                        {snapshots.length
+                          ? "List generated"
+                          : "Generate delivery list"}
+                      </button>
+                    )}
+                    {edition.status === "eligibility_generated" && (
+                      <button
+                        disabled={busy}
+                        className={CTA}
+                        onClick={() => {
+                          const reason = window.prompt(
+                            "Approval note for this delivery list (required)",
+                          );
+                          if (reason && reason.trim().length >= 5)
+                            void mutate({
+                              action: "edition.lock",
+                              editionId: edition.id,
+                              reason,
+                            });
+                        }}
+                      >
+                        Approve & lock
+                      </button>
+                    )}
+                    {locked && (
+                      <a
+                        className={CTA_OUTLINE}
+                        href={`/api/admin/dispatch?edition=${encodeURIComponent(edition.id)}&format=pdf`}
+                      >
+                        Print address labels
+                      </a>
+                    )}
+                  </div>
+                </header>
+                {snapshots.length > 0 && (
+                  <div className="mt-5 grid gap-3 sm:grid-cols-3">
+                    <Metric label="Included" value={included.length} />
+                    <Metric label="Excluded" value={excluded.length} />
+                    <Metric
+                      label="Copies for delivery"
+                      value={fulfilments
+                        .filter((item) => item.status !== "returned")
+                        .reduce(
+                          (sum, item) =>
+                            sum +
+                            Number(
+                              data.subscriptions.find(
+                                (subscription) =>
+                                  subscription.id === item.subscription_id,
+                              )?.quantity ?? 1,
+                            ),
+                          0,
+                        )}
+                    />
+                  </div>
+                )}
+                <div className="mt-5 grid gap-2">
+                  {fulfilments.map((item) => (
+                    <div
+                      className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-rule p-3"
+                      key={item.id}
+                    >
+                      <span className="font-mono text-xs">
+                        {item.subscription_id}
+                      </span>
+                      <strong className="capitalize">{item.status}</strong>
+                    </div>
+                  ))}
+                </div>
+              </article>
+            );
+          })}
+        </div>
+      </section>
+    </div>
+  );
 }
 
-export function EditionManager({data,busy,mutate,create}:{data:AdminData;busy:boolean;mutate:(p:Record<string,unknown>)=>Promise<boolean>;create:(e:React.FormEvent<HTMLFormElement>)=>Promise<void>}){
-  const next:Record<string,string[]>={scheduled:['prepared'],prepared:['dispatched'],dispatched:['delivered','delayed','returned'],delayed:['delivered','returned','replacement'],returned:['replacement'],replacement:['prepared']}
-  function override(edition:Row,item:Row,include:boolean){const reason=window.prompt(`Document why this subscription should be ${include?'included':'excluded'} (required)`);if(!reason||reason.trim().length<5)return;if(!window.confirm(`Confirm this documented override for ${item.subscription_id}?`))return;void mutate({action:'edition.override',editionId:edition.id,subscriptionId:item.subscription_id,include,reason})}
-  function lock(edition:Row){const reason=window.prompt('Approval note for locking this print list (required)');if(!reason||reason.trim().length<5)return;if(!window.confirm(`Lock ${edition.label}? Eligibility overrides will stop and the CSV will become available.`))return;void mutate({action:'edition.lock',editionId:edition.id,reason})}
-  return <div className="grid gap-7 lg:grid-cols-[360px_1fr]"><form className={`${card} self-start lg:sticky lg:top-24`} onSubmit={e=>void create(e)}><p className={EYEBROW}>Monthly workflow</p><h2 className="text-2xl font-bold">Create edition</h2>{[['label','Edition name','text'],['issue','Issue number','number'],['cutoff','Eligibility cut-off','datetime-local'],['dispatch','Dispatch date','datetime-local']].map(([name,label,type])=><label className="mt-4 block" key={name}><span className="mb-1 block text-sm font-bold">{label}</span><input className={input} required name={name} type={type}/></label>)}<button disabled={busy} className={`${CTA} mt-5`} type="submit">Create edition</button><p className="mt-4 text-xs text-graphite-soft">Generate → review exclusions → document overrides → lock → export → fulfil.</p></form><section><h2 className={H2}>Edition and fulfilment management</h2><div className="mt-5 grid gap-5">{data.editions.length===0&&<p className={card}>No editions created yet.</p>}{data.editions.map(edition=>{const snapshots=data.eligibility.filter(item=>item.edition_id===edition.id),included=snapshots.filter(item=>['included','override_included'].includes(item.decision)),excluded=snapshots.filter(item=>['excluded','override_excluded'].includes(item.decision)),fulfilments=data.fulfilments.filter(item=>item.edition_label===edition.label),editionAudits=data.audits.filter(item=>item.target_type==='edition'&&item.target_id===edition.id),locked=['locked','dispatched','completed'].includes(edition.status);return <article className={card} key={edition.id}><header className="flex flex-wrap items-start justify-between gap-4"><div><p className={EYEBROW}>Issue {edition.issue_number} · {String(edition.status).replace('_',' ')}</p><h3 className="text-2xl font-bold">{edition.label}</h3><p className="mt-2 text-sm">Cut-off {new Date(edition.eligibility_cutoff_at).toLocaleString()} · Dispatch {new Date(edition.dispatch_at).toLocaleString()}</p></div><div className="flex flex-wrap gap-2">{!locked&&<button disabled={busy} className={CTA_OUTLINE} onClick={()=>void mutate({action:'edition.generate',editionId:edition.id})}>{snapshots.length?'Regenerate snapshot':'Generate snapshot'}</button>}{edition.status==='eligibility_generated'&&<button disabled={busy} className={CTA} onClick={()=>lock(edition)}>Approve & lock</button>}{locked&&<a className={CTA} href={`/api/admin/dispatch?edition=${encodeURIComponent(edition.id)}`}>Export printer CSV</a>}</div></header>{snapshots.length>0&&<div className="mt-5 grid gap-3 sm:grid-cols-3"><Metric label="Included" value={included.length}/><Metric label="Excluded" value={excluded.length}/><Metric label="Print copies" value={fulfilments.filter(f=>!['returned'].includes(f.status)).reduce((sum,f)=>sum+Number(data.subscriptions.find(s=>s.id===f.subscription_id)?.quantity??1),0)}/></div>}
-        {snapshots.length>0&&<details className="mt-5 border-t border-rule pt-4"><summary className="cursor-pointer font-bold">Eligibility snapshot and exclusion reasons ({snapshots.length})</summary><div className="mt-3 overflow-x-auto"><table className="w-full min-w-[720px] text-left text-sm"><thead><tr><th className="py-2">Subscription</th><th>Decision</th><th>Reason</th><th>Review</th></tr></thead><tbody>{snapshots.map(item=><tr className="border-t border-rule" key={item.id}><td className="py-3 font-mono text-xs">{item.subscription_id}</td><td className="capitalize">{String(item.decision).replace('_',' ')}</td><td>{item.reason}</td><td>{!locked&&<button className="underline" onClick={()=>override(edition,item,!['included','override_included'].includes(item.decision))}>{['included','override_included'].includes(item.decision)?'Exclude':'Include'} with reason</button>}{locked&&<span className="text-graphite-soft">Locked</span>}</td></tr>)}</tbody></table></div></details>}
-        {fulfilments.length>0&&<details className="mt-4 border-t border-rule pt-4" open={locked}><summary className="cursor-pointer font-bold">Fulfilment records ({fulfilments.length})</summary><div className="mt-3 grid gap-2">{fulfilments.map(item=><div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-rule p-3" key={item.id}><div><span className="font-mono text-xs">{item.subscription_id}</span><strong className="ml-3 capitalize">{item.status}</strong>{item.tracking_url&&<a className="ml-3 underline" href={item.tracking_url}>Tracking</a>}</div><div className="flex gap-2">{next[item.status]?.map(status=><button disabled={busy||!locked} className={CTA_OUTLINE} key={status} onClick={()=>{const tracking=status==='dispatched'?window.prompt('Courier tracking URL (https://, optional)')??'':'';if(window.confirm(`Confirm ${item.status} → ${status}?`))void mutate({action:'fulfilment.status',fulfilmentId:item.id,status,trackingUrl:tracking})}}>{status}</button>)}</div></div>)}</div></details>}
-        <details className="mt-4 border-t border-rule pt-4"><summary className="cursor-pointer font-bold">Edition audit trail ({editionAudits.length})</summary><div className="mt-3 grid gap-2">{editionAudits.map(item=><p className="text-sm" key={item.id}><strong>{item.action}</strong> · {new Date(item.created_at).toLocaleString()} · {item.actor_user_id}</p>)}</div></details></article>})}</div></section></div>
-}
-
-function Pricing({ data, busy, mutate }: { data: AdminData; busy: boolean; mutate: (p: Record<string,unknown>) => Promise<boolean> }) {
-  return <div className="grid gap-6 xl:grid-cols-2"><SimpleCountryDeliveryPricing zones={data.zones} busy={busy} mutate={mutate}/><RegionalPricing zones={data.zones} busy={busy} mutate={mutate}/><SimpleDiscountPricing options={data.options} busy={busy} mutate={mutate}/></div>
-}
-
-function EditionCopyPricing({editions,busy,mutate}:{editions:Row[];busy:boolean;mutate:(payload:Record<string,unknown>)=>Promise<boolean>}){
-  const drafts=editions.filter(edition=>edition.status==='draft')
-  async function submit(event:React.FormEvent<HTMLFormElement>){event.preventDefault();const form=new FormData(event.currentTarget),price=Number(form.get('copyPriceRupees'));await mutate({action:'edition.price',editionId:form.get('editionId'),copyPriceMinor:Math.round(price*100)})}
-  return <section className={`${card} max-w-xl`}><p className={EYEBROW}>Edition pricing</p><h2 className="text-2xl font-bold">Set an edition copy price</h2><p className="mt-2 text-sm text-graphite-soft">Choose an available draft edition and save its price per copy. This does not rewrite completed customer orders.</p>{drafts.length?<form onSubmit={e=>void submit(e)} className="mt-4 grid gap-3 sm:grid-cols-2"><label>Available edition<select required name="editionId" className={`${input} mt-1`}>{drafts.map(edition=><option key={edition.id} value={edition.id}>{edition.label} — Edition {edition.issue_number}</option>)}</select></label><label>Price per copy (₹)<input required min="0" step="0.01" name="copyPriceRupees" type="number" className={`${input} mt-1`}/></label><button disabled={busy} className={`${CTA} sm:col-span-2`}>Save edition price</button></form>:<p className="mt-4 text-sm">Create a draft edition in Editions before setting its copy price.</p>}</section>
-}
-
-export function CountryDeliveryPricing({zones,busy,mutate}:{zones:Row[];busy:boolean;mutate:(payload:Record<string,unknown>)=>Promise<boolean>}){
-  async function save(event:React.FormEvent<HTMLFormElement>){
-    event.preventDefault()
-    const form=new FormData(event.currentTarget), shipping=Number(form.get('shippingRupees')), extra=Number(form.get('extraCopyRupees'))
-    const payload={action:'catalog.upsert',kind:'shipping',countryCode:String(form.get('countryCode')??'').trim().toUpperCase(),countryName:String(form.get('countryName')??'').trim(),currency:String(form.get('currency')??'').trim().toUpperCase(),shippingMinor:Math.round(shipping*100),additionalCopyMinor:Math.round(extra*100),taxRateBasisPoints:Number(form.get('taxRateBasisPoints')??0),active:true}
-    if(await mutate(payload))event.currentTarget.reset()
+export function EditionManager({
+  data,
+  busy,
+  mutate,
+  create,
+}: {
+  data: AdminData;
+  busy: boolean;
+  mutate: (p: Record<string, unknown>) => Promise<boolean>;
+  create: (e: React.FormEvent<HTMLFormElement>) => Promise<void>;
+}) {
+  const next: Record<string, string[]> = {
+    scheduled: ["prepared"],
+    prepared: ["dispatched"],
+    dispatched: ["delivered", "delayed", "returned"],
+    delayed: ["delivered", "returned", "replacement"],
+    returned: ["replacement"],
+    replacement: ["prepared"],
+  };
+  function override(edition: Row, item: Row, include: boolean) {
+    const reason = window.prompt(
+      `Document why this subscription should be ${include ? "included" : "excluded"} (required)`,
+    );
+    if (!reason || reason.trim().length < 5) return;
+    if (
+      !window.confirm(
+        `Confirm this documented override for ${item.subscription_id}?`,
+      )
+    )
+      return;
+    void mutate({
+      action: "edition.override",
+      editionId: edition.id,
+      subscriptionId: item.subscription_id,
+      include,
+      reason,
+    });
   }
-  const zoneForm=(zone?:Row)=><form key={String(zone?.country_code??'new')} onSubmit={event=>void save(event)} className="rounded-2xl border border-graphite bg-paper p-5"><div className="grid gap-3 sm:grid-cols-[96px_1fr_96px]"><label className="text-sm font-bold">Code<input required name="countryCode" maxLength={2} pattern="[A-Za-z]{2}" defaultValue={zone?.country_code??''} placeholder="IN" className={`${input} mt-1 uppercase`}/></label><label className="text-sm font-bold">Country<input required name="countryName" defaultValue={zone?.country_name??''} placeholder="India" className={`${input} mt-1`}/></label><label className="text-sm font-bold">Currency<input required name="currency" maxLength={3} pattern="[A-Za-z]{3}" defaultValue={zone?.currency??'INR'} className={`${input} mt-1 uppercase`}/></label><label className="text-sm font-bold">Delivery charge (₹)<input required name="shippingRupees" min="0" step="0.01" type="number" defaultValue={((Number(zone?.shipping_minor??0))/100).toFixed(2)} className={`${input} mt-1`}/></label><label className="text-sm font-bold">Each extra copy (₹)<input required name="extraCopyRupees" min="0" step="0.01" type="number" defaultValue={((Number(zone?.additional_copy_minor??0))/100).toFixed(2)} className={`${input} mt-1`}/></label><input type="hidden" name="taxRateBasisPoints" value={Number(zone?.tax_rate_basis_points??0)}/><button disabled={busy} className={`${CTA} self-end`}>{zone?'Save changes':'Add country'}</button></div></form>
-  return <section className={`${card} xl:col-span-4`}><p className={EYEBROW}>Delivery pricing</p><h2 className="text-2xl font-bold">Set delivery price by country</h2><p className="mt-2 text-sm text-graphite-soft">Add every delivery country you support. Edit each saved country independently; changes apply only to future checkouts.</p><div className="mt-5 grid gap-3">{zones.map(zone=>zoneForm(zone))}</div><h3 className="mt-6 text-lg font-bold">Add another country</h3><div className="mt-3">{zoneForm()}</div></section>
+  function lock(edition: Row) {
+    const reason = window.prompt(
+      "Approval note for locking this print list (required)",
+    );
+    if (!reason || reason.trim().length < 5) return;
+    if (
+      !window.confirm(
+        `Lock ${edition.label}? Eligibility overrides will stop and the CSV will become available.`,
+      )
+    )
+      return;
+    void mutate({ action: "edition.lock", editionId: edition.id, reason });
+  }
+  return (
+    <div className="grid gap-7 lg:grid-cols-[360px_1fr]">
+      <form
+        className={`${card} self-start lg:sticky lg:top-24`}
+        onSubmit={(e) => void create(e)}
+      >
+        <p className={EYEBROW}>Monthly workflow</p>
+        <h2 className="text-2xl font-bold">Create edition</h2>
+        {[
+          ["label", "Edition name", "text"],
+          ["issue", "Issue number", "number"],
+          ["cutoff", "Eligibility cut-off", "datetime-local"],
+          ["dispatch", "Dispatch date", "datetime-local"],
+        ].map(([name, label, type]) => (
+          <label className="mt-4 block" key={name}>
+            <span className="mb-1 block text-sm font-bold">{label}</span>
+            <input className={input} required name={name} type={type} />
+          </label>
+        ))}
+        <button disabled={busy} className={`${CTA} mt-5`} type="submit">
+          Create edition
+        </button>
+        <p className="mt-4 text-xs text-graphite-soft">
+          Generate → review exclusions → document overrides → lock → export →
+          fulfil.
+        </p>
+      </form>
+      <section>
+        <h2 className={H2}>Edition and fulfilment management</h2>
+        <div className="mt-5 grid gap-5">
+          {data.editions.length === 0 && (
+            <p className={card}>No editions created yet.</p>
+          )}
+          {data.editions.map((edition) => {
+            const snapshots = data.eligibility.filter(
+                (item) => item.edition_id === edition.id,
+              ),
+              included = snapshots.filter((item) =>
+                ["included", "override_included"].includes(item.decision),
+              ),
+              excluded = snapshots.filter((item) =>
+                ["excluded", "override_excluded"].includes(item.decision),
+              ),
+              fulfilments = data.fulfilments.filter(
+                (item) => item.edition_label === edition.label,
+              ),
+              editionAudits = data.audits.filter(
+                (item) =>
+                  item.target_type === "edition" &&
+                  item.target_id === edition.id,
+              ),
+              locked = ["locked", "dispatched", "completed"].includes(
+                edition.status,
+              );
+            return (
+              <article className={card} key={edition.id}>
+                <header className="flex flex-wrap items-start justify-between gap-4">
+                  <div>
+                    <p className={EYEBROW}>
+                      Issue {edition.issue_number} ·{" "}
+                      {String(edition.status).replace("_", " ")}
+                    </p>
+                    <h3 className="text-2xl font-bold">{edition.label}</h3>
+                    <p className="mt-2 text-sm">
+                      Cut-off{" "}
+                      {new Date(edition.eligibility_cutoff_at).toLocaleString()}{" "}
+                      · Dispatch{" "}
+                      {new Date(edition.dispatch_at).toLocaleString()}
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {!locked && (
+                      <button
+                        disabled={busy}
+                        className={CTA_OUTLINE}
+                        onClick={() =>
+                          void mutate({
+                            action: "edition.generate",
+                            editionId: edition.id,
+                          })
+                        }
+                      >
+                        {snapshots.length
+                          ? "Regenerate snapshot"
+                          : "Generate snapshot"}
+                      </button>
+                    )}
+                    {edition.status === "eligibility_generated" && (
+                      <button
+                        disabled={busy}
+                        className={CTA}
+                        onClick={() => lock(edition)}
+                      >
+                        Approve & lock
+                      </button>
+                    )}
+                    {locked && (
+                      <a
+                        className={CTA}
+                        href={`/api/admin/dispatch?edition=${encodeURIComponent(edition.id)}`}
+                      >
+                        Export printer CSV
+                      </a>
+                    )}
+                  </div>
+                </header>
+                {snapshots.length > 0 && (
+                  <div className="mt-5 grid gap-3 sm:grid-cols-3">
+                    <Metric label="Included" value={included.length} />
+                    <Metric label="Excluded" value={excluded.length} />
+                    <Metric
+                      label="Print copies"
+                      value={fulfilments
+                        .filter((f) => !["returned"].includes(f.status))
+                        .reduce(
+                          (sum, f) =>
+                            sum +
+                            Number(
+                              data.subscriptions.find(
+                                (s) => s.id === f.subscription_id,
+                              )?.quantity ?? 1,
+                            ),
+                          0,
+                        )}
+                    />
+                  </div>
+                )}
+                {snapshots.length > 0 && (
+                  <details className="mt-5 border-t border-rule pt-4">
+                    <summary className="cursor-pointer font-bold">
+                      Eligibility snapshot and exclusion reasons (
+                      {snapshots.length})
+                    </summary>
+                    <div className="mt-3 overflow-x-auto">
+                      <table className="w-full min-w-[720px] text-left text-sm">
+                        <thead>
+                          <tr>
+                            <th className="py-2">Subscription</th>
+                            <th>Decision</th>
+                            <th>Reason</th>
+                            <th>Review</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {snapshots.map((item) => (
+                            <tr className="border-t border-rule" key={item.id}>
+                              <td className="py-3 font-mono text-xs">
+                                {item.subscription_id}
+                              </td>
+                              <td className="capitalize">
+                                {String(item.decision).replace("_", " ")}
+                              </td>
+                              <td>{item.reason}</td>
+                              <td>
+                                {!locked && (
+                                  <button
+                                    className="underline"
+                                    onClick={() =>
+                                      override(
+                                        edition,
+                                        item,
+                                        ![
+                                          "included",
+                                          "override_included",
+                                        ].includes(item.decision),
+                                      )
+                                    }
+                                  >
+                                    {["included", "override_included"].includes(
+                                      item.decision,
+                                    )
+                                      ? "Exclude"
+                                      : "Include"}{" "}
+                                    with reason
+                                  </button>
+                                )}
+                                {locked && (
+                                  <span className="text-graphite-soft">
+                                    Locked
+                                  </span>
+                                )}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </details>
+                )}
+                {fulfilments.length > 0 && (
+                  <details
+                    className="mt-4 border-t border-rule pt-4"
+                    open={locked}
+                  >
+                    <summary className="cursor-pointer font-bold">
+                      Fulfilment records ({fulfilments.length})
+                    </summary>
+                    <div className="mt-3 grid gap-2">
+                      {fulfilments.map((item) => (
+                        <div
+                          className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-rule p-3"
+                          key={item.id}
+                        >
+                          <div>
+                            <span className="font-mono text-xs">
+                              {item.subscription_id}
+                            </span>
+                            <strong className="ml-3 capitalize">
+                              {item.status}
+                            </strong>
+                            {item.tracking_url && (
+                              <a
+                                className="ml-3 underline"
+                                href={item.tracking_url}
+                              >
+                                Tracking
+                              </a>
+                            )}
+                          </div>
+                          <div className="flex gap-2">
+                            {next[item.status]?.map((status) => (
+                              <button
+                                disabled={busy || !locked}
+                                className={CTA_OUTLINE}
+                                key={status}
+                                onClick={() => {
+                                  const tracking =
+                                    status === "dispatched"
+                                      ? (window.prompt(
+                                          "Courier tracking URL (https://, optional)",
+                                        ) ?? "")
+                                      : "";
+                                  if (
+                                    window.confirm(
+                                      `Confirm ${item.status} → ${status}?`,
+                                    )
+                                  )
+                                    void mutate({
+                                      action: "fulfilment.status",
+                                      fulfilmentId: item.id,
+                                      status,
+                                      trackingUrl: tracking,
+                                    });
+                                }}
+                              >
+                                {status}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </details>
+                )}
+                <details className="mt-4 border-t border-rule pt-4">
+                  <summary className="cursor-pointer font-bold">
+                    Edition audit trail ({editionAudits.length})
+                  </summary>
+                  <div className="mt-3 grid gap-2">
+                    {editionAudits.map((item) => (
+                      <p className="text-sm" key={item.id}>
+                        <strong>{item.action}</strong> ·{" "}
+                        {new Date(item.created_at).toLocaleString()} ·{" "}
+                        {item.actor_user_id}
+                      </p>
+                    ))}
+                  </div>
+                </details>
+              </article>
+            );
+          })}
+        </div>
+      </section>
+    </div>
+  );
 }
 
-const COUNTRY_OPTIONS=[['IN','India'],['AU','Australia'],['CA','Canada'],['DE','Germany'],['FR','France'],['GB','United Kingdom'],['SG','Singapore'],['AE','United Arab Emirates'],['US','United States']] as const
-const CURRENCY_OPTIONS=['INR','AUD','CAD','EUR','GBP','SGD','AED','USD']
-
-function SimpleCountryDeliveryPricing({zones,busy,mutate}:{zones:Row[];busy:boolean;mutate:(payload:Record<string,unknown>)=>Promise<boolean>}){
-  const [editing,setEditing]=useState<Row|null>(null),[revision,setRevision]=useState(0)
-  async function save(event:React.FormEvent<HTMLFormElement>){event.preventDefault();const form=new FormData(event.currentTarget),countryCode=String(form.get('countryCode')??''),countryName=COUNTRY_OPTIONS.find(([code])=>code===countryCode)?.[1]??'',amount=Math.round(Number(form.get('amount')??0)*100);if(await mutate({action:'catalog.upsert',kind:'shipping',countryCode,countryName,currency:form.get('currency'),shippingMinor:amount,additionalCopyMinor:0,taxRateBasisPoints:0,active:true})){setEditing(null);setRevision(value=>value+1)}}
-  return <section className={card}><p className={EYEBROW}>Delivery</p><h2 className="text-2xl font-bold">Delivery price by country</h2><form key={`${editing?.country_code??'new'}-${revision}`} onSubmit={event=>void save(event)} className="mt-5 grid gap-3 sm:grid-cols-3"><label>Country<select required name="countryCode" defaultValue={editing?.country_code??''} className={`${input} mt-1`}><option value="" disabled>Select country</option>{COUNTRY_OPTIONS.map(([code,name])=><option value={code} key={code}>{name}</option>)}</select></label><label>Currency<select required name="currency" defaultValue={editing?.currency??'INR'} className={`${input} mt-1`}>{CURRENCY_OPTIONS.map(currency=><option key={currency}>{currency}</option>)}</select></label><label>Delivery amount<input required name="amount" type="number" min="0" step="0.01" defaultValue={editing?(Number(editing.shipping_minor)/100).toFixed(2):''} className={`${input} mt-1`}/></label><button disabled={busy} className={`${CTA} sm:col-span-3`}>{editing?'Save delivery price':'Add delivery price'}</button></form><div className="mt-6 space-y-2">{zones.length?zones.map(zone=><article className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-rule p-3" key={zone.country_code}><span><strong>{zone.country_name}</strong> · {zone.currency} {(Number(zone.shipping_minor)/100).toFixed(2)}</span><span className="flex gap-3"><button className="underline" onClick={()=>{setEditing(zone);setRevision(value=>value+1)}}>Edit</button><button className="text-red-700 underline" onClick={()=>{if(window.confirm(`Remove ${zone.country_name} delivery pricing?`))void mutate({action:'shipping.delete',countryCode:zone.country_code})}}>Delete</button></span></article>):<p className="text-sm text-graphite-soft">No delivery countries added yet.</p>}</div></section>
+function Pricing({
+  data,
+  busy,
+  mutate,
+}: {
+  data: AdminData;
+  busy: boolean;
+  mutate: (p: Record<string, unknown>) => Promise<boolean>;
+}) {
+  return (
+    <div className="grid gap-6 xl:grid-cols-2">
+      <SimpleCountryDeliveryPricing
+        zones={data.zones}
+        busy={busy}
+        mutate={mutate}
+      />
+      <RegionalPricing zones={data.zones} busy={busy} mutate={mutate} />
+      <SimpleDiscountPricing
+        options={data.options}
+        busy={busy}
+        mutate={mutate}
+      />
+    </div>
+  );
 }
 
-function RegionalPricing({zones,busy,mutate}:{zones:Row[];busy:boolean;mutate:(payload:Record<string,unknown>)=>Promise<boolean>}){
-  async function save(event:React.FormEvent<HTMLFormElement>){event.preventDefault();const form=new FormData(event.currentTarget),amount=Math.round(Number(form.get('amount')??0)*100);await mutate({action:'regional.price',countryCode:form.get('countryCode'),currency:form.get('currency'),amountMinor:amount})}
-  return <section className={card}><p className={EYEBROW}>Regional pricing</p><h2 className="text-2xl font-bold">Monthly price by region</h2><p className="mt-2 text-sm text-graphite-soft">Choose a configured delivery country. Customers there see this currency and monthly price across the website and checkout.</p>{zones.length?<form onSubmit={event=>void save(event)} className="mt-5 grid gap-3 sm:grid-cols-3"><label>Country<select required name="countryCode" className={`${input} mt-1`}>{zones.map(zone=><option key={zone.country_code} value={zone.country_code}>{zone.country_name}</option>)}</select></label><label>Currency<select required name="currency" className={`${input} mt-1`}>{CURRENCY_OPTIONS.map(currency=><option key={currency}>{currency}</option>)}</select></label><label>Monthly amount<input required name="amount" type="number" min="0" step="0.01" className={`${input} mt-1`}/></label><button disabled={busy} className={`${CTA} sm:col-span-3`}>Save regional price</button></form>:<p className="mt-4 text-sm">Add delivery pricing for a country first.</p>}<div className="mt-6 space-y-2">{zones.map(zone=><p className="rounded-xl border border-rule p-3 text-sm" key={zone.country_code}><strong>{zone.country_name}</strong>: {zone.regional_monthly_price_minor===null||zone.regional_monthly_price_minor===undefined?'Uses standard price':`${zone.currency} ${(Number(zone.regional_monthly_price_minor)/100).toFixed(2)} per month`}</p>)}</div></section>
+function EditionCopyPricing({
+  editions,
+  busy,
+  mutate,
+}: {
+  editions: Row[];
+  busy: boolean;
+  mutate: (payload: Record<string, unknown>) => Promise<boolean>;
+}) {
+  const drafts = editions.filter((edition) => edition.status === "draft");
+  async function submit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget),
+      price = Number(form.get("copyPriceRupees"));
+    await mutate({
+      action: "edition.price",
+      editionId: form.get("editionId"),
+      copyPriceMinor: Math.round(price * 100),
+    });
+  }
+  return (
+    <section className={`${card} max-w-xl`}>
+      <p className={EYEBROW}>Edition pricing</p>
+      <h2 className="text-2xl font-bold">Set an edition copy price</h2>
+      <p className="mt-2 text-sm text-graphite-soft">
+        Choose an available draft edition and save its price per copy. This does
+        not rewrite completed customer orders.
+      </p>
+      {drafts.length ? (
+        <form
+          onSubmit={(e) => void submit(e)}
+          className="mt-4 grid gap-3 sm:grid-cols-2"
+        >
+          <label>
+            Available edition
+            <select required name="editionId" className={`${input} mt-1`}>
+              {drafts.map((edition) => (
+                <option key={edition.id} value={edition.id}>
+                  {edition.label} — Edition {edition.issue_number}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            Price per copy (₹)
+            <input
+              required
+              min="0"
+              step="0.01"
+              name="copyPriceRupees"
+              type="number"
+              className={`${input} mt-1`}
+            />
+          </label>
+          <button disabled={busy} className={`${CTA} sm:col-span-2`}>
+            Save edition price
+          </button>
+        </form>
+      ) : (
+        <p className="mt-4 text-sm">
+          Create a draft edition in Editions before setting its copy price.
+        </p>
+      )}
+    </section>
+  );
 }
 
-function SimpleDiscountPricing({options,busy,mutate}:{options:Row[];busy:boolean;mutate:(payload:Record<string,unknown>)=>Promise<boolean>}){
-  async function save(event:React.FormEvent<HTMLFormElement>){event.preventDefault();const form=new FormData(event.currentTarget),percent=Number(form.get('percentage')),duration=Number(form.get('durationMonths')),code=String(form.get('code')??'').trim().toUpperCase();await mutate({action:'catalog.upsert',kind:'discount',id:`offer_${crypto.randomUUID()}`,code,discountKind:'percentage',value:Math.round(percent*100),startsAt:form.get('startsAt'),endsAt:form.get('endsAt'),usageLimit:form.get('usageLimit'),eligibleDurations:String(duration),active:true,combinable:true})}
-  const durations=Array.from(new Set([...options.map(option=>Number(option.duration_months)).filter(Number.isFinite),1,3,6,12])).sort((a,b)=>a-b)
-  return <section className={`${card} xl:col-span-2`}><p className={EYEBROW}>Discount</p><h2 className="text-2xl font-bold">Create a plan discount</h2><form onSubmit={event=>void save(event)} className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3"><label>Discount code<input required name="code" className={`${input} mt-1`} placeholder="WELCOME10"/></label><label>Percentage<input required name="percentage" type="number" min="0" max="100" step="0.01" className={`${input} mt-1`}/></label><label>Subscription plan<select required name="durationMonths" className={`${input} mt-1`}>{durations.map(months=><option key={months} value={months}>{months===1?'One time':`${months} months`}</option>)}</select></label><label>Start date<input name="startsAt" type="datetime-local" className={`${input} mt-1`}/></label><label>End date<input name="endsAt" type="datetime-local" className={`${input} mt-1`}/></label><label>Total users<input name="usageLimit" type="number" min="1" className={`${input} mt-1`}/></label><button disabled={busy} className={`${CTA} sm:col-span-2 lg:col-span-3`}>Save discount</button></form></section>
+export function CountryDeliveryPricing({
+  zones,
+  busy,
+  mutate,
+}: {
+  zones: Row[];
+  busy: boolean;
+  mutate: (payload: Record<string, unknown>) => Promise<boolean>;
+}) {
+  async function save(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget),
+      shipping = Number(form.get("shippingRupees")),
+      extra = Number(form.get("extraCopyRupees"));
+    const payload = {
+      action: "catalog.upsert",
+      kind: "shipping",
+      countryCode: String(form.get("countryCode") ?? "")
+        .trim()
+        .toUpperCase(),
+      countryName: String(form.get("countryName") ?? "").trim(),
+      currency: String(form.get("currency") ?? "")
+        .trim()
+        .toUpperCase(),
+      shippingMinor: Math.round(shipping * 100),
+      additionalCopyMinor: Math.round(extra * 100),
+      taxRateBasisPoints: Number(form.get("taxRateBasisPoints") ?? 0),
+      active: true,
+    };
+    if (await mutate(payload)) event.currentTarget.reset();
+  }
+  const zoneForm = (zone?: Row) => (
+    <form
+      key={String(zone?.country_code ?? "new")}
+      onSubmit={(event) => void save(event)}
+      className="rounded-2xl border border-graphite bg-paper p-5"
+    >
+      <div className="grid gap-3 sm:grid-cols-[96px_1fr_96px]">
+        <label className="text-sm font-bold">
+          Code
+          <input
+            required
+            name="countryCode"
+            maxLength={2}
+            pattern="[A-Za-z]{2}"
+            defaultValue={zone?.country_code ?? ""}
+            placeholder="IN"
+            className={`${input} mt-1 uppercase`}
+          />
+        </label>
+        <label className="text-sm font-bold">
+          Country
+          <input
+            required
+            name="countryName"
+            defaultValue={zone?.country_name ?? ""}
+            placeholder="India"
+            className={`${input} mt-1`}
+          />
+        </label>
+        <label className="text-sm font-bold">
+          Currency
+          <input
+            required
+            name="currency"
+            maxLength={3}
+            pattern="[A-Za-z]{3}"
+            defaultValue={zone?.currency ?? "INR"}
+            className={`${input} mt-1 uppercase`}
+          />
+        </label>
+        <label className="text-sm font-bold">
+          Delivery charge (₹)
+          <input
+            required
+            name="shippingRupees"
+            min="0"
+            step="0.01"
+            type="number"
+            defaultValue={(Number(zone?.shipping_minor ?? 0) / 100).toFixed(2)}
+            className={`${input} mt-1`}
+          />
+        </label>
+        <label className="text-sm font-bold">
+          Each extra copy (₹)
+          <input
+            required
+            name="extraCopyRupees"
+            min="0"
+            step="0.01"
+            type="number"
+            defaultValue={(
+              Number(zone?.additional_copy_minor ?? 0) / 100
+            ).toFixed(2)}
+            className={`${input} mt-1`}
+          />
+        </label>
+        <input
+          type="hidden"
+          name="taxRateBasisPoints"
+          value={Number(zone?.tax_rate_basis_points ?? 0)}
+        />
+        <button disabled={busy} className={`${CTA} self-end`}>
+          {zone ? "Save changes" : "Add country"}
+        </button>
+      </div>
+    </form>
+  );
+  return (
+    <section className={`${card} xl:col-span-4`}>
+      <p className={EYEBROW}>Delivery pricing</p>
+      <h2 className="text-2xl font-bold">Set delivery price by country</h2>
+      <p className="mt-2 text-sm text-graphite-soft">
+        Add every delivery country you support. Edit each saved country
+        independently; changes apply only to future checkouts.
+      </p>
+      <div className="mt-5 grid gap-3">
+        {zones.map((zone) => zoneForm(zone))}
+      </div>
+      <h3 className="mt-6 text-lg font-bold">Add another country</h3>
+      <div className="mt-3">{zoneForm()}</div>
+    </section>
+  );
 }
 
-export function Content({ data, busy, mutate }: { data: AdminData; busy: boolean; mutate: (p: Record<string,unknown>) => Promise<boolean> }) {
-  async function submit(event: React.FormEvent<HTMLFormElement>) { event.preventDefault(); const form=event.currentTarget; const f=new FormData(form); if(await mutate({action:'content.upsert',key:f.get('key'),title:f.get('title'),body:f.get('body')})) form.reset() }
-  return <div className="grid gap-7 lg:grid-cols-[420px_1fr]"><form className={card} onSubmit={submit}><h2 className="text-2xl font-bold">Update managed content</h2><label className="mt-4 block">Content key<input className={input} name="key" placeholder="faq_delivery" required/></label><label className="mt-4 block">Title<input className={input} name="title" required/></label><label className="mt-4 block">Body<textarea className={`${input} min-h-40`} name="body" required/></label><button disabled={busy} className={`${CTA} mt-4`}>Save content</button></form><section><h2 className={H2}>Managed content</h2><div className="mt-5 grid gap-3">{data.content.map(row=><article className={card} key={row.content_key}><p className="font-mono text-xs uppercase">{row.content_key}</p><h3 className="mt-2 text-xl font-bold">{row.title}</h3><p className="mt-2 whitespace-pre-wrap">{row.body}</p></article>)}</div></section></div>
+const COUNTRY_OPTIONS = [
+  ["IN", "India"],
+  ["AU", "Australia"],
+  ["CA", "Canada"],
+  ["DE", "Germany"],
+  ["FR", "France"],
+  ["GB", "United Kingdom"],
+  ["SG", "Singapore"],
+  ["AE", "United Arab Emirates"],
+  ["US", "United States"],
+] as const;
+const CURRENCY_OPTIONS = [
+  "INR",
+  "AUD",
+  "CAD",
+  "EUR",
+  "GBP",
+  "SGD",
+  "AED",
+  "USD",
+];
+
+function SimpleCountryDeliveryPricing({
+  zones,
+  busy,
+  mutate,
+}: {
+  zones: Row[];
+  busy: boolean;
+  mutate: (payload: Record<string, unknown>) => Promise<boolean>;
+}) {
+  const [editing, setEditing] = useState<Row | null>(null),
+    [revision, setRevision] = useState(0);
+  async function save(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget),
+      countryCode = String(form.get("countryCode") ?? ""),
+      countryName =
+        COUNTRY_OPTIONS.find(([code]) => code === countryCode)?.[1] ?? "",
+      amount = Math.round(Number(form.get("amount") ?? 0) * 100);
+    if (
+      await mutate({
+        action: "catalog.upsert",
+        kind: "shipping",
+        countryCode,
+        countryName,
+        currency: form.get("currency"),
+        shippingMinor: amount,
+        additionalCopyMinor: 0,
+        taxRateBasisPoints: 0,
+        active: true,
+      })
+    ) {
+      setEditing(null);
+      setRevision((value) => value + 1);
+    }
+  }
+  return (
+    <section className={card}>
+      <p className={EYEBROW}>Delivery</p>
+      <h2 className="text-2xl font-bold">Delivery price by country</h2>
+      <form
+        key={`${editing?.country_code ?? "new"}-${revision}`}
+        onSubmit={(event) => void save(event)}
+        className="mt-5 grid gap-3 sm:grid-cols-3"
+      >
+        <label>
+          Country
+          <select
+            required
+            name="countryCode"
+            defaultValue={editing?.country_code ?? ""}
+            className={`${input} mt-1`}
+          >
+            <option value="" disabled>
+              Select country
+            </option>
+            {COUNTRY_OPTIONS.map(([code, name]) => (
+              <option value={code} key={code}>
+                {name}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label>
+          Currency
+          <select
+            required
+            name="currency"
+            defaultValue={editing?.currency ?? "INR"}
+            className={`${input} mt-1`}
+          >
+            {CURRENCY_OPTIONS.map((currency) => (
+              <option key={currency}>{currency}</option>
+            ))}
+          </select>
+        </label>
+        <label>
+          Delivery amount
+          <input
+            required
+            name="amount"
+            type="number"
+            min="0"
+            step="0.01"
+            defaultValue={
+              editing ? (Number(editing.shipping_minor) / 100).toFixed(2) : ""
+            }
+            className={`${input} mt-1`}
+          />
+        </label>
+        <button disabled={busy} className={`${CTA} sm:col-span-3`}>
+          {editing ? "Save delivery price" : "Add delivery price"}
+        </button>
+      </form>
+      <div className="mt-6 space-y-2">
+        {zones.length ? (
+          zones.map((zone) => (
+            <article
+              className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-rule p-3"
+              key={zone.country_code}
+            >
+              <span>
+                <strong>{zone.country_name}</strong> · {zone.currency}{" "}
+                {(Number(zone.shipping_minor) / 100).toFixed(2)}
+              </span>
+              <span className="flex gap-3">
+                <button
+                  className="underline"
+                  onClick={() => {
+                    setEditing(zone);
+                    setRevision((value) => value + 1);
+                  }}
+                >
+                  Edit
+                </button>
+                <button
+                  className="text-red-700 underline"
+                  onClick={() => {
+                    if (
+                      window.confirm(
+                        `Remove ${zone.country_name} delivery pricing?`,
+                      )
+                    )
+                      void mutate({
+                        action: "shipping.delete",
+                        countryCode: zone.country_code,
+                      });
+                  }}
+                >
+                  Delete
+                </button>
+              </span>
+            </article>
+          ))
+        ) : (
+          <p className="text-sm text-graphite-soft">
+            No delivery countries added yet.
+          </p>
+        )}
+      </div>
+    </section>
+  );
 }
 
-function Audit({ rows }: { rows: Row[] }) { return <section><h2 className={H2}>Audit trail</h2><div className="mt-6 grid gap-3">{rows.map(row=><article className={card} key={row.id}><div className="flex flex-wrap justify-between gap-2"><strong>{row.action}</strong><time>{new Date(row.created_at).toLocaleString()}</time></div><p className="mt-2 font-mono text-xs">{row.actor_user_id} · {row.target_type}:{row.target_id}</p><pre className="mt-2 overflow-auto text-xs">{JSON.stringify(JSON.parse(row.summary_json),null,2)}</pre></article>)}</div></section> }
+function RegionalPricing({
+  zones,
+  busy,
+  mutate,
+}: {
+  zones: Row[];
+  busy: boolean;
+  mutate: (payload: Record<string, unknown>) => Promise<boolean>;
+}) {
+  async function save(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget),
+      amount = Math.round(Number(form.get("amount") ?? 0) * 100);
+    await mutate({
+      action: "regional.price",
+      countryCode: form.get("countryCode"),
+      currency: form.get("currency"),
+      amountMinor: amount,
+    });
+  }
+  return (
+    <section className={card}>
+      <p className={EYEBROW}>Regional pricing</p>
+      <h2 className="text-2xl font-bold">Monthly price by region</h2>
+      <p className="mt-2 text-sm text-graphite-soft">
+        Choose a configured delivery country. Customers there see this currency
+        and monthly price across the website and checkout.
+      </p>
+      {zones.length ? (
+        <form
+          onSubmit={(event) => void save(event)}
+          className="mt-5 grid gap-3 sm:grid-cols-3"
+        >
+          <label>
+            Country
+            <select required name="countryCode" className={`${input} mt-1`}>
+              {zones.map((zone) => (
+                <option key={zone.country_code} value={zone.country_code}>
+                  {zone.country_name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            Currency
+            <select required name="currency" className={`${input} mt-1`}>
+              {CURRENCY_OPTIONS.map((currency) => (
+                <option key={currency}>{currency}</option>
+              ))}
+            </select>
+          </label>
+          <label>
+            Monthly amount
+            <input
+              required
+              name="amount"
+              type="number"
+              min="0"
+              step="0.01"
+              className={`${input} mt-1`}
+            />
+          </label>
+          <button disabled={busy} className={`${CTA} sm:col-span-3`}>
+            Save regional price
+          </button>
+        </form>
+      ) : (
+        <p className="mt-4 text-sm">
+          Add delivery pricing for a country first.
+        </p>
+      )}
+      <div className="mt-6 space-y-2">
+        {zones.map((zone) => (
+          <p
+            className="rounded-xl border border-rule p-3 text-sm"
+            key={zone.country_code}
+          >
+            <strong>{zone.country_name}</strong>:{" "}
+            {zone.regional_monthly_price_minor === null ||
+            zone.regional_monthly_price_minor === undefined
+              ? "Uses standard price"
+              : `${zone.currency} ${(Number(zone.regional_monthly_price_minor) / 100).toFixed(2)} per month`}
+          </p>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function SimpleDiscountPricing({
+  options,
+  busy,
+  mutate,
+}: {
+  options: Row[];
+  busy: boolean;
+  mutate: (payload: Record<string, unknown>) => Promise<boolean>;
+}) {
+  async function save(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget),
+      percent = Number(form.get("percentage")),
+      duration = Number(form.get("durationMonths")),
+      code = String(form.get("code") ?? "")
+        .trim()
+        .toUpperCase();
+    await mutate({
+      action: "catalog.upsert",
+      kind: "discount",
+      id: `offer_${crypto.randomUUID()}`,
+      code,
+      discountKind: "percentage",
+      value: Math.round(percent * 100),
+      startsAt: form.get("startsAt"),
+      endsAt: form.get("endsAt"),
+      usageLimit: form.get("usageLimit"),
+      eligibleDurations: String(duration),
+      active: true,
+      combinable: true,
+    });
+  }
+  const durations = Array.from(
+    new Set([
+      ...options
+        .map((option) => Number(option.duration_months))
+        .filter(Number.isFinite),
+      1,
+      3,
+      6,
+      12,
+    ]),
+  ).sort((a, b) => a - b);
+  return (
+    <section className={`${card} xl:col-span-2`}>
+      <p className={EYEBROW}>Discount</p>
+      <h2 className="text-2xl font-bold">Create a plan discount</h2>
+      <form
+        onSubmit={(event) => void save(event)}
+        className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3"
+      >
+        <label>
+          Discount code
+          <input
+            required
+            name="code"
+            className={`${input} mt-1`}
+            placeholder="WELCOME10"
+          />
+        </label>
+        <label>
+          Percentage
+          <input
+            required
+            name="percentage"
+            type="number"
+            min="0"
+            max="100"
+            step="0.01"
+            className={`${input} mt-1`}
+          />
+        </label>
+        <label>
+          Subscription plan
+          <select required name="durationMonths" className={`${input} mt-1`}>
+            {durations.map((months) => (
+              <option key={months} value={months}>
+                {months === 1 ? "One time" : `${months} months`}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label>
+          Start date
+          <input
+            name="startsAt"
+            type="datetime-local"
+            className={`${input} mt-1`}
+          />
+        </label>
+        <label>
+          End date
+          <input
+            name="endsAt"
+            type="datetime-local"
+            className={`${input} mt-1`}
+          />
+        </label>
+        <label>
+          Total users
+          <input
+            name="usageLimit"
+            type="number"
+            min="1"
+            className={`${input} mt-1`}
+          />
+        </label>
+        <button
+          disabled={busy}
+          className={`${CTA} sm:col-span-2 lg:col-span-3`}
+        >
+          Save discount
+        </button>
+      </form>
+    </section>
+  );
+}
+
+export function Content({
+  data,
+  busy,
+  mutate,
+}: {
+  data: AdminData;
+  busy: boolean;
+  mutate: (p: Record<string, unknown>) => Promise<boolean>;
+}) {
+  async function submit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const f = new FormData(form);
+    if (
+      await mutate({
+        action: "content.upsert",
+        key: f.get("key"),
+        title: f.get("title"),
+        body: f.get("body"),
+      })
+    )
+      form.reset();
+  }
+  return (
+    <div className="grid gap-7 lg:grid-cols-[420px_1fr]">
+      <form className={card} onSubmit={submit}>
+        <h2 className="text-2xl font-bold">Update managed content</h2>
+        <label className="mt-4 block">
+          Content key
+          <input
+            className={input}
+            name="key"
+            placeholder="faq_delivery"
+            required
+          />
+        </label>
+        <label className="mt-4 block">
+          Title
+          <input className={input} name="title" required />
+        </label>
+        <label className="mt-4 block">
+          Body
+          <textarea className={`${input} min-h-40`} name="body" required />
+        </label>
+        <button disabled={busy} className={`${CTA} mt-4`}>
+          Save content
+        </button>
+      </form>
+      <section>
+        <h2 className={H2}>Managed content</h2>
+        <div className="mt-5 grid gap-3">
+          {data.content.map((row) => (
+            <article className={card} key={row.content_key}>
+              <p className="font-mono text-xs uppercase">{row.content_key}</p>
+              <h3 className="mt-2 text-xl font-bold">{row.title}</h3>
+              <p className="mt-2 whitespace-pre-wrap">{row.body}</p>
+            </article>
+          ))}
+        </div>
+      </section>
+    </div>
+  );
+}
+
+function Audit({ rows }: { rows: Row[] }) {
+  return (
+    <section>
+      <h2 className={H2}>Audit trail</h2>
+      <div className="mt-6 grid gap-3">
+        {rows.map((row) => (
+          <article className={card} key={row.id}>
+            <div className="flex flex-wrap justify-between gap-2">
+              <strong>{row.action}</strong>
+              <time>{new Date(row.created_at).toLocaleString()}</time>
+            </div>
+            <p className="mt-2 font-mono text-xs">
+              {row.actor_user_id} · {row.target_type}:{row.target_id}
+            </p>
+            <pre className="mt-2 overflow-auto text-xs">
+              {JSON.stringify(JSON.parse(row.summary_json), null, 2)}
+            </pre>
+          </article>
+        ))}
+      </div>
+    </section>
+  );
+}

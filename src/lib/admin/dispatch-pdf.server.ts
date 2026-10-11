@@ -1,48 +1,36 @@
-type DeliveryRow={name:string;address:string;phone:string;status:string;endsAt:string}
+type DeliveryRow={name:string;line1:string;line2:string;city:string;country:string;postcode:string;phone:string}
 
 const safe=(value:string)=>value.replace(/[^\x20-\x7E]/g,'?').replace(/[\\()]/g,'\\$&').slice(0,108)
 const text=(value:string,x:number,y:number,size=10,font='F1')=>`BT /${font} ${size} Tf ${x} ${y} Td (${safe(value)}) Tj ET`
 
-function wrapAddress(address:string,maxChars=62) {
-  const words=address.replace(/\s+/g,' ').trim().split(' ').filter(Boolean)
-  const lines:string[]=[]
-  let line=''
-  for(const word of words){
-    const next=line?`${line} ${word}`:word
-    if(next.length>maxChars&&line){lines.push(line);line=word}else line=next
-  }
-  if(line)lines.push(line)
-  return lines.length?lines.slice(0,6):['Not provided']
-}
-
-function label(row:DeliveryRow, bottom:number) {
-  const top=bottom+421
+function label(row:DeliveryRow, bottom:number, height:number) {
+  const top=bottom+height
   const lines=[
     `36 ${bottom} m 559 ${bottom} l 559 ${top} l 36 ${top} l h S`,
-    text('DELIVERY ADDRESS',54,top-42,16,'F2'),
-    text('To',54,top-76,11,'F2'),
-    text(`Name: ${row.name||'Not provided'}`,54,top-104,12),
-    text('Address:',54,top-134,12,'F2'),
+    text('TO',54,top-30,14,'F2'),
+    text(`Customer Name: ${row.name||'Not provided'}`,54,top-60,11),
+    text(`Address Line 1: ${row.line1||'Not provided'}`,54,top-85,11),
+    text(`Address Line 2: ${row.line2||'-'}`,54,top-110,11),
+    text(`City: ${row.city||'Not provided'}`,54,top-135,11),
+    text(`Country: ${row.country||'Not provided'}`,54,top-160,11),
+    text(`Postcode: ${row.postcode||'Not provided'}`,54,top-185,11),
+    text(`Phone Number: ${row.phone||'Not provided'}`,54,top-210,11),
   ]
-  wrapAddress(row.address).forEach((line,index)=>lines.push(text(line,70,top-156-index*18,11)))
-  lines.push(text(`Phone Number: ${row.phone||'Not provided'}`,54,bottom+48,12,'F2'))
   return lines
 }
 
-// A4 portrait sheet with two equal, cut-ready delivery labels. Each label is
+// A4 portrait sheet with three equal, cut-ready delivery labels. Each label is
 // restricted to a single subscriber's delivery information.
 export function deliveryPrintPdf(rows:DeliveryRow[],title:string){
   // Kept for the existing export call signature; labels intentionally contain
   // only the recipient delivery fields.
   void title
   const pages:Array<string>=[]
-  for(let start=0;start<Math.max(rows.length,1);start+=2){
-    const body=rows.slice(start,start+2)
-    const lines=[`0.5 w 36 421 m 559 421 l S`,text('CUT HERE',275,416,7)]
-    if(body[0])lines.push(...label(body[0],421))
-    else lines.push(...label({name:'No delivery address',address:'',phone:'',status:'',endsAt:''},421))
-    if(body[1])lines.push(...label(body[1],0))
-    else lines.push(...label({name:'No delivery address',address:'',phone:'',status:'',endsAt:''},0))
+  for(let start=0;start<Math.max(rows.length,1);start+=3){
+    const body=rows.slice(start,start+3),height=246
+    const blocks=[560,298,36]
+    const lines=[`0.5 w 36 543 m 559 543 l S`,text('CUT HERE',275,548,7),`0.5 w 36 281 m 559 281 l S`,text('CUT HERE',275,286,7)]
+    blocks.forEach((bottom,index)=>{if(body[index])lines.push(...label(body[index],bottom,height));else lines.push(`36 ${bottom} m 559 ${bottom} l 559 ${bottom+height} l 36 ${bottom+height} l h S`)})
     pages.push(lines.join('\n'))
   }
   const objects:string[]=['<< /Type /Catalog /Pages 2 0 R >>',`<< /Type /Pages /Kids [${pages.map((_,i)=>`${3+i*2} 0 R`).join(' ')}] /Count ${pages.length} >>`]

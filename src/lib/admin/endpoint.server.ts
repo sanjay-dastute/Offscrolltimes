@@ -325,7 +325,7 @@ export async function getDispatchCsv(request: Request) {
   const format=new URL(request.url).searchParams.get('format')==='pdf'?'pdf':'csv'
   await audit(database,session.user.id,'delivery_print_exported',editionId?'edition':'customers',exportScope,{rowCount:rows.length,expiresWithinSeconds:120})
   if(format==='pdf'){
-    const pdf=deliveryPrintPdf(rows.map(row=>({name:row.address?.name??'',address:[row.address?.line1,row.address?.line2,row.address?.city,row.address?.region,row.address?.postalCode,row.address?.country].filter(Boolean).join(', '),phone:row.contact_phone??'',status:row.subscription_status,endsAt:row.ends_at?new Date(row.ends_at).toLocaleDateString('en-GB'):'—'})),'Delivery addresses')
+    const pdf=deliveryPrintPdf(rows.map(row=>({name:row.address?.name??'',line1:row.address?.line1??'',line2:row.address?.line2??'',city:row.address?.city??'',country:row.address?.country??'',postcode:row.address?.postalCode??'',phone:row.contact_phone??''})),'Delivery addresses')
     return new Response(pdf,{headers:{'Content-Type':'application/pdf','Content-Disposition':`attachment; filename="offscroll-times-current-delivery-list.pdf"`,'Cache-Control':'private, no-store, max-age=0','X-Content-Type-Options':'nosniff'}})
   }
   const header = ['fulfilment_id','edition','quantity','name','address_line_1','address_line_2','city','region','postal_code','country','contact_email']
