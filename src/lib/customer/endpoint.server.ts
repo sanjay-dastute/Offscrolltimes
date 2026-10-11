@@ -182,7 +182,7 @@ export async function patchCustomerDashboard(request: Request): Promise<Response
   return json({ error: 'Unsupported account action.' }, 400)
 }
 
-export function isAddressChangeBeforeCutoff(now: number, timeZone = process.env.BUSINESS_TIME_ZONE || 'Asia/Kolkata', cutoffDay = Number(process.env.BUSINESS_CUTOFF_DAY || 20)) {
+export function isAddressChangeBeforeCutoff(now: number, timeZone = process.env.BUSINESS_TIME_ZONE || 'Asia/Kolkata', cutoffDay = Number(process.env.BUSINESS_CUTOFF_DAY || 25)) {
   const day = Number(new Intl.DateTimeFormat('en-GB', { timeZone, day: '2-digit' }).format(new Date(now)))
   return day <= cutoffDay
 }

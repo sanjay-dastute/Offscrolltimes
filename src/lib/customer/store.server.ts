@@ -239,7 +239,7 @@ export async function applyCustomerPaymentSucceeded(db: D1Database, input: {
   const startsAt = effectiveSubscriptionStartAt(paidAt)
   const subscriptionTerm=await db.prepare(`SELECT duration_months FROM customer_subscriptions WHERE id=?`).bind(input.id).first<{duration_months:number}>()
   const endsAt=addSubscriptionMonths(startsAt,Number(subscriptionTerm?.duration_months??1))
-  const nextDispatchAt=firstEditionTimestamp(startsAt,process.env.BUSINESS_TIME_ZONE||'Asia/Kolkata',Number(process.env.BUSINESS_CUTOFF_DAY||20))
+  const nextDispatchAt=firstEditionTimestamp(startsAt,process.env.BUSINESS_TIME_ZONE||'Asia/Kolkata',Number(process.env.BUSINESS_CUTOFF_DAY||25))
   const subscriptionUpdate = db.prepare(
     `UPDATE customer_subscriptions SET status = 'active', entitlement_status = 'paid',
        starts_at = COALESCE(starts_at, ?),
@@ -303,7 +303,7 @@ export async function updateCustomerAddress(
      WHERE id = ? AND owner_id = ? AND status IN ('upcoming', 'active', 'paused', 'cancelled', 'completed', 'payment_failed')`,
   ).bind(JSON.stringify(address), now, subscriptionId, userId).run()
   if((result.meta.changes??0)!==1)return false
-  const effectiveAt=firstEditionTimestamp(now,process.env.BUSINESS_TIME_ZONE||'Asia/Kolkata',Number(process.env.BUSINESS_CUTOFF_DAY||20))
+  const effectiveAt=firstEditionTimestamp(now,process.env.BUSINESS_TIME_ZONE||'Asia/Kolkata',Number(process.env.BUSINESS_CUTOFF_DAY||25))
   await recordAccountEvent(db,{userId,subscriptionId,eventType:'address_changed',title:'Delivery address updated',detail:`The new address applies from the ${new Intl.DateTimeFormat('en',{month:'long',year:'numeric',timeZone:'UTC'}).format(new Date(effectiveAt))} edition.`,effectiveAt,now})
   return true
 }

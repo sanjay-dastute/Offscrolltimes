@@ -1,6 +1,6 @@
 /**
  * Marketing estimate for when a new subscriber's first issue ships. Print
- * runs lock in around the 20th of the month, so an order placed after that
+ * runs lock in on the 25th of the month, so an order placed after that
  * misses the very next run.
  */
 export function firstEditionDate(now: Date = new Date()): Date {
@@ -24,7 +24,7 @@ export function editionDispatchForTerm(start:number) {
 }
 
 /** UTC timestamp for the first dispatch, derived from the configured business timezone. */
-export function firstEditionTimestamp(now=Date.now(),timeZone='Asia/Kolkata',cutoffDay=20){
+export function firstEditionTimestamp(now=Date.now(),timeZone='Asia/Kolkata',cutoffDay=25){
   const local=zonedParts(now,timeZone),monthsAhead=local.day>cutoffDay?2:1
   const target=new Date(Date.UTC(local.year,local.month-1+monthsAhead,1))
   return zonedTime(target.getUTCFullYear(),target.getUTCMonth()+1,25,10,timeZone)
