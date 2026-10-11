@@ -133,9 +133,9 @@ function Subscriptions({ data, busy, mutate }: { data: AdminData; busy: boolean;
     void mutate({action:'payment.refund',subscriptionId:row.id})
   }
   async function syncRazorpay() {
-    if (!window.confirm('Fetch paid Razorpay subscription invoices and update matching customer records? Pending or mismatched payments will not be changed.')) return
-    const synced = await mutate({ action: 'razorpay.reconcile' })
-    if (synced) window.alert('Razorpay payment records have been synchronised.')
+    if (!window.confirm('Fetch paid Razorpay subscription invoices, then align eligible future renewal dates to the Offscroll Times subscription calendar? Pending, mismatched and unsupported UPI AutoPay subscriptions will not be changed.')) return
+    const synced = await mutate({ action: 'razorpay.reconcile', alignSchedules:true })
+    if (synced) window.alert('Razorpay payment records and eligible renewal schedules have been synchronised.')
   }
   return <section><div className="flex flex-wrap items-end justify-between gap-4"><div><h2 className={H2}>Customers and subscriptions</h2><p className="mt-2 text-sm text-graphite-soft">Confirmed paid subscriptions only. Search paid entitlement and fulfilment history, or apply audited corrections.</p></div><div className="flex items-center gap-3"><p className="font-mono text-xs uppercase">{rows.length} of {paidSubscriptions.length} records</p><button disabled={busy} className={CTA_OUTLINE} onClick={()=>void syncRazorpay()}>{busy ? 'Syncing…' : 'Sync Razorpay payments'}</button></div></div>
     <div className={`${card} mt-6 grid gap-3 md:grid-cols-3`} aria-label="Subscription filters"><label className="text-sm font-bold">Customer, email or phone<input className={`${input} mt-1`} type="search" value={query} onChange={e=>setQuery(e.target.value)} placeholder="Search…"/></label><label className="text-sm font-bold">Country<select className={`${input} mt-1`} value={country} onChange={e=>setCountry(e.target.value)}><option value="all">All countries</option>{availableCountries.map(v=><option key={v}>{v}</option>)}</select></label><label className="text-sm font-bold">Plan duration<select className={`${input} mt-1`} value={duration} onChange={e=>setDuration(e.target.value)}><option value="all">All durations</option>{Array.from(new Set(data.subscriptions.map(row=>row.duration_months))).sort((a,b)=>a-b).map(v=><option key={v} value={v}>{v} months</option>)}</select></label></div>

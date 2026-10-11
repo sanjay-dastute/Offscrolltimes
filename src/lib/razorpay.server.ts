@@ -42,6 +42,15 @@ export async function createRazorpaySubscription(input:{planId:string;totalCount
   return api('/subscriptions',{method:'POST',body:JSON.stringify({plan_id:input.planId,total_count:input.totalCount,quantity:1,customer_notify:false,notes:input.notes,...(input.startAt?{start_at:input.startAt}:{})})})
 }
 
+// Subscriptions created before the launch-calendar change can retain an old
+// billing anchor. Razorpay supports this for eligible payment modes; UPI
+// AutoPay subscriptions remain subject to Razorpay's provider restriction.
+export async function updateRazorpaySubscriptionStart(subscriptionId:string,startAt:number) {
+  if(!subscriptionId) throw new RangeError('A Razorpay subscription id is required.')
+  if(!Number.isSafeInteger(startAt)||startAt<=Math.floor(Date.now()/1000)) throw new RangeError('The new subscription start time must be in the future.')
+  return api(`/subscriptions/${encodeURIComponent(subscriptionId)}`,{method:'PATCH',body:JSON.stringify({start_at:startAt,schedule_change_at:'now',customer_notify:true})})
+}
+
 export async function cancelRazorpaySubscription(subscriptionId:string) {
   if(!subscriptionId) throw new RangeError('A Razorpay subscription id is required.')
   return api(`/subscriptions/${encodeURIComponent(subscriptionId)}/cancel`,{method:'POST',body:JSON.stringify({cancel_at_cycle_end:1})})

@@ -23,7 +23,8 @@ export async function getAdminDashboard(db: D1Database) {
   const [subscriptions, payments, fulfilments, editions, eligibility, products, options, discounts, zones, content, enquiries, audits, promotionReports, analyticsEvents] = await Promise.all([
     db.prepare(`SELECT id, owner_id customer_id, plan_name, duration_months, quantity, status, currency,
       amount_minor, contact_email, contact_phone, delivery_address_json, starts_at, ends_at, paid_through_at,
-      next_dispatch_at, copies_total, copies_fulfilled, entitlement_status, pricing_snapshot_json, created_at, payment_provider, renewal_enabled, renewal_at, renewal_amount_minor
+      next_dispatch_at, copies_total, copies_fulfilled, entitlement_status, pricing_snapshot_json, created_at, payment_provider, renewal_enabled, renewal_at, renewal_amount_minor,
+      (SELECT razorpay_subscription_id FROM razorpay_recurring_subscriptions recurring WHERE recurring.subscription_id=customer_subscriptions.id ORDER BY recurring.created_at DESC LIMIT 1) razorpay_subscription_id
       FROM customer_subscriptions WHERE owner_id NOT IN (SELECT owner_id FROM users WHERE account_state='deleted')
         AND EXISTS (SELECT 1 FROM customer_payments paid WHERE paid.subscription_id=customer_subscriptions.id AND paid.status='paid')
       ORDER BY created_at DESC,id DESC`).all(),
@@ -401,19 +402,24 @@ export async function upsertContent(db: D1Database, actor: string, key: string, 
   await audit(db, actor, 'content.updated', 'content', key, { title })
 }
 
-export async function dispatchRows(db: D1Database, editionId: string) {
+// Dispatch lists are generated for the subscribers entitled on the day of
+// export. The team prints these lists on the 26th, after subscriptions ending
+// on the 25th have either renewed or have fallen out of the delivery run.
+export async function dispatchRows(db: D1Database, editionId: string, asOf = Date.now()) {
   const edition = await db.prepare(`SELECT label,status FROM editions WHERE id = ?`).bind(editionId).first<{ label: string; status:string }>()
   if (!edition || !['locked','dispatched','completed'].includes(edition.status)) return null
   const rows = await db.prepare(`SELECT f.id fulfilment_id, f.edition_label, s.contact_email, s.contact_phone, s.quantity, s.delivery_address_json, s.status subscription_status, s.ends_at
     FROM customer_fulfilments f JOIN customer_subscriptions s ON s.id = f.subscription_id
     WHERE f.edition_label = ? AND f.status IN ('scheduled','prepared') AND s.status='active' AND s.entitlement_status='paid'
-      AND EXISTS(SELECT 1 FROM customer_payments p WHERE p.subscription_id=s.id AND p.status='paid') ORDER BY s.id`).bind(edition.label).all<{
+      AND s.starts_at IS NOT NULL AND s.starts_at <= ?
+      AND COALESCE(s.paid_through_at,s.ends_at,0) > ?
+      AND EXISTS(SELECT 1 FROM customer_payments p WHERE p.subscription_id=s.id AND p.status='paid') ORDER BY s.id`).bind(edition.label, asOf, asOf).all<{
       fulfilment_id: string; edition_label: string; contact_email: string | null; contact_phone:string|null; quantity: number; delivery_address_json: string; subscription_status:string; ends_at:number|null
     }>()
   return rows.results.map(row => ({ ...row, address: parseAddress(row.delivery_address_json), delivery_address_json: undefined }))
 }
 
-export async function activePaidDeliveryRows(db:D1Database){
+export async function activePaidDeliveryRows(db:D1Database, asOf = Date.now()){
   const rows=await db.prepare(`SELECT s.id fulfilment_id, s.contact_email, s.quantity, s.status subscription_status, s.ends_at,
     COALESCE(a.name,c.display_name,'') recipient_name, COALESCE(a.line1,'') line1, a.line2, COALESCE(a.city,'') city,
     a.region, a.postal_code postal_code, a.country, COALESCE(c.phone,s.contact_phone,'') contact_phone
@@ -421,7 +427,9 @@ export async function activePaidDeliveryRows(db:D1Database){
     JOIN customers c ON c.user_id=(SELECT id FROM users WHERE owner_id=s.owner_id)
     LEFT JOIN addresses a ON a.id=(SELECT id FROM addresses WHERE customer_id=c.id AND address_type='delivery' AND active_to IS NULL ORDER BY version DESC LIMIT 1)
     WHERE s.status='active' AND s.entitlement_status='paid'
+      AND s.starts_at IS NOT NULL AND s.starts_at <= ?
+      AND COALESCE(s.paid_through_at,s.ends_at,0) > ?
       AND EXISTS(SELECT 1 FROM customer_payments p WHERE p.subscription_id=s.id AND p.status='paid')
-    ORDER BY recipient_name,s.id`).all<{fulfilment_id:string;contact_email:string|null;quantity:number;subscription_status:string;ends_at:number|null;recipient_name:string;line1:string;line2:string|null;city:string;region:string|null;postal_code:string|null;country:string|null;contact_phone:string|null}>()
+    ORDER BY recipient_name,s.id`).bind(asOf,asOf).all<{fulfilment_id:string;contact_email:string|null;quantity:number;subscription_status:string;ends_at:number|null;recipient_name:string;line1:string;line2:string|null;city:string;region:string|null;postal_code:string|null;country:string|null;contact_phone:string|null}>()
   return rows.results.map(row=>({...row,edition_label:'',address:{name:row.recipient_name,line1:row.line1,line2:row.line2??undefined,city:row.city,region:row.region??undefined,postalCode:row.postal_code??'',country:row.country??''}}))
 }

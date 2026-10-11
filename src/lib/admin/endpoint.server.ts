@@ -11,6 +11,7 @@ import { deliveryPrintPdf } from './dispatch-pdf.server'
 import { updateCustomerContact } from './directory.server'
 import { RefundRequestError, requestFullRazorpayRefund } from '#/lib/refund.server'
 import { reconcileRazorpayPayments } from '#/lib/razorpay-reconciliation.server'
+import { RazorpayApiError, updateRazorpaySubscriptionStart } from '#/lib/razorpay.server'
 import {
   activePaidDeliveryRows, audit, createEdition, deleteEdition, dispatchRows, generateEditionEligibility, getAdminDashboard, lockEdition, overrideEditionEligibility,
   updateAdminAddress, updateEdition, updateEnquiry, updateFulfilment, updateSubscriptionStatus, upsertCatalog, upsertContent,
@@ -48,8 +49,43 @@ export async function mutateAdmin(request: Request) {
   try {
     if (action === 'razorpay.reconcile') {
       const result = await reconcileRazorpayPayments(database)
-      await audit(database, session.user.id, 'razorpay.reconciled', 'payment_provider', 'razorpay', result)
-      return json({ ok: true, result })
+      let schedulesAligned=0, schedulesSkipped=0
+      if(body.alignSchedules===true){
+        const candidates=await database.prepare(`SELECT s.id,s.starts_at,r.razorpay_subscription_id
+          FROM customer_subscriptions s JOIN razorpay_recurring_subscriptions r ON r.subscription_id=s.id
+          WHERE s.status='active' AND s.entitlement_status='paid' AND s.starts_at>? AND EXISTS(SELECT 1 FROM customer_payments p WHERE p.subscription_id=s.id AND p.status='paid')
+          ORDER BY r.created_at DESC`).bind(Date.now()).all<{id:string;starts_at:number;razorpay_subscription_id:string}>()
+        for(const candidate of candidates.results){
+          try{
+            const provider=await updateRazorpaySubscriptionStart(candidate.razorpay_subscription_id,Math.ceil(candidate.starts_at/1000))
+            const nextCharge=Number(provider.charge_at??0)*1000
+            if(Number.isSafeInteger(nextCharge)&&nextCharge>0) await database.prepare(`UPDATE razorpay_recurring_subscriptions SET next_charge_at=?,updated_at=? WHERE razorpay_subscription_id=?`).bind(nextCharge,Date.now(),candidate.razorpay_subscription_id).run()
+            schedulesAligned++
+          }catch{ schedulesSkipped++ }
+        }
+      }
+      const summary={...result,schedulesAligned,schedulesSkipped}
+      await audit(database, session.user.id, 'razorpay.reconciled', 'payment_provider', 'razorpay', summary)
+      return json({ ok: true, result:summary })
+    }
+    if (action === 'razorpay.align_schedule') {
+      const subscriptionId=text(body.subscriptionId)
+      if(!SAFE_ID.test(subscriptionId)) return json({error:'Invalid subscription.'},422)
+      const row=await database.prepare(`SELECT s.starts_at,r.razorpay_subscription_id
+        FROM customer_subscriptions s JOIN razorpay_recurring_subscriptions r ON r.subscription_id=s.id
+        WHERE s.id=? ORDER BY r.created_at DESC LIMIT 1`).bind(subscriptionId).first<{starts_at:number|null;razorpay_subscription_id:string}>()
+      const startAt=Number(row?.starts_at??0)
+      if(!row?.razorpay_subscription_id||!Number.isSafeInteger(startAt)||startAt<=Date.now()) return json({error:'This payment schedule can only be aligned before its subscription start date.'},422)
+      try {
+        const provider=await updateRazorpaySubscriptionStart(row.razorpay_subscription_id,Math.ceil(startAt/1000))
+        const nextCharge=Number(provider.charge_at??0)*1000
+        if(Number.isSafeInteger(nextCharge)&&nextCharge>0) await database.prepare(`UPDATE razorpay_recurring_subscriptions SET next_charge_at=?,updated_at=? WHERE razorpay_subscription_id=?`).bind(nextCharge,Date.now(),row.razorpay_subscription_id).run()
+        await audit(database,session.user.id,'razorpay.schedule_aligned','subscription',subscriptionId,{razorpaySubscriptionId:row.razorpay_subscription_id,startAt,nextCharge:nextCharge||null})
+        return json({ok:true,nextChargeAt:nextCharge||null})
+      } catch(error) {
+        if(error instanceof RazorpayApiError) return json({error:'Razorpay could not align this schedule. UPI AutoPay subscriptions cannot be updated after creation; contact the customer for a new mandate in that case.'},409)
+        throw error
+      }
     }
     if(action==='customer.delete'){
       const userId=text(body.userId),requestId=text(body.requestId)
