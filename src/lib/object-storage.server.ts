@@ -37,6 +37,7 @@ export async function objectResponse(id:string,actor:{ownerId?:string;admin?:boo
   const row=await db.prepare(`SELECT object_key,owner_id,original_name,content_type,visibility FROM object_storage_records WHERE id=? AND deleted_at IS NULL`).bind(id).first<{object_key:string;owner_id:string|null;original_name:string;content_type:string;visibility:string}>()
   if(!row||!(actor.admin||row.visibility==='published'||(actor.ownerId&&row.owner_id===actor.ownerId)))return null
   const object=await bucket.get(row.object_key);if(!object)return null
-  const headers=new Headers({'Content-Type':row.content_type,'Content-Disposition':`attachment; filename="${safeFileName(row.original_name)}"`,'Cache-Control':row.visibility==='published'?'public, max-age=3600':'private, no-store','X-Content-Type-Options':'nosniff'})
+  const disposition=row.visibility==='published'&&row.content_type.startsWith('image/')?'inline':'attachment'
+  const headers=new Headers({'Content-Type':row.content_type,'Content-Disposition':`${disposition}; filename="${safeFileName(row.original_name)}"`,'Cache-Control':row.visibility==='published'?'public, max-age=3600':'private, no-store','X-Content-Type-Options':'nosniff'})
   return new Response(object.body,{headers})
 }
