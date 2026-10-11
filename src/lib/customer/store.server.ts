@@ -10,6 +10,19 @@ export type CustomerAddress = {
   country: string
 }
 
+// The first paid term launches on 25 November 2026 in Asia/Kolkata. Orders
+// paid before then start their entitlement on launch day; subsequent orders
+// begin on the actual payment date.
+const LAUNCH_TERM_START_AT = Date.parse('2026-11-24T18:30:00.000Z')
+export const effectiveSubscriptionStartAt = (paymentAt:number) => paymentAt < LAUNCH_TERM_START_AT ? LAUNCH_TERM_START_AT : paymentAt
+export function addSubscriptionMonths(from:number, months:number) {
+  const source=new Date(from), targetMonth=source.getUTCMonth()+months
+  const target=new Date(Date.UTC(source.getUTCFullYear(),targetMonth,1,source.getUTCHours(),source.getUTCMinutes(),source.getUTCSeconds(),source.getUTCMilliseconds()))
+  const lastDay=new Date(Date.UTC(target.getUTCFullYear(),target.getUTCMonth()+1,0)).getUTCDate()
+  target.setUTCDate(Math.min(source.getUTCDate(),lastDay))
+  return target.getTime()
+}
+
 export type CustomerSubscription = {
   id: string
   planId: string
@@ -223,15 +236,20 @@ export async function applyCustomerPaymentSucceeded(db: D1Database, input: {
   id: string; payerUserId: string | null; paymentId: string | null; paidAt: number | null; now: number
 }) {
   const paidAt = input.paidAt ?? input.now
-  const nextDispatchAt=firstEditionTimestamp(paidAt,process.env.BUSINESS_TIME_ZONE||'Asia/Kolkata',Number(process.env.BUSINESS_CUTOFF_DAY||20))
+  const startsAt = effectiveSubscriptionStartAt(paidAt)
+  const subscriptionTerm=await db.prepare(`SELECT duration_months FROM customer_subscriptions WHERE id=?`).bind(input.id).first<{duration_months:number}>()
+  const endsAt=addSubscriptionMonths(startsAt,Number(subscriptionTerm?.duration_months??1))
+  const nextDispatchAt=firstEditionTimestamp(startsAt,process.env.BUSINESS_TIME_ZONE||'Asia/Kolkata',Number(process.env.BUSINESS_CUTOFF_DAY||20))
   const subscriptionUpdate = db.prepare(
     `UPDATE customer_subscriptions SET status = 'active', entitlement_status = 'paid',
        starts_at = COALESCE(starts_at, ?),
-       ends_at = COALESCE(ends_at, ? + duration_months * 2629800000),
-       paid_through_at = COALESCE(paid_through_at, ? + duration_months * 2629800000),
-       next_dispatch_at = COALESCE(next_dispatch_at, ?), updated_at = ?
+       ends_at = COALESCE(ends_at, ?),
+       paid_through_at = COALESCE(paid_through_at, ?),
+       next_dispatch_at = COALESCE(next_dispatch_at, ?),
+       renewal_at = ?,
+       renewal_amount_minor = COALESCE(renewal_amount_minor, amount_minor), updated_at = ?
      WHERE id = ? AND (? IS NULL OR owner_id = ?) AND status IN ('upcoming', 'payment_failed')`,
-  ).bind(paidAt, paidAt, paidAt, nextDispatchAt, input.now, input.id, input.payerUserId, input.payerUserId)
+  ).bind(startsAt, endsAt, endsAt, nextDispatchAt, endsAt, input.now, input.id, input.payerUserId, input.payerUserId)
   const paymentUpdate = db.prepare(
     `UPDATE customer_payments SET status = 'paid', provider_payment_id = ?, paid_at = ?, updated_at = ?
      WHERE subscription_id = ? AND (? IS NULL OR owner_id = ?)`,
@@ -246,7 +264,7 @@ export async function applyCustomerPaymentSucceeded(db: D1Database, input: {
         VALUES (?,?,?,?,?) ON CONFLICT(discount_id,subscription_id) DO NOTHING`).bind(`redemption_${input.id}`,snapshot.discountId,input.id,purchased.owner_id,paidAt).run()
     } catch { /* A legacy snapshot must not block payment activation. */ }
   }
-  await reserveNextEditionCopies(db,input.id,paidAt,input.now)
+  await reserveNextEditionCopies(db,input.id,startsAt,input.now)
   if(purchased) await recordAccountEvent(db,{userId:purchased.owner_id,subscriptionId:input.id,eventType:'subscription_activated',title:'Subscription activated',detail:'Payment was verified and your prepaid subscription is active.',effectiveAt:nextDispatchAt,now:input.now})
   return true
 }
@@ -263,9 +281,8 @@ export async function recordCustomerSubscriptionRenewal(db: D1Database, input: {
 }) {
   const subscription = await db.prepare(`SELECT owner_id,duration_months,quantity,paid_through_at FROM customer_subscriptions WHERE id=?`).bind(input.id).first<{owner_id:string;duration_months:number;quantity:number;paid_through_at:number|null}>()
   if (!subscription) return false
-  const periodMs = subscription.duration_months * 2629800000
   const base = Math.max(subscription.paid_through_at ?? 0, input.paidAt)
-  const paidThrough = base + periodMs
+  const paidThrough = addSubscriptionMonths(base, subscription.duration_months)
   const inserted = await db.prepare(`INSERT INTO customer_payments(id,subscription_id,owner_id,provider_payment_id,status,amount_minor,currency,paid_at,created_at,updated_at)
     VALUES(?,?,?,?, 'paid', ?,?,?,?,?) ON CONFLICT(provider_payment_id) DO NOTHING`).bind(`payment_${input.paymentId}`, input.id, subscription.owner_id, input.paymentId, input.amountMinor, input.currency, input.paidAt, input.now, input.now).run()
   if ((inserted.meta.changes ?? 0) !== 1) return false

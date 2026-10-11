@@ -3,7 +3,7 @@ import { lifecycleBindings } from '#/lib/lifecycle/env.server'
 import { isSameOrigin } from '#/lib/security'
 import { json } from '#/lib/http.server'
 import { calculatePricing } from '#/lib/pricing.server'
-import { applyCustomerPaymentSucceeded, registerCustomerCheckout, saveCustomerCheckoutDetails, type CustomerAddress } from '#/lib/customer/store.server'
+import { addSubscriptionMonths, applyCustomerPaymentSucceeded, effectiveSubscriptionStartAt, registerCustomerCheckout, saveCustomerCheckoutDetails, type CustomerAddress } from '#/lib/customer/store.server'
 import { createRazorpayPlan, createRazorpaySubscription, razorpayPublicKey, retrieveRazorpayPayment, RazorpayApiError, verifySubscriptionSignature } from '#/lib/razorpay.server'
 import { recordCustomerOrder } from '#/lib/canonical-data.server'
 import { allowRequest } from '#/lib/rate-limit.server'
@@ -52,16 +52,17 @@ export async function razorpaySubscriptionCheckout(request: Request) {
 
     const localSubscriptionId = `rzp_${idempotencyKey}`
     const now = Date.now()
+    const termStartsAt = effectiveSubscriptionStartAt(now)
     checkoutStage = 'saving your subscription details'
     await registerCustomerCheckout(db, { id: localSubscriptionId, userId: session.user.id, planId: `razorpay_${durationMonths}`, planName: `${durationMonths} month`, durationMonths, quantity, currency: quote.currency, amountMinor: quote.totalMinor, pricingSnapshot: quote, now })
     await saveCustomerCheckoutDetails(db, { id: localSubscriptionId, userId: session.user.id, email, address: delivery, now })
-    await db.prepare(`UPDATE customer_subscriptions SET contact_phone=?,renewal_enabled=1,renewal_at=?,renewal_amount_minor=? WHERE id=?`).bind(phone, now + durationMonths * 2629800000, quote.totalMinor, localSubscriptionId).run()
+    await db.prepare(`UPDATE customer_subscriptions SET contact_phone=?,renewal_enabled=1,renewal_at=?,renewal_amount_minor=? WHERE id=?`).bind(phone, addSubscriptionMonths(termStartsAt,durationMonths), quote.totalMinor, localSubscriptionId).run()
     try {
       checkoutStage = 'creating the Razorpay payment plan'
       const plan = await createRazorpayPlan({ ...schedule, amount: quote.totalMinor, currency: quote.currency, name: `Offscroll Times ${durationMonths}-month subscription`, description: `${quantity} copy/copies per edition, billed every ${durationMonths} month(s).`, notes: { local_subscription_id: localSubscriptionId, duration_months: String(durationMonths) } })
       checkoutStage = 'creating the Razorpay payment session'
       const cycleCount = recurringCycleCount(durationMonths)
-      const provider = await createRazorpaySubscription({ planId: String(plan.id), totalCount: cycleCount, notes: { local_subscription_id: localSubscriptionId, user_id: session.user.id } })
+      const provider = await createRazorpaySubscription({ planId: String(plan.id), totalCount: cycleCount, startAt: termStartsAt > now ? Math.ceil(termStartsAt / 1000) : undefined, notes: { local_subscription_id: localSubscriptionId, user_id: session.user.id, term_starts_at: String(termStartsAt) } })
       if (typeof provider.id !== 'string' || typeof plan.id !== 'string') return json({ error: 'Payment service returned an invalid subscription.' }, 502)
       checkoutStage = 'saving the Razorpay payment session'
       await db.prepare(`INSERT INTO razorpay_orders(id,subscription_id,owner_id,razorpay_order_id,status,amount_minor,currency,pricing_snapshot_json,terms_accepted_at,created_at,updated_at,idempotency_key) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)`).bind(crypto.randomUUID(), localSubscriptionId, session.user.id, provider.id, 'created', quote.totalMinor, quote.currency, JSON.stringify(quote), now, now, now, idempotencyKey).run()

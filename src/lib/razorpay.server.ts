@@ -36,9 +36,10 @@ export async function createRazorpayPlan(input:{period:'monthly'|'quarterly'|'ye
   return api('/plans',{method:'POST',body:JSON.stringify({period:input.period,interval:input.interval,item:{name:input.name,amount:input.amount,currency:input.currency,description:input.description},notes:input.notes})})
 }
 
-export async function createRazorpaySubscription(input:{planId:string;totalCount:number;notes:Record<string,string>}) {
+export async function createRazorpaySubscription(input:{planId:string;totalCount:number;notes:Record<string,string>;startAt?:number}) {
   if(!input.planId||!Number.isSafeInteger(input.totalCount)||input.totalCount<1) throw new RangeError('A valid subscription plan and billing-cycle count are required.')
-  return api('/subscriptions',{method:'POST',body:JSON.stringify({plan_id:input.planId,total_count:input.totalCount,quantity:1,customer_notify:false,notes:input.notes})})
+  if(input.startAt!==undefined&&(!Number.isSafeInteger(input.startAt)||input.startAt<=Math.floor(Date.now()/1000))) throw new RangeError('Subscription start time must be in the future.')
+  return api('/subscriptions',{method:'POST',body:JSON.stringify({plan_id:input.planId,total_count:input.totalCount,quantity:1,customer_notify:false,notes:input.notes,...(input.startAt?{start_at:input.startAt}:{})})})
 }
 
 export async function cancelRazorpaySubscription(subscriptionId:string) {
