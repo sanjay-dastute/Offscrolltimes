@@ -48,6 +48,15 @@ export async function cancelRazorpaySubscription(subscriptionId:string) {
 
 export async function retrieveRazorpayPayment(id:string){ return api(`/payments/${encodeURIComponent(id)}`) }
 
+// Razorpay invoices are the authoritative record of a subscription charge.
+// Unlike the browser callback, they are available after a customer closes the
+// payment window, which makes them suitable for a protected admin backfill.
+export async function listRazorpaySubscriptionInvoices(subscriptionId:string) {
+  if (!subscriptionId) throw new RangeError('A Razorpay subscription id is required.')
+  const result = await api(`/invoices?subscription_id=${encodeURIComponent(subscriptionId)}&count=100`)
+  return Array.isArray(result.items) ? result.items as Array<Record<string, any>> : []
+}
+
 export async function createRazorpayRefund(paymentId:string, amount:number, notes:Record<string,string>={}) {
   if(!paymentId || !Number.isSafeInteger(amount) || amount < 1) throw new RangeError('A valid payment and refund amount are required.')
   return api(`/payments/${encodeURIComponent(paymentId)}/refund`, { method:'POST', body:JSON.stringify({amount,notes}) })

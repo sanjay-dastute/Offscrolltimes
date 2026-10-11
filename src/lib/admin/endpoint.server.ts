@@ -10,6 +10,7 @@ import { storeObject } from '#/lib/object-storage.server'
 import { deliveryPrintPdf } from './dispatch-pdf.server'
 import { updateCustomerContact } from './directory.server'
 import { RefundRequestError, requestFullRazorpayRefund } from '#/lib/refund.server'
+import { reconcileRazorpayPayments } from '#/lib/razorpay-reconciliation.server'
 import {
   activePaidDeliveryRows, audit, createEdition, deleteEdition, dispatchRows, generateEditionEligibility, getAdminDashboard, lockEdition, overrideEditionEligibility,
   updateAdminAddress, updateEdition, updateEnquiry, updateFulfilment, updateSubscriptionStatus, upsertCatalog, upsertContent,
@@ -45,6 +46,11 @@ export async function mutateAdmin(request: Request) {
   if (body.csrf !== session.csrf) return json({ error: 'Your session changed. Refresh and retry.' }, 403)
   const action = text(body.action, 80)
   try {
+    if (action === 'razorpay.reconcile') {
+      const result = await reconcileRazorpayPayments(database)
+      await audit(database, session.user.id, 'razorpay.reconciled', 'payment_provider', 'razorpay', result)
+      return json({ ok: true, result })
+    }
     if(action==='customer.delete'){
       const userId=text(body.userId),requestId=text(body.requestId)
       if(!SAFE_ID.test(userId)||!SAFE_ID.test(requestId)||body.confirm!==true)return json({error:'Confirm the requested account deletion.'},422)
