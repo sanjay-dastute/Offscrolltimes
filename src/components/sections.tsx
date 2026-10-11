@@ -16,7 +16,7 @@ import { CTA, CTA_OUTLINE, EYEBROW, H2, SHELL, scallop } from '#/lib/uiKit';
 
 function IssueMockup() {
   return (
-    <HomepageSlideshow fallback={<div className="interactive-newspaper overflow-hidden border border-graphite bg-paper-raised shadow-[8px_8px_0_rgba(23,21,18,0.14)]">
+    <div className="interactive-newspaper overflow-hidden border border-graphite bg-paper-raised shadow-[8px_8px_0_rgba(23,21,18,0.14)]">
       <video
         className="block aspect-[4/5] w-full bg-sun object-cover"
         autoPlay
@@ -33,7 +33,7 @@ function IssueMockup() {
         <source src="/images/IMG_8051.mp4" type="video/mp4" />
         Your browser does not support this video.
       </video>
-    </div>} />
+    </div>
   );
 }
 
@@ -121,6 +121,7 @@ export function WhyLove() {
         </h2>
 
         <div className="mt-10 grid items-center gap-12 md:mt-14 lg:grid-cols-[0.9fr_1.1fr]">
+          <HomepageSlideshow />
           <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
             {WHY_LOVE.map((item, index) => (
               <article
