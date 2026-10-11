@@ -1,17 +1,17 @@
 import { useEffect, useState } from 'react';
 import { SUBSCRIBE_HREF } from '#/content/site';
-// Registration stays open throughout November 20 in India time.
-const schedule = {
-  issue: 'December 2026',
-  issueMonth: 'December',
-  cutoff: 'November 20, 2026',
-  deadline: Date.parse('2026-11-21T00:00:00+05:30'),
-};
+import { nextIssueSchedule } from '#/lib/dates';
+
 export function NextIssueNotice() {
+  const [schedule, setSchedule] = useState(() => nextIssueSchedule());
   const [remaining, setRemaining] = useState<number | null>(null);
 
   useEffect(() => {
-    const update = () => setRemaining(Math.max(0, Math.ceil((schedule.deadline - Date.now()) / 1000)));
+    const update = () => {
+      const nextSchedule = nextIssueSchedule();
+      setSchedule(nextSchedule);
+      setRemaining(Math.max(0, Math.ceil((nextSchedule.deadline - Date.now()) / 1000)));
+    };
     update();
     const interval = window.setInterval(update, 1000);
     return () => window.clearInterval(interval);
@@ -33,7 +33,7 @@ export function NextIssueNotice() {
     >
       <h2 id="next-issue-title" className="m-0 font-display text-xl font-bold">Next : {schedule.issue} Issue</h2>
       <p id="next-issue-description" className="mt-3 text-sm leading-relaxed">
-        Become an Offscroller by {schedule.cutoff} to receive the {schedule.issue} issue.
+        Join by {schedule.cutoff}, 11:59 p.m. IST to receive the {schedule.issue} issue.
       </p>
       <p className="mt-3 text-sm font-semibold">Time remaining to join:</p>
       <div role="timer" aria-label={`Time remaining until the ${schedule.cutoff} joining deadline, India time`} className="mt-2">

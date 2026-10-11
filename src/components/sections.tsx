@@ -2,7 +2,6 @@ import {
   HOW_IT_WORKS,
   PLANS,
   PREVIEW_CLIPS,
-  SAMPLE_PAGES,
   SUBSCRIBE_HREF,
   TESTIMONIALS,
   WHATS_INSIDE,
@@ -10,7 +9,8 @@ import {
   WHY_LOVE,
 } from '#/content/site';
 import { Reveal } from '#/components/Reveal';
-import { FlipBook } from '#/components/FlipBook';
+import { HomepageSlideshow } from '#/components/HomepageSlideshow';
+import { HomepagePoll } from '#/components/HomepagePoll';
 import { NextIssueNotice } from '#/components/NextIssueNotice';
 import { CTA, CTA_OUTLINE, EYEBROW, H2, SHELL, scallop } from '#/lib/uiKit';
 
@@ -82,6 +82,7 @@ export function Hero() {
 
         <div className="hero-reveal hero-reveal-delay mx-auto w-full max-w-[360px]">
           <IssueMockup />
+          <HomepagePoll />
         </div>
       </div>
     </section>
@@ -120,7 +121,7 @@ export function WhyLove() {
         </h2>
 
         <div className="mt-10 grid items-center gap-12 md:mt-14 lg:grid-cols-[0.9fr_1.1fr]">
-          <FlipBook pages={SAMPLE_PAGES} />
+          <HomepageSlideshow />
           <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
             {WHY_LOVE.map((item, index) => (
               <article

@@ -7,6 +7,7 @@ import { AdminOffers } from "#/components/AdminOffers";
 import { AdminExports } from "#/components/AdminExports";
 import { AdminLogin } from "#/components/AdminLogin";
 import { AdminAnswers } from "#/components/AdminAnswers";
+import { AdminUploads } from "#/components/AdminUploads";
 import { AdminReferrals } from "#/components/AdminReferrals";
 
 type Row = Record<string, any>;
@@ -210,6 +211,7 @@ function AdminPage() {
                 "subscriptions",
                 "editions",
                 "answers",
+                "uploads",
                 "offers",
                 "referrals",
                 "pricing",
@@ -243,6 +245,7 @@ function AdminPage() {
               <Editions data={data} busy={busy} mutate={mutate} />
             )}
             {tab === "answers" && <AdminAnswers csrf={data.csrf} />}
+            {tab === "uploads" && <AdminUploads csrf={data.csrf} />}
             {tab === "offers" && (
               <AdminOffers
                 offers={data.discounts}

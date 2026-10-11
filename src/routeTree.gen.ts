@@ -28,9 +28,11 @@ import { Route as ApiCustomerRouteImport } from './routes/api.customer'
 import { Route as ApiHealthRouteImport } from './routes/api.health'
 import { Route as ApiLogoutRouteImport } from './routes/api.logout'
 import { Route as ApiNewsletterRouteImport } from './routes/api.newsletter'
+import { Route as ApiPollRouteImport } from './routes/api.poll'
 import { Route as ApiPricingRouteImport } from './routes/api.pricing'
 import { Route as ApiReadinessRouteImport } from './routes/api.readiness'
 import { Route as ApiSessionRouteImport } from './routes/api.session'
+import { Route as ApiUploadsRouteImport } from './routes/api.uploads'
 import { Route as CheckoutRazorpayRouteImport } from './routes/checkout.razorpay'
 import { Route as NewsletterUnsubscribeRouteImport } from './routes/newsletter.unsubscribe'
 import { Route as PoliciesSlugRouteImport } from './routes/policies.$slug'
@@ -40,6 +42,8 @@ import { Route as ApiAdminDispatchRouteImport } from './routes/api.admin.dispatc
 import { Route as ApiAdminExportRouteImport } from './routes/api.admin.export'
 import { Route as ApiAdminFilesRouteImport } from './routes/api.admin.files'
 import { Route as ApiAdminLoginRouteImport } from './routes/api.admin.login'
+import { Route as ApiAdminPollRouteImport } from './routes/api.admin.poll'
+import { Route as ApiAdminUploadsRouteImport } from './routes/api.admin.uploads'
 import { Route as ApiAssetsIdRouteImport } from './routes/api.assets.$id'
 import { Route as ApiCustomerFilesRouteImport } from './routes/api.customer.files'
 import { Route as ApiRazorpayCheckoutRouteImport } from './routes/api.razorpay.checkout'
@@ -146,6 +150,11 @@ const ApiNewsletterRoute = ApiNewsletterRouteImport.update({
   path: '/api/newsletter',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPollRoute = ApiPollRouteImport.update({
+  id: '/api/poll',
+  path: '/api/poll',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPricingRoute = ApiPricingRouteImport.update({
   id: '/api/pricing',
   path: '/api/pricing',
@@ -159,6 +168,11 @@ const ApiReadinessRoute = ApiReadinessRouteImport.update({
 const ApiSessionRoute = ApiSessionRouteImport.update({
   id: '/api/session',
   path: '/api/session',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiUploadsRoute = ApiUploadsRouteImport.update({
+  id: '/api/uploads',
+  path: '/api/uploads',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CheckoutRazorpayRoute = CheckoutRazorpayRouteImport.update({
@@ -204,6 +218,16 @@ const ApiAdminFilesRoute = ApiAdminFilesRouteImport.update({
 const ApiAdminLoginRoute = ApiAdminLoginRouteImport.update({
   id: '/login',
   path: '/login',
+  getParentRoute: () => ApiAdminRoute,
+} as any)
+const ApiAdminPollRoute = ApiAdminPollRouteImport.update({
+  id: '/poll',
+  path: '/poll',
+  getParentRoute: () => ApiAdminRoute,
+} as any)
+const ApiAdminUploadsRoute = ApiAdminUploadsRouteImport.update({
+  id: '/uploads',
+  path: '/uploads',
   getParentRoute: () => ApiAdminRoute,
 } as any)
 const ApiAssetsIdRoute = ApiAssetsIdRouteImport.update({
@@ -278,9 +302,11 @@ export interface FileRoutesByFullPath {
   '/api/health': typeof ApiHealthRoute
   '/api/logout': typeof ApiLogoutRoute
   '/api/newsletter': typeof ApiNewsletterRoute
+  '/api/poll': typeof ApiPollRoute
   '/api/pricing': typeof ApiPricingRoute
   '/api/readiness': typeof ApiReadinessRoute
   '/api/session': typeof ApiSessionRoute
+  '/api/uploads': typeof ApiUploadsRoute
   '/checkout/razorpay': typeof CheckoutRazorpayRoute
   '/newsletter/unsubscribe': typeof NewsletterUnsubscribeRoute
   '/policies/$slug': typeof PoliciesSlugRoute
@@ -290,6 +316,8 @@ export interface FileRoutesByFullPath {
   '/api/admin/export': typeof ApiAdminExportRoute
   '/api/admin/files': typeof ApiAdminFilesRoute
   '/api/admin/login': typeof ApiAdminLoginRoute
+  '/api/admin/poll': typeof ApiAdminPollRoute
+  '/api/admin/uploads': typeof ApiAdminUploadsRoute
   '/api/assets/$id': typeof ApiAssetsIdRoute
   '/api/customer/files': typeof ApiCustomerFilesRoute
   '/api/razorpay/checkout': typeof ApiRazorpayCheckoutRoute
@@ -321,9 +349,11 @@ export interface FileRoutesByTo {
   '/api/health': typeof ApiHealthRoute
   '/api/logout': typeof ApiLogoutRoute
   '/api/newsletter': typeof ApiNewsletterRoute
+  '/api/poll': typeof ApiPollRoute
   '/api/pricing': typeof ApiPricingRoute
   '/api/readiness': typeof ApiReadinessRoute
   '/api/session': typeof ApiSessionRoute
+  '/api/uploads': typeof ApiUploadsRoute
   '/checkout/razorpay': typeof CheckoutRazorpayRoute
   '/newsletter/unsubscribe': typeof NewsletterUnsubscribeRoute
   '/policies/$slug': typeof PoliciesSlugRoute
@@ -333,6 +363,8 @@ export interface FileRoutesByTo {
   '/api/admin/export': typeof ApiAdminExportRoute
   '/api/admin/files': typeof ApiAdminFilesRoute
   '/api/admin/login': typeof ApiAdminLoginRoute
+  '/api/admin/poll': typeof ApiAdminPollRoute
+  '/api/admin/uploads': typeof ApiAdminUploadsRoute
   '/api/assets/$id': typeof ApiAssetsIdRoute
   '/api/customer/files': typeof ApiCustomerFilesRoute
   '/api/razorpay/checkout': typeof ApiRazorpayCheckoutRoute
@@ -365,9 +397,11 @@ export interface FileRoutesById {
   '/api/health': typeof ApiHealthRoute
   '/api/logout': typeof ApiLogoutRoute
   '/api/newsletter': typeof ApiNewsletterRoute
+  '/api/poll': typeof ApiPollRoute
   '/api/pricing': typeof ApiPricingRoute
   '/api/readiness': typeof ApiReadinessRoute
   '/api/session': typeof ApiSessionRoute
+  '/api/uploads': typeof ApiUploadsRoute
   '/checkout/razorpay': typeof CheckoutRazorpayRoute
   '/newsletter/unsubscribe': typeof NewsletterUnsubscribeRoute
   '/policies/$slug': typeof PoliciesSlugRoute
@@ -377,6 +411,8 @@ export interface FileRoutesById {
   '/api/admin/export': typeof ApiAdminExportRoute
   '/api/admin/files': typeof ApiAdminFilesRoute
   '/api/admin/login': typeof ApiAdminLoginRoute
+  '/api/admin/poll': typeof ApiAdminPollRoute
+  '/api/admin/uploads': typeof ApiAdminUploadsRoute
   '/api/assets/$id': typeof ApiAssetsIdRoute
   '/api/customer/files': typeof ApiCustomerFilesRoute
   '/api/razorpay/checkout': typeof ApiRazorpayCheckoutRoute
@@ -410,9 +446,11 @@ export interface FileRouteTypes {
     | '/api/health'
     | '/api/logout'
     | '/api/newsletter'
+    | '/api/poll'
     | '/api/pricing'
     | '/api/readiness'
     | '/api/session'
+    | '/api/uploads'
     | '/checkout/razorpay'
     | '/newsletter/unsubscribe'
     | '/policies/$slug'
@@ -422,6 +460,8 @@ export interface FileRouteTypes {
     | '/api/admin/export'
     | '/api/admin/files'
     | '/api/admin/login'
+    | '/api/admin/poll'
+    | '/api/admin/uploads'
     | '/api/assets/$id'
     | '/api/customer/files'
     | '/api/razorpay/checkout'
@@ -453,9 +493,11 @@ export interface FileRouteTypes {
     | '/api/health'
     | '/api/logout'
     | '/api/newsletter'
+    | '/api/poll'
     | '/api/pricing'
     | '/api/readiness'
     | '/api/session'
+    | '/api/uploads'
     | '/checkout/razorpay'
     | '/newsletter/unsubscribe'
     | '/policies/$slug'
@@ -465,6 +507,8 @@ export interface FileRouteTypes {
     | '/api/admin/export'
     | '/api/admin/files'
     | '/api/admin/login'
+    | '/api/admin/poll'
+    | '/api/admin/uploads'
     | '/api/assets/$id'
     | '/api/customer/files'
     | '/api/razorpay/checkout'
@@ -496,9 +540,11 @@ export interface FileRouteTypes {
     | '/api/health'
     | '/api/logout'
     | '/api/newsletter'
+    | '/api/poll'
     | '/api/pricing'
     | '/api/readiness'
     | '/api/session'
+    | '/api/uploads'
     | '/checkout/razorpay'
     | '/newsletter/unsubscribe'
     | '/policies/$slug'
@@ -508,6 +554,8 @@ export interface FileRouteTypes {
     | '/api/admin/export'
     | '/api/admin/files'
     | '/api/admin/login'
+    | '/api/admin/poll'
+    | '/api/admin/uploads'
     | '/api/assets/$id'
     | '/api/customer/files'
     | '/api/razorpay/checkout'
@@ -540,9 +588,11 @@ export interface RootRouteChildren {
   ApiHealthRoute: typeof ApiHealthRoute
   ApiLogoutRoute: typeof ApiLogoutRoute
   ApiNewsletterRoute: typeof ApiNewsletterRoute
+  ApiPollRoute: typeof ApiPollRoute
   ApiPricingRoute: typeof ApiPricingRoute
   ApiReadinessRoute: typeof ApiReadinessRoute
   ApiSessionRoute: typeof ApiSessionRoute
+  ApiUploadsRoute: typeof ApiUploadsRoute
   CheckoutRazorpayRoute: typeof CheckoutRazorpayRoute
   NewsletterUnsubscribeRoute: typeof NewsletterUnsubscribeRoute
   PoliciesSlugRoute: typeof PoliciesSlugRoute
@@ -689,6 +739,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiNewsletterRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/poll': {
+      id: '/api/poll'
+      path: '/api/poll'
+      fullPath: '/api/poll'
+      preLoaderRoute: typeof ApiPollRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/pricing': {
       id: '/api/pricing'
       path: '/api/pricing'
@@ -708,6 +765,13 @@ declare module '@tanstack/react-router' {
       path: '/api/session'
       fullPath: '/api/session'
       preLoaderRoute: typeof ApiSessionRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/uploads': {
+      id: '/api/uploads'
+      path: '/api/uploads'
+      fullPath: '/api/uploads'
+      preLoaderRoute: typeof ApiUploadsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/checkout/razorpay': {
@@ -771,6 +835,20 @@ declare module '@tanstack/react-router' {
       path: '/login'
       fullPath: '/api/admin/login'
       preLoaderRoute: typeof ApiAdminLoginRouteImport
+      parentRoute: typeof ApiAdminRoute
+    }
+    '/api/admin/poll': {
+      id: '/api/admin/poll'
+      path: '/poll'
+      fullPath: '/api/admin/poll'
+      preLoaderRoute: typeof ApiAdminPollRouteImport
+      parentRoute: typeof ApiAdminRoute
+    }
+    '/api/admin/uploads': {
+      id: '/api/admin/uploads'
+      path: '/uploads'
+      fullPath: '/api/admin/uploads'
+      preLoaderRoute: typeof ApiAdminUploadsRouteImport
       parentRoute: typeof ApiAdminRoute
     }
     '/api/assets/$id': {
@@ -853,6 +931,8 @@ interface ApiAdminRouteChildren {
   ApiAdminExportRoute: typeof ApiAdminExportRoute
   ApiAdminFilesRoute: typeof ApiAdminFilesRoute
   ApiAdminLoginRoute: typeof ApiAdminLoginRoute
+  ApiAdminPollRoute: typeof ApiAdminPollRoute
+  ApiAdminUploadsRoute: typeof ApiAdminUploadsRoute
   ApiAdminFileIdRoute: typeof ApiAdminFileIdRoute
 }
 
@@ -863,6 +943,8 @@ const ApiAdminRouteChildren: ApiAdminRouteChildren = {
   ApiAdminExportRoute: ApiAdminExportRoute,
   ApiAdminFilesRoute: ApiAdminFilesRoute,
   ApiAdminLoginRoute: ApiAdminLoginRoute,
+  ApiAdminPollRoute: ApiAdminPollRoute,
+  ApiAdminUploadsRoute: ApiAdminUploadsRoute,
   ApiAdminFileIdRoute: ApiAdminFileIdRoute,
 }
 
@@ -906,9 +988,11 @@ const rootRouteChildren: RootRouteChildren = {
   ApiHealthRoute: ApiHealthRoute,
   ApiLogoutRoute: ApiLogoutRoute,
   ApiNewsletterRoute: ApiNewsletterRoute,
+  ApiPollRoute: ApiPollRoute,
   ApiPricingRoute: ApiPricingRoute,
   ApiReadinessRoute: ApiReadinessRoute,
   ApiSessionRoute: ApiSessionRoute,
+  ApiUploadsRoute: ApiUploadsRoute,
   CheckoutRazorpayRoute: CheckoutRazorpayRoute,
   NewsletterUnsubscribeRoute: NewsletterUnsubscribeRoute,
   PoliciesSlugRoute: PoliciesSlugRoute,
