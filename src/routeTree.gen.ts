@@ -44,6 +44,7 @@ import { Route as ApiAdminFilesRouteImport } from './routes/api.admin.files'
 import { Route as ApiAdminLoginRouteImport } from './routes/api.admin.login'
 import { Route as ApiAdminPollRouteImport } from './routes/api.admin.poll'
 import { Route as ApiAdminUploadsRouteImport } from './routes/api.admin.uploads'
+import { Route as ApiAdminVideoRouteImport } from './routes/api.admin.video'
 import { Route as ApiAssetsIdRouteImport } from './routes/api.assets.$id'
 import { Route as ApiCustomerFilesRouteImport } from './routes/api.customer.files'
 import { Route as ApiRazorpayCheckoutRouteImport } from './routes/api.razorpay.checkout'
@@ -230,6 +231,11 @@ const ApiAdminUploadsRoute = ApiAdminUploadsRouteImport.update({
   path: '/uploads',
   getParentRoute: () => ApiAdminRoute,
 } as any)
+const ApiAdminVideoRoute = ApiAdminVideoRouteImport.update({
+  id: '/video',
+  path: '/video',
+  getParentRoute: () => ApiAdminRoute,
+} as any)
 const ApiAssetsIdRoute = ApiAssetsIdRouteImport.update({
   id: '/api/assets/$id',
   path: '/api/assets/$id',
@@ -318,6 +324,7 @@ export interface FileRoutesByFullPath {
   '/api/admin/login': typeof ApiAdminLoginRoute
   '/api/admin/poll': typeof ApiAdminPollRoute
   '/api/admin/uploads': typeof ApiAdminUploadsRoute
+  '/api/admin/video': typeof ApiAdminVideoRoute
   '/api/assets/$id': typeof ApiAssetsIdRoute
   '/api/customer/files': typeof ApiCustomerFilesRoute
   '/api/razorpay/checkout': typeof ApiRazorpayCheckoutRoute
@@ -365,6 +372,7 @@ export interface FileRoutesByTo {
   '/api/admin/login': typeof ApiAdminLoginRoute
   '/api/admin/poll': typeof ApiAdminPollRoute
   '/api/admin/uploads': typeof ApiAdminUploadsRoute
+  '/api/admin/video': typeof ApiAdminVideoRoute
   '/api/assets/$id': typeof ApiAssetsIdRoute
   '/api/customer/files': typeof ApiCustomerFilesRoute
   '/api/razorpay/checkout': typeof ApiRazorpayCheckoutRoute
@@ -413,6 +421,7 @@ export interface FileRoutesById {
   '/api/admin/login': typeof ApiAdminLoginRoute
   '/api/admin/poll': typeof ApiAdminPollRoute
   '/api/admin/uploads': typeof ApiAdminUploadsRoute
+  '/api/admin/video': typeof ApiAdminVideoRoute
   '/api/assets/$id': typeof ApiAssetsIdRoute
   '/api/customer/files': typeof ApiCustomerFilesRoute
   '/api/razorpay/checkout': typeof ApiRazorpayCheckoutRoute
@@ -462,6 +471,7 @@ export interface FileRouteTypes {
     | '/api/admin/login'
     | '/api/admin/poll'
     | '/api/admin/uploads'
+    | '/api/admin/video'
     | '/api/assets/$id'
     | '/api/customer/files'
     | '/api/razorpay/checkout'
@@ -509,6 +519,7 @@ export interface FileRouteTypes {
     | '/api/admin/login'
     | '/api/admin/poll'
     | '/api/admin/uploads'
+    | '/api/admin/video'
     | '/api/assets/$id'
     | '/api/customer/files'
     | '/api/razorpay/checkout'
@@ -556,6 +567,7 @@ export interface FileRouteTypes {
     | '/api/admin/login'
     | '/api/admin/poll'
     | '/api/admin/uploads'
+    | '/api/admin/video'
     | '/api/assets/$id'
     | '/api/customer/files'
     | '/api/razorpay/checkout'
@@ -851,6 +863,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAdminUploadsRouteImport
       parentRoute: typeof ApiAdminRoute
     }
+    '/api/admin/video': {
+      id: '/api/admin/video'
+      path: '/video'
+      fullPath: '/api/admin/video'
+      preLoaderRoute: typeof ApiAdminVideoRouteImport
+      parentRoute: typeof ApiAdminRoute
+    }
     '/api/assets/$id': {
       id: '/api/assets/$id'
       path: '/api/assets/$id'
@@ -933,6 +952,7 @@ interface ApiAdminRouteChildren {
   ApiAdminLoginRoute: typeof ApiAdminLoginRoute
   ApiAdminPollRoute: typeof ApiAdminPollRoute
   ApiAdminUploadsRoute: typeof ApiAdminUploadsRoute
+  ApiAdminVideoRoute: typeof ApiAdminVideoRoute
   ApiAdminFileIdRoute: typeof ApiAdminFileIdRoute
 }
 
@@ -945,6 +965,7 @@ const ApiAdminRouteChildren: ApiAdminRouteChildren = {
   ApiAdminLoginRoute: ApiAdminLoginRoute,
   ApiAdminPollRoute: ApiAdminPollRoute,
   ApiAdminUploadsRoute: ApiAdminUploadsRoute,
+  ApiAdminVideoRoute: ApiAdminVideoRoute,
   ApiAdminFileIdRoute: ApiAdminFileIdRoute,
 }
 

@@ -4,7 +4,7 @@ import { audit } from '#/lib/admin/store.server'
 import { json } from '#/lib/http.server'
 import { lifecycleBindings } from '#/lib/lifecycle/env.server'
 import { isSameOrigin } from '#/lib/security'
-import { retireObject, storeObject } from '#/lib/object-storage.server'
+import { purgeHomepageObject, storeObject } from '#/lib/object-storage.server'
 
 const MAX_IMAGE=10*1024*1024
 const ID=/^[A-Za-z0-9-]{1,160}$/
@@ -25,7 +25,22 @@ export async function saveHomepageUpload(request:Request){
   if(request.headers.get('x-csrf-token')!==session.csrf)return json({error:'Your session changed. Refresh and retry.'},403)
   if(!Number.isInteger(position)||position<1||position>5||!imageType(contentType)||!Number.isSafeInteger(size)||size<1||size>MAX_IMAGE||!request.body)return json({error:'Upload a JPG, PNG or WebP image up to 10 MB into one of the five slideshow positions.'},422)
   const db=lifecycleBindings().db,existing=await db.prepare('SELECT id,asset_id FROM homepage_uploads WHERE position=?').bind(position).first<{id:string;asset_id:string}>(),id=existing?.id??crypto.randomUUID(),now=Date.now();let assetId=''
-  try{assetId=await storeObject({category:'homepage_upload',relatedType:'homepage_upload',relatedId:id,originalName:fileName,contentType,size,createdBy:session.user.id,body:request.body,visibility:'published'});if(existing)await db.prepare('UPDATE homepage_uploads SET asset_id=?,updated_at=? WHERE id=?').bind(assetId,now,id).run();else await db.prepare('INSERT INTO homepage_uploads(id,asset_id,position,created_by,created_at,updated_at) VALUES(?,?,?,?,?,?)').bind(id,assetId,position,session.user.id,now,now).run();if(existing)await retireObject(existing.asset_id);await audit(db,session.user.id,'homepage_upload.saved','homepage_upload',id,{position,assetId});return json({ok:true})}catch(error){const message=error instanceof Error?error.message:'Unknown storage error';console.error(JSON.stringify({message:'homepage_upload_failed',position,error:message}));if(assetId)try{await retireObject(assetId)}catch{};return json({error:`Image upload could not be completed: ${message}`},503)}}
-export async function deleteHomepageUpload(request:Request){const auth=await admin(request);if(auth.error)return auth.error;const {session}=auth;const body=await request.json() as {csrf?:string;id?:string};if(body.csrf!==session.csrf)return json({error:'Your session changed. Refresh and retry.'},403);if(!body.id||!ID.test(body.id))return json({error:'Invalid image.'},422);const db=lifecycleBindings().db,row=await db.prepare('SELECT asset_id FROM homepage_uploads WHERE id=?').bind(body.id).first<{asset_id:string}>();if(!row)return json({error:'Image not found.'},404);await db.prepare('DELETE FROM homepage_uploads WHERE id=?').bind(body.id).run();await retireObject(row.asset_id);await audit(db,session.user.id,'homepage_upload.deleted','homepage_upload',body.id,{});return json({ok:true})}
+  let committed=false
+  try{
+    assetId=await storeObject({category:'homepage_upload',relatedType:'homepage_upload',relatedId:id,originalName:fileName,contentType,size,createdBy:session.user.id,body:request.body,visibility:'published'})
+    if(existing)await db.prepare('UPDATE homepage_uploads SET asset_id=?,updated_at=? WHERE id=?').bind(assetId,now,id).run()
+    else await db.prepare('INSERT INTO homepage_uploads(id,asset_id,position,created_by,created_at,updated_at) VALUES(?,?,?,?,?,?)').bind(id,assetId,position,session.user.id,now,now).run()
+    committed=true
+    if(existing)await purgeHomepageObject(existing.asset_id)
+    await audit(db,session.user.id,'homepage_upload.saved','homepage_upload',id,{position,assetId})
+    return json({ok:true})
+  }catch(error){
+    console.error(JSON.stringify({message:'homepage_upload_failed',position,committed,error:error instanceof Error?error.message:'unknown'}))
+    if(committed)return json({ok:true,message:'Image saved. Previous-file cleanup will retry automatically.'})
+    if(assetId)try{await purgeHomepageObject(assetId)}catch{/* Scheduled cleanup retries. */}
+    return json({error:'Image upload could not be completed. Please retry.'},503)
+  }
+}
+export async function deleteHomepageUpload(request:Request){const auth=await admin(request);if(auth.error)return auth.error;const {session}=auth;const body=await request.json() as {csrf?:string;id?:string};if(body.csrf!==session.csrf)return json({error:'Your session changed. Refresh and retry.'},403);if(!body.id||!ID.test(body.id))return json({error:'Invalid image.'},422);const db=lifecycleBindings().db,row=await db.prepare('SELECT asset_id FROM homepage_uploads WHERE id=?').bind(body.id).first<{asset_id:string}>();if(!row)return json({error:'Image not found.'},404);await db.prepare('DELETE FROM homepage_uploads WHERE id=?').bind(body.id).run();await purgeHomepageObject(row.asset_id);await audit(db,session.user.id,'homepage_upload.deleted','homepage_upload',body.id,{});return json({ok:true})}
 
 export const Route=createFileRoute('/api/admin/uploads')({server:{handlers:{GET:({request})=>listHomepageUploads(request),POST:({request})=>saveHomepageUpload(request),DELETE:({request})=>deleteHomepageUpload(request)}}})

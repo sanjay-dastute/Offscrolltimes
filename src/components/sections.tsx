@@ -11,30 +11,12 @@ import {
 import { Reveal } from '#/components/Reveal';
 import { HomepageSlideshow } from '#/components/HomepageSlideshow';
 import { HomepagePoll } from '#/components/HomepagePoll';
+import { HomepageVideo } from '#/components/HomepageVideo';
 import { NextIssueNotice } from '#/components/NextIssueNotice';
 import { CTA, CTA_OUTLINE, EYEBROW, H2, SHELL, scallop } from '#/lib/uiKit';
 
 function IssueMockup() {
-  return (
-    <div className="interactive-newspaper overflow-hidden border border-graphite bg-paper-raised shadow-[8px_8px_0_rgba(23,21,18,0.14)]">
-      <video
-        className="block aspect-[4/5] w-full bg-sun object-cover"
-        autoPlay
-        loop
-        muted
-        playsInline
-        preload="metadata"
-        aria-label="Offscroll Times newspaper preview"
-        onEnded={({ currentTarget }) => {
-          currentTarget.currentTime = 0;
-          void currentTarget.play();
-        }}
-      >
-        <source src="/images/IMG_8051.mp4" type="video/mp4" />
-        Your browser does not support this video.
-      </video>
-    </div>
-  );
+  return <HomepageVideo />;
 }
 
 export function Hero() {

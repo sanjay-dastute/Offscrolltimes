@@ -2,6 +2,7 @@ import serverEntry from '@tanstack/react-start/server-entry'
 import { initRequestLifecycleBindings, lifecycleBindingsFromEnv, type LifecycleEnv } from '#/lib/lifecycle/env.server'
 import { recordOperationalHealth } from '#/lib/health.server'
 import { runRetentionCleanup } from '#/lib/retention.server'
+import { cleanupHomepageMedia } from '#/lib/object-storage.server'
 
 export default {
   fetch(request, env, _ctx) {
@@ -28,6 +29,7 @@ export default {
             console.error('offscroll_health_monitor_failed')
           }),
           runRetentionCleanup(bindings.db).catch(()=>console.error('offscroll_retention_cleanup_failed')),
+          ...(bindings.files?[cleanupHomepageMedia(bindings.db,bindings.files).catch(()=>console.error('homepage_media_cleanup_failed'))]:[]),
         ])
       })().catch(() => {
         console.error('scheduled_tick_failed')
