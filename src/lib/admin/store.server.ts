@@ -32,7 +32,11 @@ export async function getAdminDashboard(db: D1Database) {
       amount_minor, currency, paid_at, created_at FROM customer_payments ORDER BY created_at DESC,id DESC`).all(),
     db.prepare(`SELECT id, subscription_id, owner_id customer_id, edition_label, status,
       tracking_url, dispatched_at, delivered_at, created_at FROM customer_fulfilments ORDER BY created_at DESC,id DESC`).all(),
-    db.prepare(`SELECT * FROM editions WHERE deleted_at IS NULL ORDER BY dispatch_at DESC LIMIT 100`).all(),
+    db.prepare(`SELECT e.*,
+      COALESCE((SELECT SUM(quantity) FROM edition_inventory_entries WHERE edition_id=e.id AND kind='subscription'),0) subscription_copies,
+      COALESCE((SELECT SUM(quantity) FROM edition_inventory_entries WHERE edition_id=e.id AND kind='bulk_sale'),0) bulk_copies,
+      COALESCE((SELECT SUM(quantity) FROM edition_inventory_entries WHERE edition_id=e.id AND kind='marketing'),0) marketing_copies
+      FROM editions e WHERE deleted_at IS NULL ORDER BY issue_number DESC,dispatch_at DESC`).all(),
     db.prepare(`SELECT * FROM edition_eligibility_snapshots ORDER BY created_at DESC LIMIT 5000`).all(),
     db.prepare(`SELECT * FROM admin_products ORDER BY name`).all(),
     db.prepare(`SELECT * FROM admin_subscription_options ORDER BY duration_months`).all(),
@@ -93,6 +97,7 @@ export async function getAdminDashboard(db: D1Database) {
     if (country) dispatchedByCountry.set(country, (dispatchedByCountry.get(country) ?? 0) + Number(subscription?.quantity ?? 1))
   }
   return {
+    inventoryEntries:(await db.prepare('SELECT i.*,e.label edition_label,e.issue_number FROM edition_inventory_entries i JOIN editions e ON e.id=i.edition_id ORDER BY i.created_at DESC').all()).results,
     refundRequests:(await db.prepare("SELECT r.id,r.subscription_id,r.payment_id,r.created_at,p.amount_minor,p.currency,s.contact_email FROM customer_refund_requests r JOIN customer_payments p ON p.id=r.payment_id JOIN customer_subscriptions s ON s.id=r.subscription_id WHERE r.status='pending' ORDER BY r.created_at DESC").all()).results,
     visitorLocations: (await db.prepare(`WITH ranked AS (SELECT v.country_code,v.region_name,v.region_code,ROW_NUMBER() OVER (PARTITION BY COALESCE(v.account_key,v.device_key) ORDER BY v.created_at,v.device_key) position FROM analytics_visitors v WHERE EXISTS (SELECT 1 FROM first_party_analytics_events e WHERE e.visitor_key=v.device_key AND e.event_name='page_view')) SELECT country_code country,region_name state,region_code stateCode,COUNT(*) viewers FROM ranked WHERE position=1 GROUP BY country_code,region_name,region_code ORDER BY viewers DESC,country_code,region_name`).all()).results,
     deletionRequests: (await db.prepare("SELECT COUNT(*) total FROM customer_privacy_requests WHERE request_type='deletion' AND status IN ('received','reviewing')").first<{total:number}>())?.total ?? 0,
@@ -183,17 +188,27 @@ export async function createEdition(db: D1Database, actor: string, input: { labe
   // replacement using the same human issue number a new internal ID.
   const existing = await db.prepare(`SELECT id FROM editions WHERE id=?`).bind(baseEditionId).first()
   const editionId = existing ? `${baseEditionId}_${crypto.randomUUID()}` : baseEditionId
-  const committed = await committedCopiesForEdition(db, input.cutoff)
-  const available = Math.max(0, input.copiesAvailable - committed)
-  await db.prepare(`INSERT INTO editions (id, label, issue_number, eligibility_cutoff_at, dispatch_at, copies_available, status, created_at, updated_at)
-    VALUES (?, ?, ?, ?, ?, ?, 'draft', ?, ?)`).bind(editionId, input.label, input.issueNumber, input.cutoff, input.dispatch, available, Date.now(), Date.now()).run()
+  const committed = await committedCopiesForEdition(db, input.dispatch)
+  if(input.copiesAvailable<committed)throw new Error('Print quantity must cover existing paid subscription copies.')
+  const available = input.copiesAvailable - committed
+  await db.batch([
+    db.prepare(`INSERT INTO editions (id, label, issue_number, eligibility_cutoff_at, dispatch_at, copies_available,printed_copies, status, created_at, updated_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, 'draft', ?, ?)`).bind(editionId, input.label, input.issueNumber, input.cutoff, input.dispatch,input.copiesAvailable,input.copiesAvailable, Date.now(), Date.now()),
+    db.prepare(`INSERT INTO edition_inventory_entries(id,edition_id,kind,subscription_id,quantity,note,created_by,created_at)
+      SELECT 'subscription_'||?||'_'||id,?,'subscription',id,quantity,'Paid subscription reservation','system',? FROM customer_subscriptions
+      WHERE entitlement_status='paid' AND ${process.env.FULFIL_PAID_AFTER_CANCELLATION==='true'?"status IN ('active','cancelled')":"status='active'"}
+      AND copies_fulfilled<copies_total AND starts_at<=? AND COALESCE(paid_through_at,ends_at,0)>?
+      AND EXISTS(SELECT 1 FROM customer_payments p WHERE p.subscription_id=customer_subscriptions.id AND p.status='paid')`).bind(editionId,editionId,Date.now(),input.dispatch,input.dispatch),
+  ])
   await audit(db, actor, 'edition.created', 'edition', editionId, { ...input, committedCopies: committed, copiesAvailableAfterReservations: available })
   return editionId
 }
 
 export async function updateEdition(db: D1Database, actor: string, editionId: string, input: { label: string; issueNumber: number; cutoff: number; dispatch: number; copiesAvailable: number }) {
-  const committed = await committedCopiesForEdition(db, input.cutoff)
-  const available = Math.max(0, input.copiesAvailable - committed)
+  const consumed=await db.prepare('SELECT COALESCE(SUM(quantity),0) copies FROM edition_inventory_entries WHERE edition_id=?').bind(editionId).first<{copies:number}>()
+  const committed=Number(consumed?.copies??0)
+  if(input.copiesAvailable<committed)throw new Error('Print quantity cannot be smaller than copies already reserved, sold or issued.')
+  const available=input.copiesAvailable-committed
   const edition = await db.prepare(`SELECT label, status FROM editions WHERE id=? AND deleted_at IS NULL`).bind(editionId).first<{label:string;status:string}>()
   if (!edition || !['draft','eligibility_generated','locked'].includes(edition.status)) return false
   const progressed = await db.prepare(`SELECT id FROM customer_fulfilments WHERE edition_label=? AND status <> 'scheduled' LIMIT 1`).bind(edition.label).first()
@@ -201,9 +216,9 @@ export async function updateEdition(db: D1Database, actor: string, editionId: st
   // Renaming after a delivery row exists would sever its immutable fulfilment history.
   if (progressed || (hasFulfilments && edition.label !== input.label)) return false
   const result = await db.prepare(`UPDATE editions
-    SET label=?, issue_number=?, eligibility_cutoff_at=?, dispatch_at=?, copies_available=?, updated_at=?
+    SET label=?, issue_number=?, eligibility_cutoff_at=?, dispatch_at=?, copies_available=?,printed_copies=?, updated_at=?
     WHERE id=? AND deleted_at IS NULL`) 
-    .bind(input.label, input.issueNumber, input.cutoff, input.dispatch, available, Date.now(), editionId).run()
+    .bind(input.label, input.issueNumber, input.cutoff, input.dispatch, available,input.copiesAvailable, Date.now(), editionId).run()
   if ((result.meta.changes ?? 0) !== 1) return false
   await audit(db, actor, 'edition.updated', 'edition', editionId, { ...input, committedCopies: committed, copiesAvailableAfterReservations: available })
   return true
@@ -218,7 +233,7 @@ async function committedCopiesForEdition(db: D1Database, cutoff: number) {
       AND ${statusFilter}
       AND copies_fulfilled < copies_total
       AND starts_at IS NOT NULL AND starts_at <= ?
-      AND (paid_through_at IS NULL OR paid_through_at >= ?)
+      AND COALESCE(paid_through_at,ends_at,0) > ?
       AND EXISTS (SELECT 1 FROM customer_payments paid WHERE paid.subscription_id = customer_subscriptions.id AND paid.status = 'paid')`)
     .bind(cutoff, cutoff).first<{ copies: number }>()
   return Number(row?.copies ?? 0)
@@ -229,6 +244,7 @@ export async function deleteEdition(db: D1Database, actor: string, editionId: st
   if (!edition || !['draft','eligibility_generated','locked'].includes(edition.status)) return false
   const progressed = await db.prepare(`SELECT id FROM customer_fulfilments WHERE edition_label=? AND status <> 'scheduled' LIMIT 1`).bind(edition.label).first()
   if (progressed) return false
+  if(await db.prepare("SELECT id FROM edition_inventory_entries WHERE edition_id=? AND kind IN ('bulk_sale','marketing') LIMIT 1").bind(editionId).first())return false
   const now = Date.now()
   // Keep the locked eligibility/audit history but remove the edition from all
   // operational screens and free its human issue number for a replacement.

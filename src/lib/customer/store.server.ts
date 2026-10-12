@@ -1,4 +1,5 @@
 import { editionDispatchForTerm, subscriptionCycleStartAt } from '#/lib/dates'
+import { reserveSubscriptionInventory } from '#/lib/inventory.server'
 
 export type CustomerAddress = {
   name: string
@@ -272,8 +273,7 @@ export async function applyCustomerPaymentSucceeded(db: D1Database, input: {
 export async function reserveNextEditionCopies(db: D1Database, subscriptionId: string, paidAt: number, now: number) {
   // A sale reserves only one edition's quantity now. Future editions reserve
   // their own copies when the administrator creates their monthly issue.
-  await db.prepare(`UPDATE editions SET copies_available=copies_available-(SELECT quantity FROM customer_subscriptions WHERE id=?),updated_at=?
-    WHERE id=(SELECT id FROM editions WHERE eligibility_cutoff_at>=? AND status IN ('draft','eligibility_generated') AND copies_available>=(SELECT quantity FROM customer_subscriptions WHERE id=?) ORDER BY dispatch_at LIMIT 1)`).bind(subscriptionId,now,paidAt,subscriptionId).run()
+  await reserveSubscriptionInventory(db,subscriptionId,now,paidAt)
 }
 
 export async function recordCustomerSubscriptionRenewal(db: D1Database, input: {

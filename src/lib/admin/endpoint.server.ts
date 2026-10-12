@@ -160,14 +160,23 @@ export async function mutateAdmin(request: Request) {
     if (action === 'edition.create') {
       const label = text(body.label, 100), issueNumber = Number(body.issueNumber), copiesAvailable=Number(body.copiesAvailable ?? 0), dispatch = body.dispatch?Date.parse(String(body.dispatch)):NaN, cutoff = body.cutoff?Date.parse(String(body.cutoff)):dispatch-24*60*60*1000
       if (!label || !Number.isInteger(issueNumber) || issueNumber < 1 || !Number.isSafeInteger(copiesAvailable) || copiesAvailable < 0 || !Number.isFinite(cutoff) || !Number.isFinite(dispatch) || dispatch <= cutoff) return json({ error: 'Enter a valid edition name, number and copy quantity.' }, 422)
-      return json({ ok: true, id: await createEdition(database, session.user.id, { label, issueNumber, copiesAvailable, cutoff, dispatch }) })
+      try{return json({ ok: true, id: await createEdition(database, session.user.id, { label, issueNumber, copiesAvailable, cutoff, dispatch }) })}catch(error){if(error instanceof Error&&error.message.includes('Print quantity'))return json({error:error.message},409);throw error}
+    }
+    if(action==='inventory.entry'){
+      const editionId=text(body.editionId),kind=text(body.kind),quantity=Number(body.quantity),note=text(body.note,500),entryId=text(body.entryId)
+      if(!SAFE_ID.test(editionId)||!SAFE_ID.test(entryId)||!['bulk_sale','marketing'].includes(kind)||!Number.isSafeInteger(quantity)||quantity<=0||!note)return json({error:'Choose an edition, quantity and an entry note.'},422)
+      const edition=await database.prepare('SELECT id FROM editions WHERE id=? AND deleted_at IS NULL').bind(editionId).first()
+      if(!edition)return json({error:'Edition not found.'},404)
+      try{await database.prepare('INSERT INTO edition_inventory_entries(id,edition_id,kind,quantity,note,created_by,created_at) VALUES(?,?,?,?,?,?,?) ON CONFLICT(id) DO NOTHING').bind(entryId,editionId,kind,quantity,note,session.user.id,Date.now()).run()}catch(error){if(error instanceof Error&&error.message.includes('Not enough copies'))return json({error:'Not enough copies remaining for this entry.'},409);throw error}
+      await audit(database,session.user.id,'inventory.entry_created','edition',editionId,{kind,quantity,note,entryId})
+      return json({ok:true})
     }
     if (action === 'edition.update') {
       const editionId=text(body.editionId), label=text(body.label,100), issueNumber=Number(body.issueNumber), copiesAvailable=Number(body.copiesAvailable), dispatch=body.dispatch?Date.parse(String(body.dispatch)):NaN, cutoff=dispatch-24*60*60*1000
       if(!SAFE_ID.test(editionId)||!label||!Number.isInteger(issueNumber)||issueNumber<1||!Number.isSafeInteger(copiesAvailable)||copiesAvailable<0||!Number.isFinite(dispatch))return json({error:'Enter a valid edition name, number, copy quantity and dispatch date.'},422)
       try {
         return await updateEdition(database,session.user.id,editionId,{label,issueNumber,copiesAvailable,cutoff,dispatch})?json({ok:true}):json({error:'Only editions with no prepared or dispatched copies can be edited.'},409)
-      } catch { return json({error:'That edition number is already in use.'},409) }
+      } catch(error) { return json({error:error instanceof Error&&error.message.includes('Print quantity')?error.message:'That edition number is already in use.'},409) }
     }
     if (action === 'edition.delete') {
       const editionId=text(body.editionId)

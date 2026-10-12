@@ -9,9 +9,11 @@ import { AdminLogin } from "#/components/AdminLogin";
 import { AdminAnswers } from "#/components/AdminAnswers";
 import { AdminUploads } from "#/components/AdminUploads";
 import { AdminReferrals } from "#/components/AdminReferrals";
+import { AdminInventoryCounts } from "#/components/AdminInventoryCounts";
 
 type Row = Record<string, any>;
 type AdminData = {
+  inventoryEntries: Array<{id:string;edition_id:string;edition_label:string;kind:string;quantity:number;note:string;created_at:number}>;
   refundRequests: Array<{id:string;subscription_id:string;payment_id:string;created_at:number;amount_minor:number;currency:string;contact_email:string|null}>;
   visitorLocations: Array<{country:string|null;state:string|null;stateCode:string|null;viewers:number}>;
   deletionRequests: number;
@@ -223,7 +225,7 @@ function AdminPage() {
                 "customers",
                 "newsletter",
                 "subscriptions",
-                "editions",
+                "inventory",
                 "answers",
                 "uploads",
                 "offers",
@@ -257,7 +259,7 @@ function AdminPage() {
             {tab === "subscriptions" && (
               <Subscriptions data={data} busy={busy} mutate={mutate} />
             )}
-            {tab === "editions" && (
+            {tab === "inventory" && (
               <Editions data={data} busy={busy} mutate={mutate} />
             )}
             {tab === "answers" && <AdminAnswers csrf={data.csrf} />}
@@ -1219,7 +1221,7 @@ function SimpleEditionManager({
     if (issueNumber === null) return;
     const copiesAvailable = window.prompt(
       "Total copies to print",
-      String(edition.copies_available ?? 0),
+      String(edition.printed_copies ?? 0),
     );
     if (copiesAvailable === null) return;
     const dispatch = window.prompt(
@@ -1306,7 +1308,8 @@ function SimpleEditionManager({
         </p>
       </form>
       <section>
-        <h2 className={H2}>Edition inventory and fulfilment</h2>
+        <h2 className={H2}>Inventory and fulfilment</h2>
+        <AdminInventoryCounts editions={data.editions as Array<{id:string;label:string;issue_number:number;printed_copies:number;copies_available:number;subscription_copies:number;bulk_copies:number;marketing_copies:number}>} entries={data.inventoryEntries} busy={busy} mutate={mutate}/>
         <div className="mt-5 grid gap-5">
           {data.editions.length === 0 && (
             <p className={card}>No editions created yet.</p>
