@@ -20,6 +20,27 @@ it('supports four choices and a note, preserves counts for note changes and rese
   expect((await vote(new Request('https://example.com/api/poll',{method:'POST',headers:{Origin:'https://example.com','Content-Type':'application/json'},body:JSON.stringify({choice:1,revision:state.poll.revision})}))).status).toBe(409);
 })
 it('resets a newly created poll even if its wording is identical',async()=>{await save();await db.prepare("INSERT INTO homepage_poll_votes(id,poll_id,voter_key,choice,created_at) VALUES('v','homepage','test-voter',1,1)").run();await save({newPoll:true});expect(await db.prepare('SELECT COUNT(*) total FROM homepage_poll_votes').first()).toMatchObject({total:0});expect((await save({note:'one\ntwo\nthree'})).status).toBe(422)})
+it('accepts empty option fields and no note, displaying only the supplied options',async()=>{
+  expect((await save({optionThree:'',optionFour:'',note:''})).status).toBe(200)
+  expect(await (await getPoll(new Request('https://example.com/api/poll'))).json()).toMatchObject({poll:{note:'',options:[{id:1,label:'A'},{id:2,label:'B'}]}})
+  expect((await save({optionOne:'',optionTwo:'',optionThree:'C',optionFour:'',note:''})).status).toBe(200)
+  expect(await (await getPoll(new Request('https://example.com/api/poll'))).json()).toMatchObject({poll:{options:[{id:3,label:'C'}]}})
+  expect((await save({optionOne:'',optionTwo:'',optionThree:'',optionFour:'',note:''})).status).toBe(200)
+})
+it('adjusts stock when editing or moving manual entries and prevents overselling or rewriting subscription entries',async()=>{
+  const now=Date.now(),dispatch=Date.parse('2027-05-25T10:00:00Z')
+  for(const issueNumber of [1,2])await createEdition(db,'admin',{label:'Edit edition '+issueNumber,issueNumber,dispatch,cutoff:dispatch-86400000,copiesAvailable:10})
+  await db.prepare("INSERT INTO edition_inventory_entries(id,edition_id,kind,quantity,note,created_by,created_at) VALUES('editable','edition_1','bulk_sale',4,'Order','admin',?)").bind(now).run()
+  await db.prepare("UPDATE edition_inventory_entries SET quantity=2,note='Corrected',updated_at=? WHERE id='editable'").bind(now+1).run()
+  expect(await db.prepare("SELECT copies_available FROM editions WHERE id='edition_1'").first()).toMatchObject({copies_available:8})
+  await db.prepare("UPDATE edition_inventory_entries SET edition_id='edition_2',quantity=3,updated_at=? WHERE id='editable'").bind(now+2).run()
+  expect(await db.prepare("SELECT copies_available FROM editions WHERE id='edition_1'").first()).toMatchObject({copies_available:10})
+  expect(await db.prepare("SELECT copies_available FROM editions WHERE id='edition_2'").first()).toMatchObject({copies_available:7})
+  await expect(db.prepare("UPDATE edition_inventory_entries SET quantity=11 WHERE id='editable'").run()).rejects.toThrow('Not enough')
+  expect(await db.prepare("SELECT copies_available FROM editions WHERE id='edition_2'").first()).toMatchObject({copies_available:7})
+  await db.prepare("INSERT INTO edition_inventory_entries(id,edition_id,kind,quantity,note,created_by,created_at) VALUES('system','edition_1','subscription',1,'Reserved','system',?)").bind(now).run()
+  await expect(db.prepare("UPDATE edition_inventory_entries SET quantity=2 WHERE id='system'").run()).rejects.toThrow('Only bulk')
+})
 it('keeps per-edition totals, deducts bulk and marketing copies, and rejects overselling',async()=>{
   const paidAt=Date.parse('2027-01-25T01:00:00Z');await registerCustomerCheckout(db,{id:'inventory_term',userId:'inventory_owner',planId:'quarterly',planName:'3 months',durationMonths:3,quantity:2,currency:'INR',amountMinor:55500,now:paidAt});await applyCustomerPaymentSucceeded(db,{id:'inventory_term',payerUserId:'inventory_owner',paymentId:'pay_inventory',paidAt,now:paidAt});
   for(const [issueNumber,dispatch] of [[1,Date.parse('2027-01-25T10:00:00Z')],[20,Date.parse('2027-02-25T10:00:00Z')]])await createEdition(db,'admin',{label:'Edition '+issueNumber,issueNumber,dispatch,cutoff:dispatch-86400000,copiesAvailable:10});

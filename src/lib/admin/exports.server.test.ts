@@ -4,6 +4,7 @@ import { initRequestLifecycleBindings,resetRequestLifecycleBindings } from '../l
 import { sessionCookie } from '../auth.server'
 import { ADMIN_EXPORTS } from '#/content/admin-exports'
 import { downloadAdminExport,exportCsvCell } from './exports.server'
+import { registerCustomerCheckout,applyCustomerPaymentSucceeded } from '../customer/store.server'
 const origin='https://offscrolltimes.com'
 let db:D1Database, cookie:string
 beforeEach(async()=>{
@@ -14,6 +15,19 @@ beforeEach(async()=>{
 afterEach(()=>{vi.unstubAllEnvs();resetRequestLifecycleBindings()})
 const request=(dataset:string,format='csv',csrf='export-csrf')=>new Request(`${origin}/api/admin/export`,{method:'POST',headers:{Origin:origin,Cookie:cookie,'Content-Type':'application/json'},body:JSON.stringify({dataset,format,csrf})})
 describe('separate admin data exports',()=>{
+  it('exports only current delivery addresses belonging to active paid subscribers',async()=>{
+    const now=Date.now()
+    for(const label of ['active','cancelled','expired','future','unpaid']){
+      await db.prepare("INSERT INTO users(id,owner_id,role,account_state,created_at,updated_at) VALUES(?,?,'customer','active',?,?)").bind('u_'+label,label,now,now).run()
+      await db.prepare('INSERT INTO customers(id,user_id,created_at,updated_at) VALUES(?,?,?,?)').bind('c_'+label,'u_'+label,now,now).run()
+      await db.prepare("INSERT INTO addresses(id,customer_id,address_type,version,name,line1,city,postal_code,country,active_from,created_at) VALUES(?,?,'delivery',1,?,'1 Road','Pune','411001','IN',?,?)").bind('a_'+label,'c_'+label,label,now,now).run()
+      await registerCustomerCheckout(db,{id:'s_'+label,userId:label,planId:'monthly',planName:'Monthly',durationMonths:1,quantity:1,currency:'INR',amountMinor:19900,now})
+      if(label!=='unpaid')await applyCustomerPaymentSucceeded(db,{id:'s_'+label,payerUserId:label,paymentId:'pay_'+label,paidAt:now,now})
+      await db.prepare('UPDATE customer_subscriptions SET status=?,starts_at=?,paid_through_at=? WHERE id=?').bind(label==='cancelled'?'cancelled':'active',label==='future'?now+86400000:now-86400000,label==='expired'?now-1:now+86400000,'s_'+label).run()
+    }
+    await db.prepare("INSERT INTO addresses(id,customer_id,address_type,version,name,line1,city,postal_code,country,active_from,active_to,created_at) VALUES('old','c_active','delivery',2,'old-address','1 Road','Pune','411001','IN',1,2,1)").run()
+    const response=await downloadAdminExport(request('addresses','json'));expect(response.status).toBe(200);expect((await response.json() as Array<{name:string}>).map(row=>row.name)).toEqual(['active'])
+  })
   it('exports every configured category including empty CSV headers and audits each download',async()=>{
     for(const [key] of ADMIN_EXPORTS){const response=await downloadAdminExport(request(key));expect(response.status,key).toBe(200);expect(response.headers.get('Content-Disposition')).toContain(`${key}-`);expect((await response.text()).length).toBeGreaterThan(3)}
     expect(await db.prepare("SELECT COUNT(*) total FROM admin_audit_log WHERE action='data.exported'").first()).toEqual({total:ADMIN_EXPORTS.length})

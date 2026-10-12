@@ -171,6 +171,19 @@ export async function mutateAdmin(request: Request) {
       await audit(database,session.user.id,'inventory.entry_created','edition',editionId,{kind,quantity,note,entryId})
       return json({ok:true})
     }
+    if(action==='inventory.edit'){
+      const entryId=text(body.entryId),editionId=text(body.editionId),quantity=Number(body.quantity),note=text(body.note,500),expectedUpdatedAt=Number(body.expectedUpdatedAt)
+      if(!SAFE_ID.test(entryId)||!SAFE_ID.test(editionId)||!Number.isSafeInteger(quantity)||quantity<=0||!note||!Number.isSafeInteger(expectedUpdatedAt))return json({error:'Choose an edition, positive quantity and reference note.'},422)
+      const existing=await database.prepare("SELECT edition_id,kind,quantity,note,updated_at FROM edition_inventory_entries WHERE id=? AND kind IN ('bulk_sale','marketing')").bind(entryId).first<{edition_id:string;kind:string;quantity:number;note:string;updated_at:number}>()
+      if(!existing)return json({error:'Bulk sale or marketing entry not found.'},404)
+      if(!await database.prepare('SELECT id FROM editions WHERE id=? AND deleted_at IS NULL').bind(editionId).first())return json({error:'Edition not found.'},404)
+      try{
+        const result=await database.prepare('UPDATE edition_inventory_entries SET edition_id=?,quantity=?,note=?,updated_at=? WHERE id=? AND updated_at=?').bind(editionId,quantity,note,Math.max(Date.now(),existing.updated_at+1),entryId,expectedUpdatedAt).run()
+        if(!result.meta.changes)return json({error:'This entry has changed. Refresh it before editing again.'},409)
+      }catch(error){if(error instanceof Error&&error.message.includes('Not enough copies'))return json({error:'Not enough remaining stock for the revised quantity.'},409);throw error}
+      await audit(database,session.user.id,'inventory.entry_edited','inventory_entry',entryId,{before:{editionId:existing.edition_id,quantity:existing.quantity,note:existing.note},after:{editionId,quantity,note}})
+      return json({ok:true})
+    }
     if (action === 'edition.update') {
       const editionId=text(body.editionId), label=text(body.label,100), issueNumber=Number(body.issueNumber), copiesAvailable=Number(body.copiesAvailable), dispatch=body.dispatch?Date.parse(String(body.dispatch)):NaN, cutoff=dispatch-24*60*60*1000
       if(!SAFE_ID.test(editionId)||!label||!Number.isInteger(issueNumber)||issueNumber<1||!Number.isSafeInteger(copiesAvailable)||copiesAvailable<0||!Number.isFinite(dispatch))return json({error:'Enter a valid edition name, number, copy quantity and dispatch date.'},422)
@@ -250,7 +263,7 @@ export async function mutateAdmin(request: Request) {
     if (action === 'fulfilment.status') {
       const fulfilmentId = text(body.fulfilmentId), status = text(body.status, 30), trackingUrl = text(body.trackingUrl, 500), courier = text(body.courier, 100)
       if (!SAFE_ID.test(fulfilmentId) || !FULFILMENT_STATUSES.has(status) || (trackingUrl && !trackingUrl.startsWith('https://'))) return json({ error: 'Invalid fulfilment update.' }, 422)
-      return await updateFulfilment(database, session.user.id, fulfilmentId, status, trackingUrl, courier) ? json({ ok: true }) : json({ error: 'This fulfilment transition is not permitted or the edition is not locked.' }, 409)
+      return await updateFulfilment(database, session.user.id, fulfilmentId, status, trackingUrl, courier) ? json({ ok: true }) : json({ error: 'This fulfilment transition is not permitted.' }, 409)
     }
     if(action==='regional.price'){
       const countryCode=text(body.countryCode,2).toUpperCase(), currency=text(body.currency,3).toUpperCase(), amountMinor=Number(body.amountMinor)

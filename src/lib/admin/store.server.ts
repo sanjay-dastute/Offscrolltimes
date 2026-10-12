@@ -2,6 +2,7 @@ import type { CustomerAddress } from '#/lib/customer/store.server'
 import { recordAddressVersion } from '#/lib/canonical-data.server'
 import { recordAccountEvent } from '#/lib/customer/store.server'
 import { base64url } from '#/lib/codec'
+import { editionAddressExportAt } from '#/lib/dates'
 
 const id = () => crypto.randomUUID()
 
@@ -321,7 +322,7 @@ export async function updateFulfilment(db: D1Database, actor: string, fulfilment
   const previous = await db.prepare(`SELECT dispatched_at FROM customer_fulfilments WHERE id = ?`).bind(fulfilmentId).first<{ dispatched_at: number | null }>()
   if (!previous) return false
   const context = await db.prepare(`SELECT f.status previous_status,f.subscription_id,f.edition_label,e.id edition_id,e.status edition_status,s.owner_id FROM customer_fulfilments f JOIN editions e ON e.label=f.edition_label JOIN customer_subscriptions s ON s.id=f.subscription_id WHERE f.id=?`).bind(fulfilmentId).first<{previous_status:string;subscription_id:string;edition_label:string;edition_id:string;edition_status:string;owner_id:string}>()
-  if(!context || !['locked','dispatched','completed'].includes(context.edition_status)) return false
+  if(!context)return false
   const allowed:Record<string,string[]>={scheduled:['prepared'],prepared:['dispatched'],dispatched:['delivered','delayed','returned'],delayed:['delivered','returned','replacement'],returned:['replacement'],replacement:['prepared']}
   if(!allowed[context.previous_status]?.includes(status))return false
   const result = await db.prepare(`UPDATE customer_fulfilments SET status = ?, tracking_url = ?, courier = COALESCE(?, courier),
@@ -424,18 +425,17 @@ export async function upsertContent(db: D1Database, actor: string, key: string, 
 // Dispatch lists are generated for the subscribers entitled on the day of
 // export. The team prints these lists on the 26th, after subscriptions ending
 // on the 25th have either renewed or have fallen out of the delivery run.
-export async function dispatchRows(db: D1Database, editionId: string, asOf = Date.now()) {
-  const edition = await db.prepare(`SELECT label,status FROM editions WHERE id = ?`).bind(editionId).first<{ label: string; status:string }>()
-  if (!edition || !['locked','dispatched','completed'].includes(edition.status)) return null
-  const rows = await db.prepare(`SELECT f.id fulfilment_id, f.edition_label, s.contact_email, s.contact_phone, s.quantity, s.delivery_address_json, s.status subscription_status, s.ends_at
-    FROM customer_fulfilments f JOIN customer_subscriptions s ON s.id = f.subscription_id
-    WHERE f.edition_label = ? AND f.status IN ('scheduled','prepared') AND s.status='active' AND s.entitlement_status='paid'
-      AND s.starts_at IS NOT NULL AND s.starts_at <= ?
-      AND COALESCE(s.paid_through_at,s.ends_at,0) > ?
-      AND EXISTS(SELECT 1 FROM customer_payments p WHERE p.subscription_id=s.id AND p.status='paid') ORDER BY s.id`).bind(edition.label, asOf, asOf).all<{
-      fulfilment_id: string; edition_label: string; contact_email: string | null; contact_phone:string|null; quantity: number; delivery_address_json: string; subscription_status:string; ends_at:number|null
-    }>()
-  return rows.results.map(row => ({ ...row, address: parseAddress(row.delivery_address_json), delivery_address_json: undefined }))
+export async function dispatchRows(db: D1Database, editionId: string, asOf?:number) {
+  const edition=await db.prepare('SELECT label,dispatch_at FROM editions WHERE id=? AND deleted_at IS NULL').bind(editionId).first<{label:string;dispatch_at:number}>()
+  if(!edition)return null
+  const eligibilityAt=asOf??editionAddressExportAt(edition.dispatch_at)
+  const rows=await db.prepare(`SELECT s.id fulfilment_id,? edition_label,s.contact_email,s.contact_phone,s.quantity,s.delivery_address_json,s.status subscription_status,s.ends_at
+    FROM customer_subscriptions s WHERE s.status='active' AND s.entitlement_status='paid'
+    AND s.starts_at IS NOT NULL AND s.starts_at<=? AND COALESCE(s.paid_through_at,s.ends_at,0)>?
+    AND EXISTS(SELECT 1 FROM customer_payments p WHERE p.subscription_id=s.id AND p.status='paid')
+    AND NOT EXISTS(SELECT 1 FROM users u WHERE u.owner_id=s.owner_id AND u.account_state IN ('deleted','restricted'))
+    ORDER BY s.id`).bind(edition.label,eligibilityAt,eligibilityAt).all<{fulfilment_id:string;edition_label:string;contact_email:string|null;contact_phone:string|null;quantity:number;delivery_address_json:string|null;subscription_status:string;ends_at:number|null}>()
+  return rows.results.map(row=>({...row,address:parseAddress(row.delivery_address_json),delivery_address_json:undefined})).filter(row=>row.address?.name&&row.address.line1&&row.address.city&&row.address.postalCode&&row.address.country)
 }
 
 export async function activePaidDeliveryRows(db:D1Database, asOf = Date.now()){

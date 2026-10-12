@@ -1315,25 +1315,8 @@ function SimpleEditionManager({
             <p className={card}>No editions created yet.</p>
           )}
           {data.editions.map((edition) => {
-            const snapshots = data.eligibility.filter(
-                (item) => item.edition_id === edition.id,
-              ),
-              included = snapshots.filter((item) =>
-                ["included", "override_included"].includes(item.decision),
-              ),
-              excluded = snapshots.filter((item) =>
-                ["excluded", "override_excluded"].includes(item.decision),
-              ),
-              fulfilments = data.fulfilments.filter(
-                (item) => item.edition_label === edition.label,
-              ),
-              locked = ["locked", "dispatched", "completed"].includes(
-                edition.status,
-              ),
-              canManage =
-                ["draft", "eligibility_generated", "locked"].includes(
-                  String(edition.status),
-                ) && !fulfilments.some((item) => item.status !== "scheduled");
+            const fulfilments=data.fulfilments.filter(item=>item.edition_label===edition.label);
+            const canManage=['draft','eligibility_generated','locked'].includes(String(edition.status))&&!fulfilments.some(item=>item.status!=='scheduled');
             return (
               <article className={card} key={edition.id}>
                 <header className="flex flex-wrap items-start justify-between gap-4">
@@ -1371,73 +1354,10 @@ function SimpleEditionManager({
                         </button>
                       </>
                     )}
-                    {!locked && (
-                      <button
-                        disabled={busy}
-                        className={CTA_OUTLINE}
-                        onClick={() =>
-                          void mutate({
-                            action: "edition.generate",
-                            editionId: edition.id,
-                          })
-                        }
-                      >
-                        {snapshots.length
-                          ? "List generated"
-                          : "Generate delivery list"}
-                      </button>
-                    )}
-                    {edition.status === "eligibility_generated" && (
-                      <button
-                        disabled={busy}
-                        className={CTA}
-                        onClick={() => {
-                          const reason = window.prompt(
-                            "Approval note for this delivery list (required)",
-                          );
-                          if (reason && reason.trim().length >= 5)
-                            void mutate({
-                              action: "edition.lock",
-                              editionId: edition.id,
-                              reason,
-                            });
-                        }}
-                      >
-                        Approve & lock
-                      </button>
-                    )}
-                    {locked && (
-                      <a
-                        className={CTA_OUTLINE}
-                        href={`/api/admin/dispatch?edition=${encodeURIComponent(edition.id)}&format=pdf`}
-                      >
-                        Print address labels
-                      </a>
-                    )}
+                    <a className={CTA_OUTLINE} href={`/api/admin/dispatch?edition=${encodeURIComponent(edition.id)}&format=pdf`}>Print address labels</a>
                   </div>
                 </header>
-                {snapshots.length > 0 && (
-                  <div className="mt-5 grid gap-3 sm:grid-cols-3">
-                    <Metric label="Included" value={included.length} />
-                    <Metric label="Excluded" value={excluded.length} />
-                    <Metric
-                      label="Copies for delivery"
-                      value={fulfilments
-                        .filter((item) => item.status !== "returned")
-                        .reduce(
-                          (sum, item) =>
-                            sum +
-                            Number(
-                              data.subscriptions.find(
-                                (subscription) =>
-                                  subscription.id === item.subscription_id,
-                              )?.quantity ?? 1,
-                            ),
-                          0,
-                        )}
-                    />
-                  </div>
-                )}
+                <p className="mt-4 text-sm text-graphite-soft">Print directly for paid subscriptions eligible on the 26th of this edition’s month. No list generation or approval is required.</p>
                 <div className="mt-5 grid gap-2">
                   {fulfilments.map((item) => (
                     <div

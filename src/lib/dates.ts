@@ -23,6 +23,12 @@ export function editionDispatchForTerm(start:number) {
   return zonedTime(local.year,local.month,25,10,'Asia/Kolkata')
 }
 
+/** Address exports use eligibility on the 26th of the edition's month. */
+export function editionAddressExportAt(dispatchAt:number,timeZone='Asia/Kolkata'){
+  const local=zonedParts(dispatchAt,timeZone)
+  return zonedTime(local.year,local.month,26,0,timeZone)
+}
+
 /**
  * Subscription terms always begin on the monthly 25th. A purchase made after
  * that date joins the following month's cycle rather than starting mid-term.

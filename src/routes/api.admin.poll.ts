@@ -18,10 +18,10 @@ export async function saveHomepagePoll(request:Request){
   const auth=await admin(request);if(auth.error)return auth.error
   const body=await request.json().catch(()=>null) as PollBody|null
   if(!body||body.csrf!==auth.session.csrf)return json({error:'Your session changed. Refresh and retry.'},403)
-  const question=text(body.question,240),options=[body.optionOne,body.optionTwo,body.optionThree,body.optionFour].map(value=>text(value,80)),note=typeof body.note==='string'?body.note.trim():''
-  if(!question||options.some(value=>!value)||note.length>500||note.split(/\r?\n/).length>2)return json({error:'Enter a question, four options, and an optional note of up to two lines (500 characters).'},422)
+  const question=text(body.question,240),options=[body.optionOne,body.optionTwo,body.optionThree,body.optionFour].map(value=>typeof value==='string'?value.trim():''),note=typeof body.note==='string'?body.note.trim():''
+  if(!question||options.some(value=>value.length>80)||note.length>500||note.split(/\r?\n/).length>2)return json({error:'Enter a question. Options are optional (80 characters each); the optional note supports up to two lines and 500 characters.'},422)
   const db=lifecycleBindings().db,existing=await db.prepare("SELECT question,option_one,option_two,option_three,option_four,revision FROM homepage_poll WHERE id='homepage'").first<{question:string;option_one:string;option_two:string;option_three:string|null;option_four:string|null;revision:string}>()
-  const reset=body.newPoll===true||!existing||existing.question!==question||[existing.option_one,existing.option_two,existing.option_three,existing.option_four].some((value,index)=>value!==options[index])
+  const reset=body.newPoll===true||!existing||existing.question!==question||[existing.option_one,existing.option_two,existing.option_three,existing.option_four].some((value,index)=>(value??'')!==options[index])
   const now=Date.now(),revision=reset?crypto.randomUUID():existing!.revision
   await db.batch([
     ...(reset?[db.prepare("DELETE FROM homepage_poll_votes WHERE poll_id='homepage'")]:[]),

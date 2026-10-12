@@ -1,6 +1,6 @@
 export const ADMIN_EXPORTS = [
   ['customers','Customers','Names, email, phone, WhatsApp and current delivery address'],
-  ['addresses','Delivery addresses','Complete delivery address history'],
+  ['addresses','Delivery addresses','Current delivery addresses for active paid subscribers only'],
   ['orders','Orders','Order details and pricing snapshots'],
   ['subscriptions','Subscriptions','Plans, subscription status and paid entitlement'],
   ['payments','Payments','Recorded payment amounts and status'],

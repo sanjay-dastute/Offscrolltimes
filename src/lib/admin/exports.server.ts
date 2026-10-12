@@ -7,7 +7,12 @@ import { audit } from './store.server'
 
 const queries:Record<string,string>={
   customers:`SELECT u.id user_id,u.owner_id,u.account_state,c.id customer_id,c.display_name,COALESCE(c.email,u.primary_email) email,c.phone,c.whatsapp_number,c.marketing_consent,c.created_at,c.updated_at,a.name delivery_name,a.line1 address_line_1,a.line2 address_line_2,a.city,a.region,a.postal_code,a.country FROM users u LEFT JOIN customers c ON c.user_id=u.id LEFT JOIN addresses a ON a.id=(SELECT id FROM addresses WHERE customer_id=c.id AND address_type='delivery' AND active_to IS NULL ORDER BY version DESC LIMIT 1) WHERE u.role='customer' ORDER BY u.created_at,u.id`,
-  addresses:'SELECT * FROM addresses ORDER BY created_at,id',
+  addresses:`SELECT a.* FROM addresses a JOIN customers c ON c.id=a.customer_id JOIN users u ON u.id=c.user_id
+    WHERE a.address_type='delivery' AND a.active_to IS NULL AND u.account_state NOT IN ('deleted','restricted')
+    AND EXISTS(SELECT 1 FROM customer_subscriptions s WHERE s.owner_id=u.owner_id AND s.status='active' AND s.entitlement_status='paid'
+      AND s.starts_at IS NOT NULL AND s.starts_at<=? AND COALESCE(s.paid_through_at,s.ends_at,0)>?
+      AND EXISTS(SELECT 1 FROM customer_payments p WHERE p.subscription_id=s.id AND p.status='paid'))
+    ORDER BY a.created_at,a.id`,
   orders:'SELECT * FROM orders ORDER BY created_at,id',
   subscriptions:'SELECT * FROM customer_subscriptions ORDER BY created_at,id',
   payments:'SELECT * FROM customer_payments ORDER BY created_at,id',
@@ -53,7 +58,8 @@ export async function downloadAdminExport(request:Request){
     const db=lifecycleBindings().db
     // Read directly from D1, never from the paginated dashboard lists.
     // D1 column names also provide headers for empty datasets.
-    const raw=await db.prepare(queries[dataset]).raw({columnNames:true})
+    const statement=db.prepare(queries[dataset])
+    const raw=await (dataset==='addresses'?statement.bind(Date.now(),Date.now()):statement).raw({columnNames:true})
     const columns=raw[0] as string[]
     const rows=raw.slice(1).map(values=>Object.fromEntries(columns.map((column,index)=>[column,values[index]])))
     const content=newsletterText?rows.map(row=>String(row.email??'').trim()).filter(Boolean).join('\r\n')+'\r\n':format==='json'?JSON.stringify(rows,null,2):'\uFEFF'+[columns.map(exportCsvCell).join(','),...rows.map(row=>columns.map(column=>exportCsvCell(row[column])).join(','))].join('\r\n')
