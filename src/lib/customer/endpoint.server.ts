@@ -6,13 +6,11 @@ import { isSameOrigin } from '#/lib/security'
 import { recordAddressVersion } from '#/lib/canonical-data.server'
 import {
   listCustomerSubscriptions,
-  requestCustomerAction,
   updateCustomerAddress,
   createPrivacyRequest,
   type CustomerAddress,
 } from './store.server'
 import { RefundRequestError, requestFullRazorpayRefund } from '#/lib/refund.server'
-import { cancelRazorpaySubscription, RazorpayApiError } from '#/lib/razorpay.server'
 
 const SUBSCRIPTION_ID = /^[A-Za-z0-9_-]{6,160}$/
 const COUNTRY = /^[A-Z]{2}$/
@@ -77,7 +75,8 @@ export async function getCustomerDashboard(request: Request): Promise<Response> 
   const profile=await db.prepare(`SELECT c.display_name,COALESCE(c.email,u.primary_email) email,c.phone,c.whatsapp_number FROM customers c JOIN users u ON u.id=c.user_id WHERE u.owner_id=?`).bind(session.user.id).first()
   const address=await db.prepare(`SELECT a.name,a.line1,a.line2,a.city,a.region,a.postal_code postalCode,a.country FROM addresses a JOIN customers c ON c.id=a.customer_id JOIN users u ON u.id=c.user_id WHERE u.owner_id=? AND a.address_type='delivery' AND a.active_to IS NULL ORDER BY a.version DESC LIMIT 1`).bind(session.user.id).first()
   const referralCode=await customerReferralCode(db,session.user.id)
-  return json({ profileComplete: await isCustomerProfileComplete(db,session.user.id), user: session.user, csrf: session.csrf, identities: identities.results, profile, address, referralCode, ...data })
+  const refundRequests=await db.prepare('SELECT subscription_id subscriptionId,payment_id paymentId,status FROM customer_refund_requests WHERE owner_id=?').bind(session.user.id).all()
+  return json({refundRequests:refundRequests.results, profileComplete: await isCustomerProfileComplete(db,session.user.id), user: session.user, csrf: session.csrf, identities: identities.results, profile, address, referralCode, ...data })
 }
 
 export async function patchCustomerDashboard(request: Request): Promise<Response> {
@@ -159,29 +158,23 @@ export async function patchCustomerDashboard(request: Request): Promise<Response
   }
   if (body.action === 'pause' || body.action === 'resume')return json({error:'Pausing is not available.'},422)
   if (body.action === 'cancel') {
+    const owned=await db.prepare('SELECT id FROM customer_subscriptions WHERE id=? AND owner_id=?').bind(subscriptionId,session.user.id).first()
+    if(!owned)return json({error:'Subscription not found.'},404)
     const paid=await db.prepare("SELECT paid_at FROM customer_payments WHERE subscription_id=? AND owner_id=? AND status='paid' ORDER BY paid_at DESC LIMIT 1").bind(subscriptionId,session.user.id).first<{paid_at:number|null}>()
     if(paid?.paid_at&&Date.now()-paid.paid_at<48*60*60*1000){
       try{const result=await requestFullRazorpayRefund(db,{subscriptionId,ownerId:session.user.id,actorId:session.user.id,source:'customer'});return json({ok:true,message:result.status==='processed'?'Subscription cancelled and full refund processed.':'Subscription cancelled and full refund submitted to Razorpay.'})}catch(error){if(error instanceof RefundRequestError)return json({error:error.message},error.status);return json({error:'Cancellation refund could not be completed. Please retry.'},502)}
     }
-    const provider=await db.prepare(`SELECT razorpay_subscription_id FROM razorpay_recurring_subscriptions WHERE subscription_id=? AND owner_id=?`).bind(subscriptionId,session.user.id).first<{razorpay_subscription_id:string}>()
-    if(provider){
-      try{await cancelRazorpaySubscription(provider.razorpay_subscription_id)}catch(error){
-        if(error instanceof RazorpayApiError)return json({error:'Razorpay could not stop the next automatic debit. Please try again.'},502)
-        throw error
-      }
-    }
-    const updated = await requestCustomerAction(db, session.user.id, subscriptionId, body.action, Date.now())
-    return updated ? json({ ok: true,message:'Auto-renewal is cancelled. Your current prepaid term remains available.' }) : json({ error: 'Subscription not found.' }, 404)
+    if(!paid?.paid_at)return json({error:'Your full subscription payment has not been confirmed.'},409)
+    return json({error:'The 48-hour full-refund window has closed. You can still submit a refund request for administrator review.'},409)
   }
   if (body.action === 'refund') {
-    try {
-      const result=await requestFullRazorpayRefund(db,{subscriptionId,ownerId:session.user.id,actorId:session.user.id,source:'customer'})
-      return json({ok:true,message:result.status==='processed'?'Your full refund has been processed.':'Your full refund request is being processed by Razorpay.'})
-    } catch(error) {
-      if(error instanceof RefundRequestError)return json({error:error.message},error.status)
-      console.error('customer_refund_failed')
-      return json({error:'The refund could not be requested. Please try again.'},502)
-    }
+    const payment=await db.prepare("SELECT p.id FROM customer_payments p JOIN customer_subscriptions s ON s.id=p.subscription_id WHERE p.subscription_id=? AND s.owner_id=? AND p.status='paid' ORDER BY p.paid_at DESC LIMIT 1").bind(subscriptionId,session.user.id).first<{id:string}>()
+    if(!payment)return json({error:'No paid payment is available for a refund request.'},404)
+    const existing=await db.prepare("SELECT id FROM refunds WHERE payment_id=? AND provider_status IN ('requested','processing','processed')").bind(payment.id).first()
+    if(existing)return json({error:'A refund is already being processed or has been completed for this payment.'},409)
+    const now=Date.now()
+    await db.prepare("INSERT INTO customer_refund_requests(id,subscription_id,payment_id,owner_id,status,created_at,updated_at) VALUES(?,?,?,?,'pending',?,?) ON CONFLICT(payment_id) DO NOTHING").bind(crypto.randomUUID(),subscriptionId,payment.id,session.user.id,now,now).run()
+    return json({ok:true,message:'Your full refund request has been sent to the administrator for review.'})
   }
   return json({ error: 'Unsupported account action.' }, 400)
 }

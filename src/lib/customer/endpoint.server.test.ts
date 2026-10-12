@@ -39,6 +39,20 @@ beforeEach(() => {
 afterEach(() => resetRequestLifecycleBindings())
 
 describe('customer role and ownership endpoints', () => {
+  it('allows an administrator-review refund request after 48 hours and deduplicates submissions',async()=>{
+    const now=Date.now(),paidAt=now-72*3600000;
+    await registerCustomerCheckout(db,{id:'review_refund',userId:'review_owner',planId:'monthly',planName:'Monthly',durationMonths:1,quantity:1,currency:'INR',amountMinor:19900,now:paidAt});
+    await applyCustomerPaymentSucceeded(db,{id:'review_refund',payerUserId:'review_owner',paymentId:'pay_review',paidAt,now});
+    const send=(owner:string,action:string)=>requestFor(owner,'/api/customer',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({csrf:`csrf-${owner}`,subscriptionId:'review_refund',action})}).then(patchCustomerDashboard);
+    expect((await send('other_owner','refund')).status).toBe(404);
+    expect((await send('review_owner','cancel')).status).toBe(409);
+    expect((await send('review_owner','refund')).status).toBe(200);
+    expect((await send('review_owner','refund')).status).toBe(200);
+    expect(await db.prepare("SELECT COUNT(*) total FROM customer_refund_requests WHERE status='pending'").first()).toMatchObject({total:1});
+    expect(await db.prepare("SELECT status FROM customer_payments WHERE provider_payment_id='pay_review'").first()).toMatchObject({status:'paid'});
+    const dashboard=await getCustomerDashboard(await requestFor('review_owner','/api/customer'));
+    expect(await dashboard.json()).toMatchObject({refundRequests:[{subscriptionId:'review_refund',status:'pending'}]});
+  })
   it('persists identity, contact and address details and exposes them in the admin directory',async()=>{
     const identity=await authTesting.persistSocialIdentity('google','profile-test-subject','login@example.com',undefined,{name:'Original Reader'})
     const change=(body:Record<string,unknown>)=>requestFor(identity.ownerId,'/api/customer',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({csrf:`csrf-${identity.ownerId}`,...body})}).then(patchCustomerDashboard)

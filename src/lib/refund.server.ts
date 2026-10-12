@@ -7,12 +7,12 @@ export class RefundRequestError extends Error {
   constructor(message:string, public readonly status=409) { super(message) }
 }
 
-export async function requestFullRazorpayRefund(db:D1Database,input:{subscriptionId:string; ownerId?:string; actorId:string; source:'customer'|'administrator'; amountMinor?:number; now?:number}) {
+export async function requestFullRazorpayRefund(db:D1Database,input:{subscriptionId:string;paymentId?:string; ownerId?:string; actorId:string; source:'customer'|'administrator'; amountMinor?:number; now?:number}) {
   const now=input.now??Date.now()
   const row=await db.prepare(`SELECT p.id payment_id,p.provider_payment_id,p.amount_minor,p.currency,p.paid_at,p.status payment_status,
     s.owner_id,s.status subscription_status FROM customer_payments p JOIN customer_subscriptions s ON s.id=p.subscription_id
-    WHERE p.subscription_id=? AND p.status='paid' ${input.ownerId?'AND s.owner_id=?':''} ORDER BY p.paid_at DESC LIMIT 1`)
-    .bind(...(input.ownerId?[input.subscriptionId,input.ownerId]:[input.subscriptionId])).first<{payment_id:string;provider_payment_id:string|null;amount_minor:number;currency:string;paid_at:number|null;payment_status:string;owner_id:string;subscription_status:string}>()
+    WHERE p.subscription_id=? AND p.status='paid' ${input.ownerId?'AND s.owner_id=?':''} ${input.paymentId?'AND p.id=?':''} ORDER BY p.paid_at DESC LIMIT 1`)
+    .bind(input.subscriptionId,...(input.ownerId?[input.ownerId]:[]),...(input.paymentId?[input.paymentId]:[])).first<{payment_id:string;provider_payment_id:string|null;amount_minor:number;currency:string;paid_at:number|null;payment_status:string;owner_id:string;subscription_status:string}>()
   if(!row) throw new RefundRequestError('No refundable paid payment was found.',404)
   if(!row.provider_payment_id) throw new RefundRequestError('The Razorpay payment reference is missing.')
   if(input.source==='customer'&&(!input.ownerId||!row.paid_at||now-row.paid_at>=WINDOW_MS)) throw new RefundRequestError('The 48-hour refund window has closed.')
@@ -42,6 +42,7 @@ export async function requestFullRazorpayRefund(db:D1Database,input:{subscriptio
     .bind(`razorpay_${refund.id}`,row.payment_id,input.subscriptionId,refund.id,amount,row.currency,`${input.source} cancellation refund`,providerStatus,now,now).run()
   await db.prepare(`UPDATE customer_subscriptions SET status=?,entitlement_status=?,renewal_enabled=0,updated_at=? WHERE id=?`).bind(providerStatus==='processed'&&amount===row.amount_minor?'refunded':'cancelled',providerStatus==='processed'&&amount===row.amount_minor?'refunded':'exhausted',now,input.subscriptionId).run()
   if(providerStatus==='processed'&&amount===row.amount_minor) await db.prepare(`UPDATE customer_payments SET status='refunded',updated_at=? WHERE id=?`).bind(now,row.payment_id).run()
+  await db.prepare("UPDATE customer_refund_requests SET status='submitted',amount_minor=?,provider_refund_id=?,updated_at=? WHERE payment_id=? AND status='pending'").bind(amount,refund.id,now,row.payment_id).run()
   await recordAccountEvent(db,{userId:row.owner_id,subscriptionId:input.subscriptionId,eventType:providerStatus==='processed'?'refund_processed':'refund_requested',title:providerStatus==='processed'?'Refund processed':'Refund requested',detail:`Your ${row.currency} ${(amount/100).toFixed(2)} Razorpay refund is ${providerStatus}.`,now})
   return {status:providerStatus,refundId:refund.id,amountMinor:amount,currency:row.currency}
 }

@@ -12,6 +12,7 @@ import { AdminReferrals } from "#/components/AdminReferrals";
 
 type Row = Record<string, any>;
 type AdminData = {
+  refundRequests: Array<{id:string;subscription_id:string;payment_id:string;created_at:number;amount_minor:number;currency:string;contact_email:string|null}>;
   visitorLocations: Array<{country:string|null;state:string|null;stateCode:string|null;viewers:number}>;
   deletionRequests: number;
   user: { id: string; name?: string };
@@ -157,6 +158,15 @@ function AdminPage() {
     }
   }
 
+  async function approveRefund(request:AdminData['refundRequests'][number],partial=false){
+    const value=partial?window.prompt(`Enter the partial refund amount in ${request.currency}. Maximum ${(request.amount_minor/100).toFixed(2)}.`):String(request.amount_minor/100);
+    if(value===null)return;
+    const amountMinor=Math.round(Number(value)*100);
+    if(!value.trim()||!Number.isSafeInteger(amountMinor)||amountMinor<=0||amountMinor>request.amount_minor){window.alert('Enter a valid refund amount no greater than the payment.');return}
+    if(!window.confirm(`Approve ${request.currency} ${(amountMinor/100).toFixed(2)} refund and cancel this subscription?`))return;
+    if(await mutate({action:'refund_request.resolve',requestId:request.id,amountMinor,confirm:true}))window.alert('Refund initiated through Razorpay.');
+  }
+
   return (
     <>
       <SiteHeader />
@@ -243,6 +253,7 @@ function AdminPage() {
               />
             )}
             {tab === "overview" && <Overview data={data} />}
+            {data.refundRequests?.length > 0 && <section className="my-5 rounded-xl border border-graphite bg-paper-raised p-5"><h2 className="font-display text-2xl font-bold">Refund requests awaiting review ({data.refundRequests.length})</h2>{data.refundRequests.map(request=><article key={request.id} className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-rule pt-3"><div><strong>{request.contact_email ?? request.subscription_id}</strong><p className="text-sm">Paid {request.currency} {(request.amount_minor/100).toFixed(2)} · Requested {new Date(request.created_at).toLocaleDateString()}</p></div><div className="flex gap-2"><button disabled={busy} className={CTA_OUTLINE} onClick={()=>void approveRefund(request)}>Full refund</button><button disabled={busy} className={CTA_OUTLINE} onClick={()=>void approveRefund(request,true)}>Partial refund</button></div></article>)}</section>}
             {tab === "subscriptions" && (
               <Subscriptions data={data} busy={busy} mutate={mutate} />
             )}

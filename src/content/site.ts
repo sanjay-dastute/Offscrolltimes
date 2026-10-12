@@ -262,6 +262,11 @@ export const FAQ_MORE = [
   },
 ] as const;
 
+export const PAYMENT_MANDATE_FAQ = {
+  q: "Why does my payment page show an end date as far away as 2036?",
+  a: "Seeing a date like 2036 can be worrying, but it doesn’t mean you’ll be paying until then. Under Indian payment regulations, recurring payment mandates must have an expiry date, which can be set up to ten years ahead. This date indicates how long the payment authorisation remains valid, not how long you’re committed to paying. Your charges follow your subscription’s billing cycle, not the mandate’s expiry date.",
+} as const;
+
 export const FAQ_GROUPS = [
   {
     key: "publication",
@@ -286,6 +291,7 @@ export const FAQ_GROUPS = [
     key: "payment",
     title: "Payments and currencies",
     items: [
+      PAYMENT_MANDATE_FAQ,
       { q: "What does the payment cover?", a: "One payment covers all copies, delivery, and applicable taxes for your selected subscription term." },
       { q: "Which currencies and payment methods are supported?", a: "Online checkout currently supports INR for India delivery. Available payment methods appear in Razorpay Checkout. For international orders, contact us before ordering." },
     ],
@@ -528,6 +534,7 @@ export const GIFT_INFO = {
 };
 
 export const SUBSCRIPTION_FAQ = [
+  PAYMENT_MANDATE_FAQ,
   {
     q: "When am I charged again?",
     a: "Each purchase covers only the prepaid term you select. Place a new order if you would like another term.",

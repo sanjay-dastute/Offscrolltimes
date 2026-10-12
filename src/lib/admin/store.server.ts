@@ -93,6 +93,7 @@ export async function getAdminDashboard(db: D1Database) {
     if (country) dispatchedByCountry.set(country, (dispatchedByCountry.get(country) ?? 0) + Number(subscription?.quantity ?? 1))
   }
   return {
+    refundRequests:(await db.prepare("SELECT r.id,r.subscription_id,r.payment_id,r.created_at,p.amount_minor,p.currency,s.contact_email FROM customer_refund_requests r JOIN customer_payments p ON p.id=r.payment_id JOIN customer_subscriptions s ON s.id=r.subscription_id WHERE r.status='pending' ORDER BY r.created_at DESC").all()).results,
     visitorLocations: (await db.prepare(`WITH ranked AS (SELECT v.country_code,v.region_name,v.region_code,ROW_NUMBER() OVER (PARTITION BY COALESCE(v.account_key,v.device_key) ORDER BY v.created_at,v.device_key) position FROM analytics_visitors v WHERE EXISTS (SELECT 1 FROM first_party_analytics_events e WHERE e.visitor_key=v.device_key AND e.event_name='page_view')) SELECT country_code country,region_name state,region_code stateCode,COUNT(*) viewers FROM ranked WHERE position=1 GROUP BY country_code,region_name,region_code ORDER BY viewers DESC,country_code,region_name`).all()).results,
     deletionRequests: (await db.prepare("SELECT COUNT(*) total FROM customer_privacy_requests WHERE request_type='deletion' AND status IN ('received','reviewing')").first<{total:number}>())?.total ?? 0,
     referralSettings: referralSettings ?? { discount_basis_points: 0, updated_at: 0 },

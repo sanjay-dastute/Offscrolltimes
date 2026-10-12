@@ -212,6 +212,18 @@ export async function mutateAdmin(request: Request) {
       if (!SAFE_ID.test(subscriptionId) || !address || !address.name || !address.line1 || !address.city || !address.postalCode || !/^[A-Z]{2}$/.test(address.country) || reason.length < 5 || (email&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) || (phone&&!/^\+?[0-9 ()-]{7,30}$/.test(phone))) return json({ error: 'Enter complete delivery details, a valid email/phone and a correction reason.' }, 422)
       return await updateAdminAddress(database, session.user.id, subscriptionId, address, reason,{email,phone}) ? json({ ok:true }) : json({ error:'Subscription not found.' },404)
     }
+    if (action === 'refund_request.resolve') {
+      const requestId=text(body.requestId),amountMinor=Number(body.amountMinor)
+      if(!SAFE_ID.test(requestId)||body.confirm!==true||!Number.isSafeInteger(amountMinor)||amountMinor<=0)return json({error:'Confirm the refund request and amount.'},422)
+      const request=await database.prepare("SELECT subscription_id,payment_id FROM customer_refund_requests WHERE id=? AND status='pending'").bind(requestId).first<{subscription_id:string;payment_id:string}>()
+      if(!request)return json({error:'Refund request not found or already handled.'},404)
+      try{
+        const result=await requestFullRazorpayRefund(database,{subscriptionId:request.subscription_id,paymentId:request.payment_id,actorId:session.user.id,source:'administrator',amountMinor})
+        await database.prepare("UPDATE customer_refund_requests SET status='submitted',amount_minor=?,provider_refund_id=?,updated_at=? WHERE id=?").bind(result.amountMinor,result.refundId,Date.now(),requestId).run()
+        await audit(database,session.user.id,'customer.refund_request_approved','refund_request',requestId,{amountMinor,refundId:result.refundId})
+        return json({ok:true,message:'Refund initiated through Razorpay.'})
+      }catch(error){if(error instanceof RefundRequestError)return json({error:error.message},error.status);return json({error:'Refund could not be confirmed. Check Razorpay before retrying.'},502)}
+    }
     if (action === 'payment.refund' || action === 'subscription.cancel_refund') {
       const subscriptionId=text(body.subscriptionId)
       if(!SAFE_ID.test(subscriptionId))return json({error:'Invalid subscription.'},422)

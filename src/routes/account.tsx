@@ -24,6 +24,7 @@ import {
 import { AccountDeliveryAddress } from "#/components/AccountDeliveryAddress";
 
 type DashboardData = {
+  refundRequests: Array<{subscriptionId:string;paymentId:string;status:string}>;
   profileComplete?: boolean;
   user: {
     id: string;
@@ -159,7 +160,7 @@ function AccountPage() {
     if (!data || busy) return;
     if (
       !window.confirm(
-        actionName === 'cancel' ? 'Cancel this subscription? Within 48 hours of payment, a full refund is automatically requested. After 48 hours, only future renewal is stopped.' : "Cancel this subscription and request a full refund to the original payment method? This is available only within 48 hours of payment.",
+        actionName === 'cancel' ? 'Cancel this subscription and initiate a full refund to the original payment method?' : 'Send a full refund request to the administrator for review? The administrator will decide the approved refund amount.',
       )
     )
       return;
@@ -183,6 +184,7 @@ function AccountPage() {
         setError(result.error ?? "The subscription could not be updated.");
       else {
         setNotice(result.message ?? "Subscription updated.");
+        window.alert(actionName === 'cancel' ? 'Your refund has been initiated.' : 'Your refund request has been sent to the administrator for review.');
         await load();
       }
     } catch {
@@ -363,6 +365,9 @@ function AccountPage() {
                       latestPayment.paidAt &&
                       Date.now() - latestPayment.paidAt < 48 * 60 * 60 * 1000,
                     );
+                  const refundPending = data.refundRequests?.some(request => request.paymentId === latestPayment?.id && request.status === 'pending');
+                  const canRequestRefund = latestPayment?.status === 'paid' && !['requested','processing','processed'].includes(latestPayment.refundStatus ?? '') && !refundPending;
+                  const refundWindowExpired = Boolean(latestPayment?.paidAt && Date.now()-latestPayment.paidAt >= 48*60*60*1000);
                   const daysRemaining = subscription.paidThroughAt
                     ? Math.ceil(
                         (subscription.paidThroughAt - Date.now()) / 86400000,
@@ -536,15 +541,15 @@ function AccountPage() {
                             </p>
                           )}
                         <div className="w-full">
-                          <button disabled={busy || ['cancelled','refunded','completed'].includes(subscription.status)} className={`${CTA_OUTLINE} mr-3 disabled:opacity-40`} onClick={() => void action(subscription.id, 'cancel')}>Cancel subscription</button>
+                          <button disabled={busy || !canRefund} className={`${CTA_OUTLINE} mr-3 disabled:opacity-40`} onClick={() => void action(subscription.id, 'cancel')}>Cancel &amp; refund</button>
                           <button
-                            disabled={busy || !canRefund}
+                            disabled={busy || !canRequestRefund}
                             className={`${CTA_OUTLINE} disabled:cursor-not-allowed disabled:opacity-40`}
                             onClick={() =>
                               void action(subscription.id, "refund")
                             }
                           >
-                            Request full refund
+                            {refundPending ? 'Refund request submitted' : 'Request full refund'}
                           </button>
                           <p className="mt-2 text-sm">
                             {latestPayment?.status === "refunded"
@@ -555,9 +560,11 @@ function AccountPage() {
                                 ? "Razorpay has processed your refund."
                               : !latestPayment?.paidAt
                                 ? "Refunds become available after your full subscription payment is confirmed."
-                              : canRefund
-                                ? "Full refunds are available for 48 hours after payment."
-                                : "The 48-hour full-refund window has closed."}
+                              : refundWindowExpired
+                                ? "The 48-hour full-refund window has closed. You can still request administrator review."
+                              : refundPending
+                                ? "Your refund request is awaiting administrator review."
+                                : "Cancel & refund initiates a full refund within 48 hours of payment. Request full refund sends a request for administrator review."}
                           </p>
                         </div>
                         <a
