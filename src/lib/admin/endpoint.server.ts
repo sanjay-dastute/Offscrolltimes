@@ -171,6 +171,16 @@ export async function mutateAdmin(request: Request) {
       await audit(database,session.user.id,'inventory.entry_created','edition',editionId,{kind,quantity,note,entryId})
       return json({ok:true})
     }
+    if(action==='inventory.delete'){
+      const entryId=text(body.entryId),expectedUpdatedAt=Number(body.expectedUpdatedAt)
+      if(!SAFE_ID.test(entryId)||body.confirm!==true||!Number.isSafeInteger(expectedUpdatedAt))return json({error:'Confirm the inventory entry deletion.'},422)
+      const existing=await database.prepare("SELECT edition_id,kind,quantity,note,updated_at FROM edition_inventory_entries WHERE id=? AND kind IN ('bulk_sale','marketing')").bind(entryId).first<{edition_id:string;kind:string;quantity:number;note:string;updated_at:number}>()
+      if(!existing)return json({error:'Bulk sale or marketing entry not found.'},404)
+      const result=await database.prepare("DELETE FROM edition_inventory_entries WHERE id=? AND updated_at=? AND kind IN ('bulk_sale','marketing')").bind(entryId,expectedUpdatedAt).run()
+      if(!result.meta.changes)return json({error:'This entry has changed. Refresh before deleting it.'},409)
+      await audit(database,session.user.id,'inventory.entry_deleted','inventory_entry',entryId,{editionId:existing.edition_id,kind:existing.kind,restoredCopies:existing.quantity,note:existing.note})
+      return json({ok:true})
+    }
     if(action==='inventory.edit'){
       const entryId=text(body.entryId),editionId=text(body.editionId),quantity=Number(body.quantity),note=text(body.note,500),expectedUpdatedAt=Number(body.expectedUpdatedAt)
       if(!SAFE_ID.test(entryId)||!SAFE_ID.test(editionId)||!Number.isSafeInteger(quantity)||quantity<=0||!note||!Number.isSafeInteger(expectedUpdatedAt))return json({error:'Choose an edition, positive quantity and reference note.'},422)

@@ -59,6 +59,7 @@ const MIGRATION_FILES = [
   '0050_customer_refund_requests.sql',
   '0051_poll_inventory.sql',
   '0052_manual_inventory_edits.sql',
+  '0053_manual_inventory_delete.sql',
 ]
 
 export function createTestD1(): D1Database {

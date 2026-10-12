@@ -41,6 +41,17 @@ it('adjusts stock when editing or moving manual entries and prevents overselling
   await db.prepare("INSERT INTO edition_inventory_entries(id,edition_id,kind,quantity,note,created_by,created_at) VALUES('system','edition_1','subscription',1,'Reserved','system',?)").bind(now).run()
   await expect(db.prepare("UPDATE edition_inventory_entries SET quantity=2 WHERE id='system'").run()).rejects.toThrow('Only bulk')
 })
+it('restores stock once when deleting bulk or marketing entries and protects subscription reservations',async()=>{
+  const now=Date.now(),dispatch=Date.parse('2027-05-25T10:00:00Z')
+  await createEdition(db,'admin',{label:'Delete stock',issueNumber:1,dispatch,cutoff:dispatch-86400000,copiesAvailable:100})
+  for(const [id,kind,quantity] of [['bulk','bulk_sale',25],['marketing','marketing',10],['system','subscription',3]] as const)await db.prepare('INSERT INTO edition_inventory_entries(id,edition_id,kind,quantity,note,created_by,created_at) VALUES(?,?,?,?,?,?,?)').bind(id,'edition_1',kind,quantity,'Test','admin',now).run()
+  expect(await db.prepare("SELECT copies_available FROM editions WHERE id='edition_1'").first()).toMatchObject({copies_available:62})
+  await db.prepare("DELETE FROM edition_inventory_entries WHERE id='bulk'").run();await db.prepare("DELETE FROM edition_inventory_entries WHERE id='bulk'").run()
+  expect(await db.prepare("SELECT copies_available FROM editions WHERE id='edition_1'").first()).toMatchObject({copies_available:87})
+  await db.prepare("DELETE FROM edition_inventory_entries WHERE id='marketing'").run()
+  expect(await db.prepare("SELECT copies_available FROM editions WHERE id='edition_1'").first()).toMatchObject({copies_available:97})
+  await expect(db.prepare("DELETE FROM edition_inventory_entries WHERE id='system'").run()).rejects.toThrow('Subscription inventory')
+})
 it('keeps per-edition totals, deducts bulk and marketing copies, and rejects overselling',async()=>{
   const paidAt=Date.parse('2027-01-25T01:00:00Z');await registerCustomerCheckout(db,{id:'inventory_term',userId:'inventory_owner',planId:'quarterly',planName:'3 months',durationMonths:3,quantity:2,currency:'INR',amountMinor:55500,now:paidAt});await applyCustomerPaymentSucceeded(db,{id:'inventory_term',payerUserId:'inventory_owner',paymentId:'pay_inventory',paidAt,now:paidAt});
   for(const [issueNumber,dispatch] of [[1,Date.parse('2027-01-25T10:00:00Z')],[20,Date.parse('2027-02-25T10:00:00Z')]])await createEdition(db,'admin',{label:'Edition '+issueNumber,issueNumber,dispatch,cutoff:dispatch-86400000,copiesAvailable:10});
