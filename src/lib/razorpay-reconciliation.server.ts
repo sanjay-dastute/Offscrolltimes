@@ -72,6 +72,7 @@ export async function reconcileRazorpayPayments(db: D1Database, limit = 100): Pr
           if (activated) {
             await db.prepare(`UPDATE razorpay_orders SET razorpay_payment_id=?,status='captured',updated_at=? WHERE subscription_id=?`).bind(paymentId, Date.now(), row.subscription_id).run()
             summary.activated += 1
+            row.status = 'active'
           }
         } else {
           const renewed = await recordCustomerSubscriptionRenewal(db, {

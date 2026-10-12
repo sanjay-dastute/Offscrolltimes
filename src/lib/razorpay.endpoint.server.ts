@@ -3,13 +3,15 @@ import { lifecycleBindings } from '#/lib/lifecycle/env.server'
 import { isSameOrigin } from '#/lib/security'
 import { json } from '#/lib/http.server'
 import { calculatePricing } from '#/lib/pricing.server'
-import { applyCustomerPaymentSucceeded, recordAccountEvent, recordCustomerSubscriptionRenewal, registerCustomerCheckout, saveCustomerCheckoutDetails, type CustomerAddress } from '#/lib/customer/store.server'
+import { applyCustomerPaymentSucceeded, recordAccountEvent, registerCustomerCheckout, saveCustomerCheckoutDetails, type CustomerAddress } from '#/lib/customer/store.server'
 import { createRazorpayOrder, RazorpayApiError, razorpayPublicKey, retrieveRazorpayPayment, verifyCheckoutSignature, verifyWebhookSignature } from './razorpay.server'
 import { BUSINESS_DETAILS, CONTACT_EMAIL, CONTACT_HOURS } from '#/content/site'
 import { recordCustomerOrder } from '#/lib/canonical-data.server'
 import { allowRequest } from '#/lib/rate-limit.server'
 import { recordOperationalAnalytics } from '#/lib/analytics.server'
 import { storeObject } from '#/lib/object-storage.server'
+import { retrieveRazorpayInvoice } from './razorpay.server'
+import { recordVerifiedRecurringPayment } from './razorpay-recurring-payment.server'
 
 const safe=(v:unknown,n=160)=>typeof v==='string'?v.trim().slice(0,n):''
 const address=(v:unknown):CustomerAddress|null=>{if(!v||typeof v!=='object')return null;const x=v as Record<string,unknown>;const a={name:safe(x.name,100),line1:safe(x.line1),line2:safe(x.line2)||undefined,city:safe(x.city,100),region:safe(x.region,100)||undefined,postalCode:safe(x.postalCode,24),country:safe(x.country,2).toUpperCase()};return a.name&&a.line1&&a.city&&a.region&&a.postalCode&&/^[A-Z]{2}$/.test(a.country)?a:null}
@@ -103,13 +105,10 @@ export async function razorpayWebhook(request:Request){
   try{
     const event=JSON.parse(raw) as Record<string,any>,type=String(event.event??''),payment=event.payload?.payment?.entity,providerSubscription=event.payload?.subscription?.entity
     if(providerSubscription?.id&&type==='subscription.cancelled')await db.prepare(`UPDATE customer_subscriptions SET status='cancelled',renewal_enabled=0,cancellation_requested_at=?,updated_at=? WHERE id=(SELECT subscription_id FROM razorpay_recurring_subscriptions WHERE razorpay_subscription_id=?)`).bind(Date.now(),Date.now(),providerSubscription.id).run()
-    if(payment?.subscription_id&&type==='payment.captured'){
-      const recurring=await db.prepare(`SELECT rs.subscription_id,rs.next_charge_at,ro.razorpay_payment_id FROM razorpay_recurring_subscriptions rs JOIN razorpay_orders ro ON ro.subscription_id=rs.subscription_id WHERE rs.razorpay_subscription_id=?`).bind(payment.subscription_id).first<{subscription_id:string;next_charge_at:number|null;razorpay_payment_id:string|null}>()
-      if(recurring){
-        const paidAt=Number(payment.created_at)*1000
-        if(!recurring.razorpay_payment_id||recurring.razorpay_payment_id===payment.id)await captured(db,{subscriptionId:recurring.subscription_id,userId:(await db.prepare(`SELECT owner_id FROM customer_subscriptions WHERE id=?`).bind(recurring.subscription_id).first<{owner_id:string}>())?.owner_id??'',paymentId:payment.id,paidAt})
-        else await recordCustomerSubscriptionRenewal(db,{id:recurring.subscription_id,paymentId:payment.id,paidAt,amountMinor:Number(payment.amount),currency:String(payment.currency),nextChargeAt:recurring.next_charge_at,now:Date.now()})
-      }
+    if(payment && ['payment.captured','subscription.authenticated','subscription.charged'].includes(type)){
+      let providerId=payment.subscription_id || providerSubscription?.id
+      if(!providerId&&payment.invoice_id){const invoice=await retrieveRazorpayInvoice(payment.invoice_id);if(invoice.payment_id===payment.id)providerId=invoice.subscription_id}
+      if(providerId)await recordVerifiedRecurringPayment(db,String(providerId),payment)
     }
     if(payment?.order_id){const row=await db.prepare(`SELECT subscription_id,owner_id FROM razorpay_orders WHERE razorpay_order_id=?`).bind(payment.order_id).first<{subscription_id:string;owner_id:string}>();if(row){
       if(type==='payment.captured'||type==='order.paid'){await db.prepare(`UPDATE razorpay_orders SET razorpay_payment_id=?,status='captured',updated_at=? WHERE razorpay_order_id=?`).bind(payment.id,Date.now(),payment.order_id).run();await captured(db,{subscriptionId:row.subscription_id,userId:row.owner_id,paymentId:payment.id,paidAt:Number(payment.created_at)*1000})}

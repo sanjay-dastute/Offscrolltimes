@@ -51,7 +51,7 @@ export async function mutateAdmin(request: Request) {
       const result = await reconcileRazorpayPayments(database)
       let schedulesAligned=0, schedulesSkipped=0
       if(body.alignSchedules===true){
-        const candidates=await database.prepare(`SELECT s.id,s.starts_at,r.razorpay_subscription_id
+        const candidates=await database.prepare(`SELECT s.id,CASE WHEN json_extract(s.pricing_snapshot_json,'$.billingCollection')='upfront_first_term' THEN s.ends_at ELSE s.starts_at END starts_at,r.razorpay_subscription_id
           FROM customer_subscriptions s JOIN razorpay_recurring_subscriptions r ON r.subscription_id=s.id
           WHERE s.status='active' AND s.entitlement_status='paid' AND s.starts_at>? AND EXISTS(SELECT 1 FROM customer_payments p WHERE p.subscription_id=s.id AND p.status='paid')
           ORDER BY r.created_at DESC`).bind(Date.now()).all<{id:string;starts_at:number;razorpay_subscription_id:string}>()
@@ -71,7 +71,7 @@ export async function mutateAdmin(request: Request) {
     if (action === 'razorpay.align_schedule') {
       const subscriptionId=text(body.subscriptionId)
       if(!SAFE_ID.test(subscriptionId)) return json({error:'Invalid subscription.'},422)
-      const row=await database.prepare(`SELECT s.starts_at,r.razorpay_subscription_id
+      const row=await database.prepare(`SELECT CASE WHEN json_extract(s.pricing_snapshot_json,'$.billingCollection')='upfront_first_term' THEN s.ends_at ELSE s.starts_at END starts_at,r.razorpay_subscription_id
         FROM customer_subscriptions s JOIN razorpay_recurring_subscriptions r ON r.subscription_id=s.id
         WHERE s.id=? ORDER BY r.created_at DESC LIMIT 1`).bind(subscriptionId).first<{starts_at:number|null;razorpay_subscription_id:string}>()
       const startAt=Number(row?.starts_at??0)

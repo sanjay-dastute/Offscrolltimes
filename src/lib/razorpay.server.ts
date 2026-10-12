@@ -36,10 +36,11 @@ export async function createRazorpayPlan(input:{period:'monthly'|'quarterly'|'ye
   return api('/plans',{method:'POST',body:JSON.stringify({period:input.period,interval:input.interval,item:{name:input.name,amount:input.amount,currency:input.currency,description:input.description},notes:input.notes})})
 }
 
-export async function createRazorpaySubscription(input:{planId:string;totalCount:number;notes:Record<string,string>;startAt?:number}) {
+export async function createRazorpaySubscription(input:{planId:string;totalCount:number;notes:Record<string,string>;startAt?:number;upfront?:{amount:number;currency:string;name:string}}) {
   if(!input.planId||!Number.isSafeInteger(input.totalCount)||input.totalCount<1) throw new RangeError('A valid subscription plan and billing-cycle count are required.')
   if(input.startAt!==undefined&&(!Number.isSafeInteger(input.startAt)||input.startAt<=Math.floor(Date.now()/1000))) throw new RangeError('Subscription start time must be in the future.')
-  return api('/subscriptions',{method:'POST',body:JSON.stringify({plan_id:input.planId,total_count:input.totalCount,quantity:1,customer_notify:false,notes:input.notes,...(input.startAt?{start_at:input.startAt}:{})})})
+  if(input.upfront&&(!Number.isSafeInteger(input.upfront.amount)||input.upfront.amount<100||!input.startAt))throw new RangeError('A valid prepaid amount and future renewal date are required.')
+  return api('/subscriptions',{method:'POST',body:JSON.stringify({plan_id:input.planId,total_count:input.totalCount,quantity:1,customer_notify:false,notes:input.notes,...(input.startAt?{start_at:input.startAt}:{}),...(input.upfront?{addons:[{item:{name:input.upfront.name,amount:input.upfront.amount,currency:input.upfront.currency}}]}:{})})})
 }
 
 // Subscriptions created before the launch-calendar change can retain an old
@@ -57,6 +58,7 @@ export async function cancelRazorpaySubscription(subscriptionId:string, immediat
 }
 
 export async function retrieveRazorpayPayment(id:string){ return api(`/payments/${encodeURIComponent(id)}`) }
+export async function retrieveRazorpayInvoice(id:string){ return api(`/invoices/${encodeURIComponent(id)}`) }
 
 // Razorpay invoices are the authoritative record of a subscription charge.
 // Unlike the browser callback, they are available after a customer closes the

@@ -549,6 +549,12 @@ function AccountPage() {
                           <p className="mt-2 text-sm">
                             {latestPayment?.status === "refunded"
                               ? "This payment has been refunded."
+                              : ['requested','processing'].includes(latestPayment?.refundStatus ?? '')
+                                ? "Your refund is being processed by Razorpay. No further action is needed."
+                              : latestPayment?.refundStatus === 'processed'
+                                ? "Razorpay has processed your refund."
+                              : !latestPayment?.paidAt
+                                ? "Refunds become available after your full subscription payment is confirmed."
                               : canRefund
                                 ? "Full refunds are available for 48 hours after payment."
                                 : "The 48-hour full-refund window has closed."}

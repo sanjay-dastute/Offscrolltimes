@@ -53,19 +53,21 @@ export async function razorpaySubscriptionCheckout(request: Request) {
     const localSubscriptionId = `rzp_${idempotencyKey}`
     const now = Date.now()
     const termStartsAt = effectiveSubscriptionStartAt(now)
+    const firstRenewalAt = addSubscriptionMonths(termStartsAt,durationMonths)
+    const billingQuote = {...quote,billingCollection:'upfront_first_term',termStartsAt,firstRenewalAt}
     checkoutStage = 'saving your subscription details'
-    await registerCustomerCheckout(db, { id: localSubscriptionId, userId: session.user.id, planId: `razorpay_${durationMonths}`, planName: `${durationMonths} month`, durationMonths, quantity, currency: quote.currency, amountMinor: quote.totalMinor, pricingSnapshot: quote, now })
+    await registerCustomerCheckout(db, { id: localSubscriptionId, userId: session.user.id, planId: `razorpay_${durationMonths}`, planName: `${durationMonths} month`, durationMonths, quantity, currency: quote.currency, amountMinor: quote.totalMinor, pricingSnapshot: billingQuote, now })
     await saveCustomerCheckoutDetails(db, { id: localSubscriptionId, userId: session.user.id, email, address: delivery, now })
-    await db.prepare(`UPDATE customer_subscriptions SET contact_phone=?,renewal_enabled=1,renewal_at=?,renewal_amount_minor=? WHERE id=?`).bind(phone, addSubscriptionMonths(termStartsAt,durationMonths), quote.totalMinor, localSubscriptionId).run()
+    await db.prepare(`UPDATE customer_subscriptions SET contact_phone=?,starts_at=?,ends_at=?,renewal_enabled=1,renewal_at=?,renewal_amount_minor=? WHERE id=?`).bind(phone,termStartsAt,firstRenewalAt,firstRenewalAt, quote.totalMinor, localSubscriptionId).run()
     try {
       checkoutStage = 'creating the Razorpay payment plan'
       const plan = await createRazorpayPlan({ ...schedule, amount: quote.totalMinor, currency: quote.currency, name: `Offscroll Times ${durationMonths}-month subscription`, description: `${quantity} copy/copies per edition, billed every ${durationMonths} month(s).`, notes: { local_subscription_id: localSubscriptionId, duration_months: String(durationMonths) } })
       checkoutStage = 'creating the Razorpay payment session'
       const cycleCount = recurringCycleCount(durationMonths)
-      const provider = await createRazorpaySubscription({ planId: String(plan.id), totalCount: cycleCount, startAt: termStartsAt > now ? Math.ceil(termStartsAt / 1000) : undefined, notes: { local_subscription_id: localSubscriptionId, user_id: session.user.id, term_starts_at: String(termStartsAt) } })
+      const provider = await createRazorpaySubscription({ planId: String(plan.id), totalCount: cycleCount, startAt: Math.ceil(firstRenewalAt / 1000), upfront:{amount:quote.totalMinor,currency:quote.currency,name:`Offscroll Times first ${durationMonths}-month prepaid term`}, notes: { local_subscription_id: localSubscriptionId, user_id: session.user.id, term_starts_at: String(termStartsAt),first_renewal_at:String(firstRenewalAt),billing_collection:'upfront_first_term' } })
       if (typeof provider.id !== 'string' || typeof plan.id !== 'string') return json({ error: 'Payment service returned an invalid subscription.' }, 502)
       checkoutStage = 'saving the Razorpay payment session'
-      await db.prepare(`INSERT INTO razorpay_orders(id,subscription_id,owner_id,razorpay_order_id,status,amount_minor,currency,pricing_snapshot_json,terms_accepted_at,created_at,updated_at,idempotency_key) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)`).bind(crypto.randomUUID(), localSubscriptionId, session.user.id, provider.id, 'created', quote.totalMinor, quote.currency, JSON.stringify(quote), now, now, now, idempotencyKey).run()
+      await db.prepare(`INSERT INTO razorpay_orders(id,subscription_id,owner_id,razorpay_order_id,status,amount_minor,currency,pricing_snapshot_json,terms_accepted_at,created_at,updated_at,idempotency_key) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)`).bind(crypto.randomUUID(), localSubscriptionId, session.user.id, provider.id, 'created', quote.totalMinor, quote.currency, JSON.stringify(billingQuote), now, now, now, idempotencyKey).run()
       // Payment verification is based on razorpay_orders. Keep the recurring
       // reporting record best-effort so a secondary tracking constraint never
       // blocks a customer from completing the Razorpay mandate.
@@ -79,7 +81,7 @@ export async function razorpaySubscriptionCheckout(request: Request) {
       // prevent the customer from opening an already-created Razorpay checkout session.
       checkoutStage = 'saving the order record'
       try {
-        await recordCustomerOrder(db, { userId: session.user.id, email, phone, subscriptionId: localSubscriptionId, providerOrderId: provider.id, currency: quote.currency, amountMinor: quote.totalMinor, pricingSnapshot: quote, address: delivery, termsAcceptedAt: now })
+        await recordCustomerOrder(db, { userId: session.user.id, email, phone, subscriptionId: localSubscriptionId, providerOrderId: provider.id, currency: quote.currency, amountMinor: quote.totalMinor, pricingSnapshot: billingQuote, address: delivery, termsAcceptedAt: now })
       } catch (error) {
         console.error('canonical_order_record_failed', { subscriptionId: localSubscriptionId, error: error instanceof Error ? error.message : String(error) })
       }
@@ -103,7 +105,9 @@ export async function razorpaySubscriptionCheckout(request: Request) {
     if (!row || !verifySubscriptionSignature(providerSubscriptionId, paymentId, signature)) return json({ error: 'Payment verification failed.' }, 400)
     try {
       const payment = await retrieveRazorpayPayment(paymentId)
-      if (payment.subscription_id !== providerSubscriptionId || payment.amount !== row.amount_minor || payment.currency !== row.currency) return json({ error: 'Payment does not match this subscription.' }, 409)
+      // The verified callback signature binds this payment to the mandate.
+      // Upfront add-on payments may omit subscription_id on the payment entity.
+      if ((payment.subscription_id && payment.subscription_id !== providerSubscriptionId) || payment.amount !== row.amount_minor || payment.currency !== row.currency) return json({ error: 'Payment does not match this subscription.' }, 409)
       await db.prepare(`UPDATE razorpay_orders SET razorpay_payment_id=?,status=?,updated_at=? WHERE razorpay_order_id=?`).bind(paymentId, payment.status === 'captured' ? 'captured' : 'verified', Date.now(), providerSubscriptionId).run()
       if (payment.status === 'captured') {
         await applyCustomerPaymentSucceeded(db, { id: row.subscription_id, payerUserId: row.owner_id, paymentId, paidAt: Number(payment.created_at) * 1000, now: Date.now() })
